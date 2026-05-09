@@ -1,0 +1,11 @@
+node_modules/
+.expo/
+**/*.jpg
+**/*.jpeg
+**/*.png
+**/*.webp
+!assets/**/*
+dist/
+.vscode/
+scratch/
+%ProgramData%/

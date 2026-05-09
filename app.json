@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "One Delhi",
+    "slug": "railone-mobile",
+    "version": "1.0.1",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#D32F2F"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.onedelhi.app"
+    },
+    "android": {
+      "package": "com.onedelhi.app",
+      "softwareKeyboardLayoutMode": "pan",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#D32F2F"
+      }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "7d2eba88-167c-48b1-b1bf-c0bee946e409"
+      }
+    }
+  }
+}

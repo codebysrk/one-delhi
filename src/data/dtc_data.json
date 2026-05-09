@@ -1,0 +1,42 @@
+{
+  "routes": [
+    {
+      "id": "502",
+      "name": "502 (Old Delhi Rly Station - Mehrauli)",
+      "stops": ["Old Delhi Railway Station", "Kashmere Gate", "Red Fort", "Delhi Gate", "ITO", "Mandi House", "Khan Market", "AIIMS", "Hauz Khas", "Malviya Nagar", "Saket Metro Station", "Mehrauli"]
+    },
+    {
+      "id": "534",
+      "name": "534 (Anand Vihar ISBT - Mehrauli)",
+      "stops": ["Anand Vihar ISBT", "Hasan Pur Village", "Shakarpur X-ing", "Laxmi Nagar", "Noida Mode", "Nehru Place", "IIT Gate", "Panchsheel Park", "Saket Metro Station", "Mehrauli"]
+    },
+    {
+      "id": "711",
+      "name": "711 (Uttam Nagar - Sarai Kale Khan)",
+      "stops": ["Uttam Nagar", "Janakpuri East", "Tilak Nagar", "Rajouri Garden", "Dhaula Kuan", "Moti Bagh", "AIIMS", "South Extension", "Lajpat Nagar", "Sarai Kale Khan ISBT"]
+    },
+    {
+      "id": "440",
+      "name": "440 (Anand Vihar - New Delhi Rly Station)",
+      "stops": ["Anand Vihar", "Gazipur Depot", "Nizamuddin", "Lajpat Nagar", "Moolchand", "AIIMS", "Lodhi Colony", "India Gate", "Patiala House", "New Delhi Railway Station"]
+    },
+    {
+      "id": "D036",
+      "name": "D036 (Westend DLF - Saidulajab)",
+      "stops": ["Westend DLF", "Munirka", "RK Puram", "Malviya Nagar Metro", "Saket District Centre", "Saket Metro Station", "Saidulajab"]
+    },
+    {
+      "id": "857",
+      "name": "857 (Hasan Pur Village - Shakarpur)",
+      "stops": ["Hasan Pur Village", "Gazipur Crossing", "Karkardooma", "Preet Vihar", "Shakarpur X-ing"]
+    },
+    {
+      "id": "OMS",
+      "name": "OMS (Outer Ring Road Circle)",
+      "stops": ["Anand Vihar", "Noida Mode", "Sarai Kale Khan", "Ashram", "Nehru Place", "IIT Gate", "Dhaula Kuan", "Punjabi Bagh", "Azadpur", "ISBT Kashmere Gate"]
+    }
+  ],
+  "allStops": [
+    "Anand Vihar ISBT", "Old Delhi Railway Station", "Mehrauli", "Saket Metro Station", "AIIMS", "ITO", "Lajpat Nagar", "Nehru Place", "Hasan Pur Village", "Shakarpur X-ing", "Westend DLF", "Saidulajab", "Uttam Nagar", "Janakpuri", "Dhaula Kuan", "IIT Gate", "India Gate", "New Delhi Railway Station"
+  ]
+}
