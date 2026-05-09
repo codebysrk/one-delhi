@@ -20,9 +20,11 @@ export const auth = initializeAuth(app, {
   persistence: getReactNativePersistence(AsyncStorage)
 });
 
-// Using initializeFirestore with Long Polling to fix connection issues
+// Using initializeFirestore with optimized settings
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
+  // Caching is handled automatically by Firebase in native environments
+  // but we ensure the connection is stable
 });
 
 export default app;

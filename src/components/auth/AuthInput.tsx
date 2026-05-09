@@ -31,20 +31,26 @@ export const AuthInput: React.FC<AuthInputProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, isFocused && { color: COLORS.primary }]}>{label}</Text>
       <View 
         style={[
           styles.inputWrapper,
           isFocused && styles.inputFocused,
           error && styles.inputError,
-          SHADOWS.soft
         ]}
       >
-        {icon && <View style={styles.iconContainer}>{icon}</View>}
+        {icon && (
+          <View style={styles.iconContainer}>
+            {React.cloneElement(icon as React.ReactElement, { 
+              color: isFocused ? COLORS.primary : COLORS.textMuted,
+              size: 20 
+            })}
+          </View>
+        )}
         <TextInput
           style={styles.input}
           placeholder={placeholder}
-          placeholderTextColor={COLORS.textMuted}
+          placeholderTextColor="#9CA3AF"
           value={value}
           onChangeText={onChangeText}
           onFocus={() => setIsFocused(true)}
@@ -52,16 +58,18 @@ export const AuthInput: React.FC<AuthInputProps> = ({
           secureTextEntry={secureTextEntry && !showPassword}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
+          selectionColor={COLORS.primary}
         />
         {secureTextEntry && (
           <TouchableOpacity 
             onPress={() => setShowPassword(!showPassword)}
             style={styles.eyeBtn}
+            activeOpacity={0.7}
           >
             {showPassword ? (
-              <EyeOff size={20} color={COLORS.textMuted} />
+              <EyeOff size={20} color={isFocused ? COLORS.primary : COLORS.textMuted} />
             ) : (
-              <Eye size={20} color={COLORS.textMuted} />
+              <Eye size={20} color={isFocused ? COLORS.primary : COLORS.textMuted} />
             )}
           </TouchableOpacity>
         )}
@@ -73,49 +81,58 @@ export const AuthInput: React.FC<AuthInputProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: SPACING.md,
+    marginBottom: 20,
     width: '100%',
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: SPACING.xs,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#4B5563',
+    marginBottom: 8,
     marginLeft: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: RADII.lg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
     height: 56,
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: 16,
   },
   inputFocused: {
     borderColor: COLORS.primary,
-    backgroundColor: COLORS.white,
+    backgroundColor: 'white',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
   },
   inputError: {
     borderColor: COLORS.error,
   },
   iconContainer: {
-    marginRight: SPACING.sm,
+    marginRight: 12,
   },
   input: {
     flex: 1,
     fontSize: 16,
-    color: COLORS.text,
+    color: '#111827',
+    fontWeight: '500',
     height: '100%',
   },
   eyeBtn: {
-    padding: SPACING.xs,
+    padding: 4,
   },
   errorText: {
     color: COLORS.error,
     fontSize: 12,
-    marginTop: 4,
+    marginTop: 6,
     marginLeft: 4,
+    fontWeight: '500',
   },
 });

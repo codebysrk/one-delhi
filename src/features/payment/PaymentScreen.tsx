@@ -97,7 +97,7 @@ export const PaymentScreen = ({ navigation, route }: any) => {
                 <Text style={styles.busRouteText}>{getRouteNumberOnly(ticketData.route)}</Text>
               </View>
               <Text style={styles.fareCalcText}>
-                ₹10.0 x {ticketData.qty} = <Text style={styles.fareGreen}>₹{ticketData.total}</Text>
+                ₹{Number(ticketData.baseFare).toFixed(1)} x {ticketData.qty} = <Text style={styles.fareGreen}>₹{ticketData.total}</Text>
               </Text>
             </View>
             

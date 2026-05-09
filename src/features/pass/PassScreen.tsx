@@ -12,8 +12,9 @@ import {
   FlatList,
   Platform
 } from 'react-native';
-import { ChevronLeft, ChevronDown, Calendar } from 'lucide-react-native';
+import { ChevronLeft, ChevronDown, Calendar as CalendarIcon } from 'lucide-react-native';
 import { useAppStore } from '../../store/useAppStore';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const PASS_TYPES = [
   { id: '1', label: 'DAILY ALL ROUTE NON AC PASS', fare: '₹40', sub: 'Daily non-ac bus pass for all routes' },
@@ -27,10 +28,11 @@ const PASS_TYPES = [
 export const PassScreen = ({ navigation }: any) => {
   const { setShowFooter } = useAppStore();
   const [showPicker, setShowPicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedPass, setSelectedPass] = useState(PASS_TYPES[0]);
   const [formData, setFormData] = useState({
     name: '',
-    phone: '7748900943',
+    phone: '',
     dob: '',
     idLastDigits: ''
   });
@@ -43,6 +45,16 @@ export const PassScreen = ({ navigation }: any) => {
   const handleSelectPass = (pass: typeof PASS_TYPES[0]) => {
     setSelectedPass(pass);
     setShowPicker(false);
+  };
+
+  const onDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      const day = selectedDate.getDate().toString().padStart(2, '0');
+      const month = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
+      const year = selectedDate.getFullYear();
+      setFormData({ ...formData, dob: `${day}/${month}/${year}` });
+    }
   };
 
   return (
@@ -118,17 +130,27 @@ export const PassScreen = ({ navigation }: any) => {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Birth Date</Text>
-            <View style={styles.dateInputContainer}>
-              <TextInput 
-                style={[styles.textInput, { flex: 1, borderWidth: 0, paddingLeft: 0 }]}
-                placeholder="DD/MM/YYYY"
-                placeholderTextColor="#999"
-                value={formData.dob}
-                onChangeText={(val) => setFormData({...formData, dob: val})}
-              />
-              <Calendar color="#000" size={20} />
-            </View>
+            <TouchableOpacity 
+              style={styles.dateInputContainer}
+              onPress={() => setShowDatePicker(true)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.textInput, { flex: 1, borderWidth: 0, paddingLeft: 0, textAlignVertical: 'center', paddingTop: Platform.OS === 'ios' ? 12 : 0, color: formData.dob ? '#333' : '#999' }]}>
+                {formData.dob || "DD/MM/YYYY"}
+              </Text>
+              <CalendarIcon color="#000" size={20} />
+            </TouchableOpacity>
           </View>
+
+          {showDatePicker && (
+            <DateTimePicker
+              value={new Date(2000, 0, 1)}
+              mode="date"
+              display="default"
+              onChange={onDateChange}
+              maximumDate={new Date()}
+            />
+          )}
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Verification Document</Text>

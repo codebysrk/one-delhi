@@ -18,12 +18,17 @@ const HUB_SERVICES = [
 
 export const EVScreen = () => {
   return (
-    <Screen noPadding backgroundColor="#F8F9FA" scrollable>
-      <View style={styles.header}>
-        <Text style={styles.title}>Delhi Transport Hub</Text>
-        <Text style={styles.subtitle}>Explore all transport services in one place</Text>
-      </View>
-
+    <Screen 
+      noPadding 
+      backgroundColor="#F8F9FA" 
+      scrollable
+      header={
+        <View style={styles.header}>
+          <Text style={styles.title}>Delhi Transport Hub</Text>
+          <Text style={styles.subtitle}>Explore all transport services in one place</Text>
+        </View>
+      }
+    >
       <View style={styles.gridContainer}>
         {HUB_SERVICES.map((item) => (
           <TouchableOpacity key={item.id} style={styles.serviceItem}>
@@ -54,7 +59,17 @@ export const EVScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  header: { padding: 25, backgroundColor: '#FFF', borderBottomLeftRadius: 30, borderBottomRightRadius: 30, elevation: 2 },
+  header: { 
+    padding: 25, 
+    backgroundColor: '#FFF', 
+    borderBottomLeftRadius: 30, 
+    borderBottomRightRadius: 30, 
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10
+  },
   title: { fontSize: 26, fontWeight: '800', color: '#111' },
   subtitle: { fontSize: 14, color: '#666', marginTop: 5 },
   gridContainer: { 
@@ -103,3 +118,4 @@ const styles = StyleSheet.create({
   },
   promoBtnText: { color: '#D32F2F', fontWeight: '700' }
 });
+

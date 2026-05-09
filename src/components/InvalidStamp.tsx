@@ -13,7 +13,7 @@ export const InvalidStamp: React.FC<InvalidStampProps> = ({
   rotation = "-12deg" 
 }) => {
   return (
-    <View style={[styles.stampOverlay, { transform: [{ rotate: rotation }] }]}>
+    <View style={{ transform: [{ rotate: rotation }] }}>
       <View style={[styles.stampBox, { borderColor: color }]}>
         <Text style={[styles.stampLabel, { color }]}>{text}</Text>
       </View>
@@ -22,26 +22,20 @@ export const InvalidStamp: React.FC<InvalidStampProps> = ({
 };
 
 const styles = StyleSheet.create({
-  stampOverlay: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 99,
-    backgroundColor: 'rgba(255,255,255,0.2)', // Very subtle overlay
-  },
   stampBox: {
-    borderWidth: 4,
-    paddingHorizontal: 15,
-    paddingVertical: 5,
-    borderRadius: 8,
+    borderWidth: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 4,
     borderStyle: 'solid',
+    alignSelf: 'flex-start',
   },
   stampLabel: {
-    fontSize: 40,
-    letterSpacing: 2,
-    fontFamily: 'Exiger', 
+    fontSize: 26,
+    letterSpacing: 1,
+    fontWeight: '900',
     textAlign: 'center',
     textTransform: 'uppercase',
   }
 });
+

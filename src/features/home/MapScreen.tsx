@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   View,
   StyleSheet,
@@ -89,6 +89,11 @@ export const MapScreen = ({ navigation }: any) => {
       let initialLocation = await Location.getCurrentPositionAsync({});
       setLocation(initialLocation);
       setLoading(false);
+      
+      // Auto-center on load
+      const centerJs = `centerMap(${initialLocation.coords.latitude}, ${initialLocation.coords.longitude});`;
+      setTimeout(() => webViewRef.current?.injectJavaScript(centerJs), 1000);
+
       await Location.watchPositionAsync(
         { accuracy: Location.Accuracy.High, distanceInterval: 5 },
         (newLocation) => {
@@ -155,7 +160,7 @@ export const MapScreen = ({ navigation }: any) => {
     return { bottom: bottomPos };
   });
 
-  const mapHtml = `
+  const mapHtml = useMemo(() => `
     <!DOCTYPE html>
     <html>
     <head>
@@ -171,9 +176,12 @@ export const MapScreen = ({ navigation }: any) => {
     <body>
       <div id="map"></div>
       <script>
-        var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([${location?.coords.latitude || 28.6273}, ${location?.coords.longitude || 77.2183}], 15);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        var userMarker = L.marker([${location?.coords.latitude || 28.6273}, ${location?.coords.longitude || 77.2183}], {
+        var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([28.6273, 77.2183], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          keepBuffer: 2 // Improve panning performance
+        }).addTo(map);
+        var userMarker = L.marker([28.6273, 77.2183], {
           icon: L.divIcon({ className: 'user-marker', iconSize: [14, 14] })
         }).addTo(map);
         function updateLocation(lat, lng) { userMarker.setLatLng(new L.LatLng(lat, lng)); }
@@ -181,13 +189,30 @@ export const MapScreen = ({ navigation }: any) => {
       </script>
     </body>
     </html>
-  `;
+  `, []);
 
-  const stopsToShow = dtcData.routes[0]?.stops.slice(0, 15).map((stopName, idx) => ({
-    id: idx.toString(),
-    name: stopName,
-    dir: idx % 2 === 0 ? "towards Terminal" : "towards Cambridge Sch..."
-  })) || [];
+  const stopsToShow = useMemo(() => 
+    dtcData.routes[0]?.stops.slice(0, 20).map((stopName, idx) => ({
+      id: idx.toString(),
+      name: stopName,
+      dir: idx % 2 === 0 ? "towards Terminal" : "towards Cambridge Sch..."
+    })) || []
+  , []);
+
+  const renderStopItem = useCallback(({ item, index }: { item: any, index: number }) => (
+    <View key={item.id}>
+      <View style={styles.stopCard}>
+        <View style={styles.stopDetails}>
+          <Text style={styles.stopMain}>{item.name}</Text>
+          <Text style={styles.stopDir}>{item.dir}</Text>
+        </View>
+        <TouchableOpacity style={styles.greenBtn}>
+          <Text style={styles.greenBtnText}>View Buses</Text>
+        </TouchableOpacity>
+      </View>
+      {index < stopsToShow.length - 1 && <View style={styles.divider} />}
+    </View>
+  ), [stopsToShow.length]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -198,7 +223,7 @@ export const MapScreen = ({ navigation }: any) => {
           <ImageBackground 
             source={require("../../../assets/images/map-header.webp")} 
             style={styles.headerBg}
-            imageStyle={{ opacity: 0.8 }} // Slight opacity to allow red bg to show through
+            imageStyle={{ opacity: 0.8 }}
           >
             <View style={styles.darkOverlay}>
               <SafeAreaView style={styles.safeHeader}>
@@ -239,7 +264,16 @@ export const MapScreen = ({ navigation }: any) => {
           {loading ? (
             <View style={styles.loader}><ActivityIndicator size="large" color="#B91C1C" /></View>
           ) : (
-            <WebView ref={webViewRef} originWhitelist={["*"]} source={{ html: mapHtml }} style={styles.mapWeb} scrollEnabled={false} pointerEvents="auto" />
+            <WebView 
+              ref={webViewRef} 
+              originWhitelist={["*"]} 
+              source={{ html: mapHtml }} 
+              style={styles.mapWeb} 
+              scrollEnabled={false} 
+              pointerEvents="auto"
+              androidHardwareAccelerationDisabled={false} // Performance boost
+              cacheEnabled={true}
+            />
           )}
 
           <Animated.View style={[styles.redArrowBtn, animatedControlStyle, { left: 20 }]}>
@@ -267,22 +301,17 @@ export const MapScreen = ({ navigation }: any) => {
             </View>
           </GestureDetector>
 
-          <ScrollView showsVerticalScrollIndicator={false} bounces={true} contentContainerStyle={styles.scrollContent}>
-            {stopsToShow.map((stop, index) => (
-              <React.Fragment key={stop.id}>
-                <View style={styles.stopCard}>
-                  <View style={styles.stopDetails}>
-                    <Text style={styles.stopMain}>{stop.name}</Text>
-                    <Text style={styles.stopDir}>{stop.dir}</Text>
-                  </View>
-                  <TouchableOpacity style={styles.greenBtn}>
-                    <Text style={styles.greenBtnText}>View Buses</Text>
-                  </TouchableOpacity>
-                </View>
-                {index < stopsToShow.length - 1 && <View style={styles.divider} />}
-              </React.Fragment>
-            ))}
-          </ScrollView>
+          <Animated.FlatList
+            data={stopsToShow}
+            renderItem={renderStopItem}
+            keyExtractor={item => item.id}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+            initialNumToRender={10}
+            maxToRenderPerBatch={10}
+            windowSize={5}
+            removeClippedSubviews={true} // Performance boost for large lists
+          />
         </Animated.View>
       </View>
     </GestureHandlerRootView>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert, Image, Dimensions } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -7,21 +7,26 @@ import { Screen } from '../../components/Screen';
 import { AuthInput } from '../../components/auth/AuthInput';
 import { Button } from '../../components/Button';
 import { COLORS, SPACING, SHADOWS, RADII } from '../../core/theme';
-import { Mail, Lock, User, UserPlus } from 'lucide-react-native';
+import { Mail, Lock, User, UserPlus, Phone } from 'lucide-react-native';
 import { auth, db } from '../../services/firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { useAppStore } from '../../store/useAppStore';
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+const phoneRegex = /^[6-9]\d{9}$/;
+const nameRegex = /^[a-zA-Z\s]{2,50}$/;
 
 const signupSchema = z.object({
   fullName: z.string()
-    .min(2, 'Name is too short')
-    .refine((val) => val.trim().length > 0, 'Name cannot be empty or spaces only'),
+    .min(2, 'Name must be at least 2 characters')
+    .max(50, 'Name must not exceed 50 characters')
+    .regex(nameRegex, 'Name can only contain alphabets and spaces'),
   email: z.string().email('Please enter a valid email address').trim().toLowerCase(),
+  phone: z.string().regex(phoneRegex, 'Enter a valid 10-digit Indian phone number'),
   password: z.string()
-    .regex(passwordRegex, 'Password must have 8+ chars, uppercase, lowercase, number and special char'),
+    .min(8, 'Password must be at least 8 characters')
+    .regex(passwordRegex, 'Password must have uppercase, lowercase, number and special char'),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
@@ -51,19 +56,28 @@ export const SignupScreen = ({ navigation }: any) => {
       await setDoc(doc(db, "users", user.uid), {
         name: trimmedName,
         email: data.email,
+        phone: data.phone,
         createdAt: Date.now()
       });
       
       setUser(user);
     } catch (error: any) {
-      Alert.alert('Signup Failed', error.message.replace('Firebase: ', ''));
+      let msg = error.message.replace('Firebase: ', '');
+      if (error.code === 'auth/email-already-in-use') {
+        msg = 'This email is already registered. Please login instead.';
+      }
+      Alert.alert('Signup Failed', msg);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Screen backgroundColor={COLORS.background}>
+    <View style={styles.container}>
+      <View style={styles.topSection}>
+        <View style={styles.redCircle} />
+      </View>
+
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flex}
@@ -71,13 +85,21 @@ export const SignupScreen = ({ navigation }: any) => {
         <ScrollView 
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
+            <View style={styles.logoWrapper}>
+              <Image 
+                source={require('../../../assets/images/icon.png')} 
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </View>
             <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join us today and start your journey</Text>
+            <Text style={styles.subtitle}>Join One Delhi and start your journey</Text>
           </View>
 
-          <View style={styles.form}>
+          <View style={styles.card}>
             <Controller
               control={control}
               name="fullName"
@@ -106,6 +128,22 @@ export const SignupScreen = ({ navigation }: any) => {
                   error={errors.email?.message}
                   icon={<Mail size={20} color={COLORS.textMuted} />}
                   keyboardType="email-address"
+                />
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="phone"
+              render={({ field: { onChange, value } }) => (
+                <AuthInput
+                  label="Phone Number"
+                  placeholder="9876543210"
+                  value={value}
+                  onChangeText={onChange}
+                  error={errors.phone?.message}
+                  icon={<Phone size={20} color={COLORS.textMuted} />}
+                  keyboardType="phone-pad"
                 />
               )}
             />
@@ -153,53 +191,96 @@ export const SignupScreen = ({ navigation }: any) => {
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>Already have an account? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+              <TouchableOpacity onPress={() => navigation.navigate('Login')} activeOpacity={0.7}>
                 <Text style={styles.loginText}>Sign In</Text>
               </TouchableOpacity>
             </View>
           </View>
+          
+          <View style={styles.bottomBranding}>
+             <Text style={styles.brandingText}>Safe • Secure • Fast</Text>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </Screen>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: { 
+    flex: 1, 
+    backgroundColor: '#F8F9FA' 
+  },
+  topSection: {
+    position: 'absolute',
+    top: -120,
+    left: -120,
+    width: 300,
+    height: 300,
+    zIndex: 0,
+  },
+  redCircle: {
+    position: 'absolute',
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: 'rgba(211, 47, 47, 0.08)',
+  },
   flex: { flex: 1 },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.xl,
     paddingBottom: SPACING.xl,
-    justifyContent: 'center',
+    paddingTop: 50,
   },
   header: {
     alignItems: 'center',
-    marginBottom: SPACING.xl,
+    marginBottom: 30,
+  },
+  logoWrapper: {
+    width: 80,
+    height: 80,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 15,
+    ...SHADOWS.medium,
+  },
+  logo: {
+    width: 55,
+    height: 55,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: COLORS.text,
-    marginBottom: SPACING.xs,
+    color: '#1A1A1A',
+    marginBottom: 8,
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
     color: COLORS.textMuted,
     textAlign: 'center',
   },
-  form: {
+  card: {
+    backgroundColor: 'white',
+    borderRadius: 24,
+    padding: 24,
     width: '100%',
+    ...SHADOWS.premium,
+    shadowColor: 'rgba(211, 47, 47, 0.15)',
   },
   submitBtn: {
-    marginTop: SPACING.md,
-    height: 56,
-    borderRadius: RADII.lg,
+    marginTop: 15,
+    height: 58,
+    borderRadius: 16,
+    backgroundColor: COLORS.primary,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: SPACING.xl,
+    marginTop: 25,
   },
   footerText: {
     color: COLORS.textMuted,
@@ -210,4 +291,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 15,
   },
+  bottomBranding: {
+    marginTop: 30,
+    alignItems: 'center',
+  },
+  brandingText: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+  }
 });
+
+

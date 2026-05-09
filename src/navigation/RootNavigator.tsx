@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, SafeAreaView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -39,71 +39,78 @@ export const ComingSoon = ({ navigation }: any) => (
   </View>
 );
 
-const MainTabs = () => (
-  <View style={{ flex: 1 }}>
-    <Tab.Navigator
-      screenOptions={{
-        tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopWidth: 1,
-          borderTopColor: '#EEE',
-          height: 65,
-          paddingBottom: 10,
-        },
-        tabBarActiveTintColor: '#111',
-        tabBarInactiveTintColor: '#555',
-        headerShown: false,
-      }}
-    >
-      <Tab.Screen 
-        name="BusTab" 
-        component={MapScreen} 
-        options={{
-          tabBarIcon: ({ color }) => <RemixIcon name="bus-fill" size={24} color={color} />,
-          tabBarLabel: 'Bus'
+const MainTabs = () => {
+  const { showFooter } = useAppStore();
+  
+  return (
+    <View style={{ flex: 1 }}>
+      <Tab.Navigator
+        screenOptions={{
+          tabBarStyle: {
+            backgroundColor: '#FFFFFF',
+            borderTopWidth: 1,
+            borderTopColor: '#EEE',
+            height: 65,
+            paddingBottom: 10,
+          },
+          tabBarActiveTintColor: '#111',
+          tabBarInactiveTintColor: '#555',
+          headerShown: false,
         }}
-      />
-      <Tab.Screen 
-        name="TicketsTab" 
-        component={HomeScreen} 
-        options={{
-          tabBarIcon: ({ color }) => <RemixIcon name="ticket-fill" size={24} color={color} />,
-          tabBarLabel: 'Tickets'
-        }}
-      />
-      <Tab.Screen 
-        name="HubTab" 
-        component={EVScreen}
-        options={{
-          tabBarIcon: ({ color }) => <RemixIcon name="charging-pile-fill" size={24} color={color} />,
-          tabBarLabel: 'Hub'
-        }}
-      />
-      <Tab.Screen 
-        name="TripPlanTab" 
-        component={ComingSoon}
-        options={{
-          tabBarIcon: ({ color }) => <RemixIcon name="map-2-fill" size={24} color={color} />,
-          tabBarLabel: 'Trip Plan'
-        }}
-      />
-      <Tab.Screen 
-        name="ProfileTab" 
-        component={ProfileScreen}
-        options={{
-          tabBarIcon: ({ color }) => <RemixIcon name="user-fill" size={24} color={color} />,
-          tabBarLabel: 'Profile'
-        }}
-      />
-    </Tab.Navigator>
-    <View style={styles.footerContainer}>
-      <View style={styles.footerShadow} />
-      <View style={styles.globalFooter}>
-        <Text style={styles.footerText}>Powered by IIIT-Delhi</Text>
-      </View>
+      >
+        <Tab.Screen 
+          name="BusTab" 
+          component={MapScreen} 
+          options={{
+            tabBarIcon: ({ color }) => <RemixIcon name="bus-fill" size={24} color={color} />,
+            tabBarLabel: 'Bus'
+          }}
+        />
+        <Tab.Screen 
+          name="TicketsTab" 
+          component={HomeScreen} 
+          options={{
+            tabBarIcon: ({ color }) => <RemixIcon name="ticket-fill" size={24} color={color} />,
+            tabBarLabel: 'Tickets'
+          }}
+        />
+        <Tab.Screen 
+          name="HubTab" 
+          component={EVScreen}
+          options={{
+            tabBarIcon: ({ color }) => <RemixIcon name="charging-pile-fill" size={24} color={color} />,
+            tabBarLabel: 'Hub'
+          }}
+        />
+        <Tab.Screen 
+          name="TripPlanTab" 
+          component={ComingSoon}
+          options={{
+            tabBarIcon: ({ color }) => <RemixIcon name="map-2-fill" size={24} color={color} />,
+            tabBarLabel: 'Trip Plan'
+          }}
+        />
+        <Tab.Screen 
+          name="ProfileTab" 
+          component={ProfileScreen}
+          options={{
+            tabBarIcon: ({ color }) => <RemixIcon name="user-fill" size={24} color={color} />,
+            tabBarLabel: 'Profile'
+          }}
+        />
+      </Tab.Navigator>
+      
+      {showFooter && (
+        <View style={styles.footerContainer}>
+          <View style={styles.footerShadow} />
+          <View style={styles.globalFooter}>
+            <Text style={styles.footerText}>Powered by IIIT-Delhi</Text>
+          </View>
+        </View>
+      )}
     </View>
-  </View>
-);
+  );
+};
 
 export const RootNavigator = () => {
   const { user, setUser, setTickets, resetStore, showFooter } = useAppStore();

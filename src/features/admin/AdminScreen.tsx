@@ -88,20 +88,24 @@ export const AdminScreen = () => {
   };
 
   return (
-    <Screen scrollable backgroundColor="#F8F9FA">
-      <View style={styles.headerRow}>
-        <View>
-          <Text style={styles.title}>Admin Panel</Text>
-          <Text style={styles.subtitle}>System Overview</Text>
+    <Screen 
+      scrollable 
+      backgroundColor="#F8F9FA"
+      header={
+        <View style={styles.headerContainer}>
+          <View>
+            <Text style={styles.title}>Admin Panel</Text>
+            <Text style={styles.subtitle}>System Overview</Text>
+          </View>
+          <TouchableOpacity onPress={fetchAdminData} style={styles.refreshBtn}>
+            <RefreshCw size={moderateScale(20)} color="#666" />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={fetchAdminData} style={styles.refreshBtn}>
-          <RefreshCw size={moderateScale(20)} color="#666" />
-        </TouchableOpacity>
-      </View>
-
+      }
+    >
       {/* Stats Grid */}
       <View style={styles.statsGrid}>
-        {renderStatCard(<CreditCard />, "Tickets", stats.tickets, "#B3261E")}
+        {renderStatCard(<CreditCard />, "Tickets", stats.tickets, "#D32F2F")}
         {renderStatCard(<TrendingUp />, "Revenue", `₹${stats.revenue}`, "#2E7D32")}
         {renderStatCard(<Users />, "Users", stats.users, "#007BFF")}
       </View>
@@ -113,27 +117,39 @@ export const AdminScreen = () => {
             <Text style={styles.mText}>Clear All User Profiles</Text>
          </TouchableOpacity>
          <TouchableOpacity style={[styles.mItem, { borderBottomWidth: 0 }]} onPress={handleClearHistory}>
-            <View style={[styles.mIconBg, { backgroundColor: '#FFF5F5' }]}><Trash2 size={moderateScale(20)} color="#B3261E" /></View>
-            <Text style={[styles.mText, { color: '#B3261E' }]}>Clear Global Ticket History</Text>
+            <View style={[styles.mIconBg, { backgroundColor: '#FFF5F5' }]}><Trash2 size={moderateScale(20)} color="#D32F2F" /></View>
+            <Text style={[styles.mText, { color: '#D32F2F' }]}>Clear Global Ticket History</Text>
          </TouchableOpacity>
       </View>
 
       <Text style={styles.sectionTitle}>Recent Tickets</Text>
-      {loading ? <ActivityIndicator color="#B3261E" size="large" style={{ marginVertical: 40 }} /> : (
+      {loading ? <ActivityIndicator color="#D32F2F" size="large" style={{ marginVertical: 40 }} /> : (
         <View style={{ gap: 12, marginBottom: 40 }}>
-          {recentTickets.map((t) => (
+          {recentTickets.length > 0 ? recentTickets.map((t) => (
             <View key={t.id} style={styles.ticketItem}>
-              <View style={styles.ticketIcon}><Text style={styles.ticketRouteText}>{t.route}</Text></View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.ticketPath} numberOfLines={1}>{t.src} → {t.dst}</Text>
-                <Text style={styles.ticketTime}>{t.time}</Text>
+              <View style={styles.ticketMain}>
+                <View style={styles.ticketIcon}>
+                  <Text style={styles.ticketRouteText}>{t.route}</Text>
+                </View>
+                <View style={styles.ticketInfo}>
+                  <Text style={styles.ticketPath} numberOfLines={1}>{t.src} → {t.dst}</Text>
+                  <View style={styles.ticketMeta}>
+                     <Text style={styles.ticketTime}>{t.date} • {t.time}</Text>
+                  </View>
+                </View>
               </View>
-              <View style={{ alignItems: 'end' }}>
+              <View style={styles.ticketRight}>
                 <Text style={styles.ticketFare}>₹{t.total}</Text>
-                <Text style={styles.ticketQty}>{t.qty} Pax</Text>
+                <View style={styles.paxBadge}>
+                  <Text style={styles.paxText}>{t.qty} Pax</Text>
+                </View>
               </View>
             </View>
-          ))}
+          )) : (
+            <View style={styles.emptyTickets}>
+              <Text style={styles.emptyText}>No recent tickets found</Text>
+            </View>
+          )}
         </View>
       )}
     </Screen>
@@ -141,11 +157,11 @@ export const AdminScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: verticalScale(20) },
+  headerContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: verticalScale(20), paddingHorizontal: 20 },
   title: { fontSize: moderateScale(24), fontWeight: 'bold', color: '#1A1A1A' },
   subtitle: { color: '#666', fontSize: moderateScale(14) },
   refreshBtn: { backgroundColor: '#EEE', padding: moderateScale(12), borderRadius: 50 },
-  statsGrid: { flexDirection: 'row', gap: 12, marginBottom: verticalScale(24), flexWrap: 'wrap' },
+  statsGrid: { flexDirection: 'row', gap: 12, marginBottom: verticalScale(24), marginTop: 15, flexWrap: 'wrap' },
   statCard: { flex: 1, minWidth: moderateScale(100), backgroundColor: 'white', padding: moderateScale(16), borderRadius: 20, alignItems: 'center', elevation: 2 },
   iconBg: { padding: 8, borderRadius: 12, marginBottom: 8 },
   statLabel: { color: '#999', fontSize: moderateScale(10), fontWeight: 'bold', textTransform: 'uppercase' },
@@ -155,11 +171,46 @@ const styles = StyleSheet.create({
   mItem: { flexDirection: 'row', alignItems: 'center', padding: moderateScale(16), borderBottomWidth: 1, borderBottomColor: '#F5F5F5' },
   mIconBg: { backgroundColor: '#F0F7FF', padding: 8, borderRadius: 12, marginRight: 12 },
   mText: { flex: 1, fontWeight: '600', fontSize: moderateScale(14) },
-  ticketItem: { backgroundColor: 'white', padding: moderateScale(16), borderRadius: 20, flexDirection: 'row', alignItems: 'center', elevation: 1 },
-  ticketIcon: { backgroundColor: '#F5F5F5', width: moderateScale(48), height: moderateScale(48), borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-  ticketRouteText: { fontWeight: 'bold', color: '#B3261E', fontSize: moderateScale(12) },
-  ticketPath: { fontWeight: 'bold', color: '#333', fontSize: moderateScale(14) },
-  ticketTime: { color: '#999', fontSize: moderateScale(12) },
-  ticketFare: { fontWeight: 'bold', color: '#333', fontSize: moderateScale(16) },
-  ticketQty: { color: '#999', fontSize: moderateScale(10) }
+  ticketItem: { 
+    backgroundColor: 'white', 
+    padding: moderateScale(14), 
+    borderRadius: 16, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4
+  },
+  ticketMain: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  ticketIcon: { 
+    backgroundColor: '#FEF2F2', 
+    width: moderateScale(46), 
+    height: moderateScale(46), 
+    borderRadius: 12, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: '#FEE2E2'
+  },
+  ticketRouteText: { fontWeight: 'bold', color: '#D32F2F', fontSize: moderateScale(11) },
+  ticketInfo: { flex: 1 },
+  ticketPath: { fontWeight: '700', color: '#111', fontSize: moderateScale(14), marginBottom: 2 },
+  ticketMeta: { flexDirection: 'row', alignItems: 'center' },
+  ticketTime: { color: '#6B7280', fontSize: moderateScale(12) },
+  ticketRight: { alignItems: 'flex-end', marginLeft: 10 },
+  ticketFare: { fontWeight: '800', color: '#D32F2F', fontSize: moderateScale(16), marginBottom: 4 },
+  paxBadge: { 
+    backgroundColor: '#F3F4F6', 
+    paddingHorizontal: 8, 
+    paddingVertical: 2, 
+    borderRadius: 6 
+  },
+  paxText: { color: '#4B5563', fontSize: moderateScale(10), fontWeight: '700' },
+  emptyTickets: { alignItems: 'center', paddingVertical: 40 },
+  emptyText: { color: '#9CA3AF', fontSize: moderateScale(14) }
 });
+

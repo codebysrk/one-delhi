@@ -1,10 +1,11 @@
 import React from 'react';
 import { StatusBar, View, ScrollView, Platform, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS } from '../core/theme';
+import { COLORS, SHADOWS } from '../core/theme';
 
 interface ScreenProps {
   children: React.ReactNode;
+  header?: React.ReactNode;
   scrollable?: boolean;
   backgroundColor?: string;
   noPadding?: boolean;
@@ -12,6 +13,7 @@ interface ScreenProps {
 
 export const Screen: React.FC<ScreenProps> = ({
   children,
+  header,
   scrollable = false,
   backgroundColor = COLORS.background,
   noPadding = false,
@@ -27,6 +29,7 @@ export const Screen: React.FC<ScreenProps> = ({
         barStyle="light-content" 
         backgroundColor={COLORS.primary}
       />
+      {header && <View style={styles.fixedHeader}>{header}</View>}
       <Container
         style={styles.container}
         contentContainerStyle={scrollable ? styles.scrollContent : undefined}
@@ -35,7 +38,7 @@ export const Screen: React.FC<ScreenProps> = ({
       >
         <View style={[
           styles.inner, 
-          !noPadding && { paddingHorizontal: 15 }
+          !noPadding && { paddingHorizontal: 15, paddingTop: 10 }
         ]}>
           {children}
         </View>
@@ -48,11 +51,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  fixedHeader: {
+    zIndex: 10,
+    backgroundColor: 'white',
+    ...SHADOWS.soft,
+    elevation: 4, // Add elevation for Android
+  },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 60, // Increased to avoid IIIT footer overlap
+    paddingBottom: 80, 
   },
   inner: {
     flex: 1,
   }
 });
+
+
