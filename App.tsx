@@ -3,7 +3,7 @@ import 'fast-text-encoding';
 import React, { useState, useEffect } from 'react';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { StatusBar } from 'expo-status-bar';
-import { View, Image, StyleSheet, Dimensions } from 'react-native';
+import { View, Image, StyleSheet, useWindowDimensions } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -12,9 +12,10 @@ import * as SplashScreen from 'expo-splash-screen';
 
 SplashScreen.preventAutoHideAsync();
 
-const { width, height } = Dimensions.get('window');
+
 
 export default function App() {
+  const { width, height } = useWindowDimensions();
   const [appIsReady, setAppIsReady] = useState(false);
   const [fontsLoaded] = useFonts({
     'Exiger': require('./assets/fonts/Exiger-Stamp.otf'),
@@ -46,8 +47,8 @@ export default function App() {
       <View style={styles.splashContainer}>
         <StatusBar style="light" />
         <Image 
-          source={require('./assets/images/splash.webp')} 
-          style={styles.splashImage}
+          source={require('./assets/images/splash.png')} 
+          style={[styles.splashImage, { width: width * 0.8, height: width * 0.8, marginTop: height * 0.25 }]}
           resizeMode="contain"
         />
       </View>
@@ -72,8 +73,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   splashImage: {
-    width: width * 0.8,
-    height: width * 0.8,
-    marginTop: height * 0.25, // Khiskao neeche (shifted down)
+    // Style will be applied dynamically in the component to avoid top-level issues
   }
 });

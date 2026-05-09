@@ -220,7 +220,7 @@ export const BookingScreen = ({ navigation }: any) => {
 
   const currentRouteStops = useMemo(() => {
     const routeId = routeSearch.split('-')[0].trim();
-    const found = dtcData.routes.find(r => r.name === routeId || r.id === routeId);
+    const found = dtcData.routes.find(route => route.name === routeId || route.id === routeId);
     return found ? found.stops : dtcData.allStops;
   }, [routeSearch]);
 

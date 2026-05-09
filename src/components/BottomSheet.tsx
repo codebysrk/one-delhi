@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback } from 'react';
-import { View, StyleSheet, Dimensions, TouchableWithoutFeedback, Platform } from 'react-native';
+import { View, StyleSheet, useWindowDimensions, TouchableWithoutFeedback, Platform } from 'react-native';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -11,8 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { COLORS } from '../core/theme';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const MAX_TRANSLATE_Y = -SCREEN_HEIGHT + 50;
+
 
 interface BottomSheetProps {
   isVisible: boolean;
@@ -21,7 +20,10 @@ interface BottomSheetProps {
   height?: number;
 }
 
-export const BottomSheet = ({ isVisible, onClose, children, height = SCREEN_HEIGHT * 0.5 }: BottomSheetProps) => {
+export const BottomSheet = ({ isVisible, onClose, children, height: customHeight }: BottomSheetProps) => {
+  const { height: SCREEN_HEIGHT } = useWindowDimensions();
+  const height = customHeight || SCREEN_HEIGHT * 0.5;
+  const MAX_TRANSLATE_Y = -SCREEN_HEIGHT + 50;
   const translateY = useSharedValue(0);
   const active = useSharedValue(false);
 
@@ -86,7 +88,7 @@ export const BottomSheet = ({ isVisible, onClose, children, height = SCREEN_HEIG
         <Animated.View style={[styles.backdrop, rBackdropStyle]} />
       </TouchableWithoutFeedback>
       <GestureDetector gesture={gesture}>
-        <Animated.View style={[styles.bottomSheetContainer, { height: SCREEN_HEIGHT }, rBottomSheetStyle]}>
+        <Animated.View style={[styles.bottomSheetContainer, { height: SCREEN_HEIGHT, top: SCREEN_HEIGHT }, rBottomSheetStyle]}>
           <View style={styles.dragHandle} />
           {children}
         </Animated.View>
@@ -105,7 +107,7 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: 'white',
     position: 'absolute',
-    top: SCREEN_HEIGHT,
+    // top: SCREEN_HEIGHT will be applied dynamically
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     zIndex: 1000,

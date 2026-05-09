@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
   SafeAreaView,
   Platform,
-  Dimensions,
+  useWindowDimensions,
   ImageBackground,
   StatusBar,
   ScrollView,
@@ -40,19 +40,16 @@ import Animated, {
 import { useAppStore } from "../../store/useAppStore";
 import dtcData from "../../data/dtc_data.json";
 
-const { width, height: SCREEN_HEIGHT } = Dimensions.get("window");
-
-// Collapsed height for exactly 2 items
 const SHEET_MIN_HEIGHT = 210; 
-// Expanded height to show more
-const SHEET_FULL_HEIGHT = SCREEN_HEIGHT * 0.78; 
 
 export const MapScreen = ({ navigation }: any) => {
+  const { width, height: SCREEN_HEIGHT } = useWindowDimensions();
+  const SHEET_FULL_HEIGHT = SCREEN_HEIGHT * 0.78; 
   const webViewRef = useRef<WebView>(null);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const translateY = useSharedValue(SHEET_FULL_HEIGHT - SHEET_MIN_HEIGHT);
+  const translateY = useSharedValue(SCREEN_HEIGHT * 0.78 - SHEET_MIN_HEIGHT);
   const context = useSharedValue({ y: 0 });
   const cursorOpacity = useSharedValue(0);
   const { setShowFooter } = useAppStore();
@@ -290,7 +287,7 @@ export const MapScreen = ({ navigation }: any) => {
           </Animated.View>
         </View>
 
-        <Animated.View style={[styles.eliteSheet, animatedSheetStyle]}>
+        <Animated.View style={[styles.eliteSheet, animatedSheetStyle, { height: SHEET_FULL_HEIGHT + 50 }]}>
           <GestureDetector gesture={gesture}>
             <View style={styles.dragArea}>
               <View style={styles.handleBar} />
@@ -345,7 +342,7 @@ const styles = StyleSheet.create({
     bottom: -15, 
     left: 0, 
     right: 0, 
-    height: SHEET_FULL_HEIGHT + 50,
+    // height moved to inline style for dynamic calculation
     backgroundColor: "white", 
     borderTopLeftRadius: 32, 
     borderTopRightRadius: 32, 

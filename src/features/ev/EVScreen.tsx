@@ -1,11 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, useWindowDimensions } from 'react-native';
 import { Screen } from '../../components/Screen';
 import { RemixIcon } from '../../components/RemixIcon';
 import { MetroLogo } from '../../components/MetroLogo';
 
-const { width } = Dimensions.get('window');
-const ITEM_WIDTH = (width - 60) / 3;
+
 
 const HUB_SERVICES = [
   { id: '1', name: 'Bus', icon: 'bus-fill', color: '#FFB74D' },
@@ -17,6 +16,8 @@ const HUB_SERVICES = [
 ];
 
 export const EVScreen = () => {
+  const { width } = useWindowDimensions();
+  const ITEM_WIDTH = (width - 60) / 3;
   return (
     <Screen 
       noPadding 
@@ -31,7 +32,7 @@ export const EVScreen = () => {
     >
       <View style={styles.gridContainer}>
         {HUB_SERVICES.map((item) => (
-          <TouchableOpacity key={item.id} style={styles.serviceItem}>
+          <TouchableOpacity key={item.id} style={[styles.serviceItem, { width: ITEM_WIDTH }]}>
             <View style={[styles.iconCircle, { backgroundColor: item.color + '15' }]}>
               {item.icon === 'metro' ? (
                 <MetroLogo size={32} />
@@ -80,7 +81,6 @@ const styles = StyleSheet.create({
     marginTop: 20
   },
   serviceItem: {
-    width: ITEM_WIDTH,
     alignItems: 'center',
     marginBottom: 25,
   },
