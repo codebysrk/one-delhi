@@ -9,7 +9,7 @@ interface TicketCardProps {
   showTimer?: boolean;
 }
 
-export const TicketCard: React.FC<TicketCardProps> = React.memo(({ ticket, onPress, showTimer }) => {
+export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onPress, showTimer }) => {
   const expired = isTicketExpired(ticket.timestamp);
   const isInvalid = ticket.status === TicketStatus.INVALID;
   
@@ -79,7 +79,7 @@ export const TicketCard: React.FC<TicketCardProps> = React.memo(({ ticket, onPre
       </View>
     </TouchableOpacity>
   );
-});
+};
 
 const styles = StyleSheet.create({
   card: { 

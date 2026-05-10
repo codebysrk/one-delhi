@@ -22,7 +22,6 @@ import {
   BackHandler,
   FlatList,
 } from "react-native";
-import { FlashList } from "@shopify/flash-list";
 import { ScrollView } from "react-native-gesture-handler";
 import { Platform } from "react-native";
 import { useAppStore } from "../../store/useAppStore";
@@ -66,43 +65,6 @@ const TimerPill = React.memo(({ timeLeft }: { timeLeft: number }) => {
   );
 });
 
-const SearchInput = React.memo(
-  ({
-    inputRef,
-    placeholder,
-    value,
-    onChangeText,
-    onFocus,
-    icon,
-    showClose,
-    onClear,
-    editable = true,
-    autoCapitalize = "none" as any,
-  }: any) => (
-    <View style={styles.searchBox}>
-      <View style={styles.iconContainer}>{icon}</View>
-      <TextInput
-        ref={inputRef}
-        style={styles.input}
-        placeholder={placeholder}
-        placeholderTextColor="#9CA3AF"
-        value={value}
-        onChangeText={onChangeText}
-        onFocus={onFocus}
-        onPressIn={onFocus}
-        editable={editable}
-        autoCorrect={false}
-        autoCapitalize={autoCapitalize}
-      />
-      {showClose && (
-        <TouchableOpacity onPress={onClear}>
-          <RemixIcon name="close-circle-fill" size={20} color="#CCC" />
-        </TouchableOpacity>
-      )}
-    </View>
-  ),
-);
-
 export const BookingScreen = ({ navigation }: any) => {
   // --- 1. Hooks & State ---
   const { setShowFooter } = useAppStore();
@@ -133,22 +95,16 @@ export const BookingScreen = ({ navigation }: any) => {
   const sourceInputRef = useRef<TextInput>(null);
   const destInputRef = useRef<TextInput>(null);
   const isSelecting = useRef(false);
-
-  // Isolated measurement systems
-  const [routeMeasuredPos, setRouteMeasuredPos] = useState({
-    x: 0,
-    y: 0,
-    width: 0,
-    height: 0,
-  });
-  const [sourceDestMeasuredPos, setSourceDestMeasuredPos] = useState({
+  const [inputLayouts, setInputLayouts] = useState<
+    Record<string, { y: number; height: number }>
+  >({});
+  const [measuredPos, setMeasuredPos] = useState({
     x: 0,
     y: 0,
     width: 0,
     height: 0,
   });
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const buyBtnStyle = useAnimatedStyle(() => {
     const isReady =
@@ -162,14 +118,8 @@ export const BookingScreen = ({ navigation }: any) => {
   }, [routeSearch, sourceSearch, destSearch, isManualFare, manualTotal]);
 
   useEffect(() => {
-    const showSubscription = Keyboard.addListener("keyboardDidShow", (e) => {
-      setIsKeyboardVisible(true);
-      setKeyboardHeight(e.endCoordinates.height);
-    });
-    const hideSubscription = Keyboard.addListener("keyboardDidHide", () => {
-      setIsKeyboardVisible(false);
-      setKeyboardHeight(0);
-    });
+    const showSubscription = Keyboard.addListener("keyboardDidShow", () => setIsKeyboardVisible(true));
+    const hideSubscription = Keyboard.addListener("keyboardDidHide", () => setIsKeyboardVisible(false));
     return () => {
       showSubscription.remove();
       hideSubscription.remove();
@@ -314,20 +264,16 @@ export const BookingScreen = ({ navigation }: any) => {
         return;
       }
     }
-    const unitPrice = isManualFare 
-      ? (Number(manualTotal) || 0) / qty 
-      : baseFare + (busType === "AC" ? 5 : 0);
-
     const ticketData = {
       route: selectedFullRouteId || routeSearch.split("-")[0].trim(),
       source: sourceSearch,
       dest: destSearch,
       qty: qty,
       busType: busType,
-      baseFare: unitPrice,
+      baseFare: isManualFare ? Number(manualTotal) / qty : baseFare,
       total: isManualFare
         ? ((Number(manualTotal) || 0) * 0.9).toFixed(1)
-        : (unitPrice * qty * 0.9).toFixed(1),
+        : calculateTotal(),
     };
 
     setIsFareLoading(true);
@@ -421,46 +367,39 @@ export const BookingScreen = ({ navigation }: any) => {
     return stopsToFilter.filter((s) => s.toLowerCase().includes(searchLower));
   }, [destSearch, activeInput, currentRouteStops, sourceSearch]);
 
-  const handleFocus = useCallback(
-    (type: "route" | "source" | "dest") => {
-      if (isSelecting.current) return;
+  const handleFocus = useCallback((type: "route" | "source" | "dest") => {
+    if (isSelecting.current) return;
 
-      // When route is clicked, clear everything to start fresh
-      if (type === "route") {
-        setRouteSearch("");
-        setSelectedFullRouteId(null);
-        setSourceSearch("");
-        setDestSearch("");
-      }
+    // When route is clicked, clear everything to start fresh
+    if (type === "route") {
+      setRouteSearch("");
+      setSelectedFullRouteId(null);
+      setSourceSearch("");
+      setDestSearch("");
+    }
 
-      // Double check: don't open source/dest if no route is selected
-      if ((type === "source" || type === "dest") && !selectedFullRouteId) {
-        return;
-      }
+    // Double check: don't open source/dest if no route is selected
+    if ((type === "source" || type === "dest") && !selectedFullRouteId) {
+      return;
+    }
 
-      if (type === "source") setSourceSearch("");
-      if (type === "dest") setDestSearch("");
+    if (type === "source") setSourceSearch("");
+    if (type === "dest") setDestSearch("");
 
-      const ref =
-        type === "route"
-          ? routeInputRef
-          : type === "source"
-            ? sourceInputRef
-            : destInputRef;
+    const ref =
+      type === "route"
+        ? routeInputRef
+        : type === "source"
+          ? sourceInputRef
+          : destInputRef;
 
-      // Independent Measurement logic
-      ref.current?.measure((x, y, width, height, pageX, pageY) => {
-        const finalY = pageY || 0;
-        if (type === "route") {
-          setRouteMeasuredPos({ x: pageX, y: finalY, width, height });
-        } else {
-          setSourceDestMeasuredPos({ x: pageX, y: finalY, width, height });
-        }
-        setActiveInput(type);
-      });
-    },
-    [selectedFullRouteId],
-  );
+    // Measure and open dropdown
+    ref.current?.measure((x, y, width, height, pageX, pageY) => {
+      const finalY = pageY || 0;
+      setMeasuredPos({ x: pageX, y: finalY, width, height });
+      setActiveInput(type);
+    });
+  }, [selectedFullRouteId, measuredPos.height, measuredPos.y, windowHeight]);
 
   const handleSelect = useCallback(
     (type: "route" | "source" | "dest", item: any) => {
@@ -495,59 +434,53 @@ export const BookingScreen = ({ navigation }: any) => {
   );
 
   // 1. DEDICATED ROUTE SUGGESTION SYSTEM
-  const renderRouteItem = useCallback(
-    ({ item, index }: { item: any; index: number }) => (
-      <TouchableOpacity
-        activeOpacity={0.7}
-        style={[styles.routeItem, index === 0 && { borderTopWidth: 0 }]}
-        onPress={() => handleSelect("route", item)}
-      >
-        <View style={styles.routeItemContent}>
-          <View style={styles.routeIconHeader}>
-            <RemixIcon name="bus-fill" size={20} color="#D32F2F" />
-            <Text style={styles.routeNumberText}>
-              {item.id?.replace(/UP$|DOWN$/, "")}
-            </Text>
-          </View>
-          <View style={styles.routeVisualPath}>
-            <View style={styles.routePathVisualizer}>
-              <View style={styles.routeCircle} />
-              <View style={styles.routeLine} />
-              <View style={styles.routeCircle} />
-            </View>
-            <View style={styles.routeLabels}>
-              <Text style={styles.routeTerminalLabel} numberOfLines={1}>
-                {item.stops?.[0]}
-              </Text>
-              <Text style={styles.routeTerminalLabel} numberOfLines={1}>
-                {item.stops?.[item.stops.length - 1]}
-              </Text>
-            </View>
-          </View>
-        </View>
-      </TouchableOpacity>
-    ),
-    [handleSelect],
-  );
-
-  // 2. DEDICATED SOURCE/DESTINATION SYSTEM
-  const renderSourceDestItem = useCallback(
-    ({ item, index }: { item: any; index: number }) => (
-      <TouchableOpacity
-        activeOpacity={0.6}
-        style={[styles.sourceDestItem, index === 0 && { borderTopWidth: 0 }]}
-        onPress={() => handleSelect(activeInput as any, item)}
-      >
-        <View style={styles.sourceDestLayout}>
-          <RemixIcon name="map-pin-fill" size={18} color="#666" />
-          <Text style={styles.sourceDestItemText} numberOfLines={1}>
-            {item}
+  const renderRouteItem = useCallback(({ item, index }: { item: any; index: number }) => (
+    <TouchableOpacity
+      activeOpacity={0.7}
+      style={[styles.routeItem, index === 0 && { borderTopWidth: 0 }]}
+      onPress={() => handleSelect("route", item)}
+    >
+      <View style={styles.routeItemContent}>
+        <View style={styles.routeIconHeader}>
+          <RemixIcon name="bus-fill" size={20} color="#D32F2F" />
+          <Text style={styles.routeNumberText}>
+            {item.id?.replace(/UP$|DOWN$/, "")}
           </Text>
         </View>
-      </TouchableOpacity>
-    ),
-    [activeInput, handleSelect],
-  );
+        <View style={styles.routeVisualPath}>
+          <View style={styles.routePathVisualizer}>
+            <View style={styles.routeCircle} />
+            <View style={styles.routeLine} />
+            <View style={styles.routeCircle} />
+          </View>
+          <View style={styles.routeLabels}>
+            <Text style={styles.routeTerminalLabel} numberOfLines={1}>
+              {item.stops?.[0]}
+            </Text>
+            <Text style={styles.routeTerminalLabel} numberOfLines={1}>
+              {item.stops?.[item.stops.length - 1]}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  ), [handleSelect]);
+
+  // 2. DEDICATED SOURCE/DESTINATION SYSTEM
+  const renderSourceDestItem = useCallback(({ item, index }: { item: any; index: number }) => (
+    <TouchableOpacity
+      activeOpacity={0.6}
+      style={[styles.sourceDestItem, index === 0 && { borderTopWidth: 0 }]}
+      onPress={() => handleSelect(activeInput as any, item)}
+    >
+      <View style={styles.sourceDestLayout}>
+        <RemixIcon name="map-pin-fill" size={18} color="#666" />
+        <Text style={styles.sourceDestItemText} numberOfLines={1}>
+          {item}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  ), [activeInput, handleSelect]);
 
   const renderHeader = useCallback(
     () => (
@@ -580,71 +513,123 @@ export const BookingScreen = ({ navigation }: any) => {
               styles.cardSection,
               { zIndex: activeInput === "route" ? 9999 : 100 },
             ]}
+            onLayout={(event) => {
+              const layout = event.nativeEvent.layout;
+              setInputLayouts((prev) => ({ ...prev, route: layout }));
+            }}
           >
             <Text style={styles.label}>Route Info</Text>
-            <SearchInput
-              inputRef={routeInputRef}
-              placeholder="Current Route"
-              value={routeSearch}
-              onChangeText={setRouteSearch}
-              onFocus={() => handleFocus("route")}
-              icon={<RemixIcon name="route-fill" size={24} color="#000" />}
-              showClose={routeSearch.length > 0}
-              onClear={() => {
-                setRouteSearch("");
-                setActiveInput("route");
-                routeInputRef.current?.focus();
-              }}
-              autoCapitalize="characters"
-            />
+            <View style={styles.searchBox}>
+              <View style={styles.iconContainer}>
+                <RemixIcon name="route-fill" size={24} color="#000" />
+              </View>
+              <TextInput
+                ref={routeInputRef}
+                style={styles.input}
+                placeholder="Current Route"
+                placeholderTextColor="#9CA3AF"
+                value={routeSearch}
+                onChangeText={setRouteSearch}
+                onFocus={() => handleFocus("route")}
+                onPressIn={() => handleFocus("route")}
+                autoCorrect={false}
+                autoCapitalize="characters"
+              />
+              {routeSearch.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => {
+                    setRouteSearch("");
+                    setActiveInput("route");
+                    routeInputRef.current?.focus();
+                  }}
+                >
+                  <RemixIcon name="close-circle-fill" size={20} color="#CCC" />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           <View
             style={[
               styles.cardSection,
               {
-                zIndex: activeInput === "source" || activeInput === "dest" ? 8888 : 50,
+                zIndex:
+                  activeInput === "source" || activeInput === "dest"
+                    ? 8888
+                    : 50,
               },
             ]}
           >
             <Text style={styles.label}>From - To</Text>
 
             {/* Source Input Container */}
-            <View style={{ zIndex: activeInput === "source" ? 9000 : 1, marginBottom: 12 }}>
-              <SearchInput
-                inputRef={sourceInputRef}
-                placeholder="Source Stop"
-                value={sourceSearch}
-                onChangeText={setSourceSearch}
-                onFocus={() => handleFocus("source")}
-                icon={<View style={styles.dotIcon} />}
-                showClose={sourceSearch.length > 0}
-                onClear={() => {
-                  setSourceSearch("");
-                  setActiveInput("source");
-                  sourceInputRef.current?.focus();
-                }}
-                editable={!!selectedFullRouteId}
-              />
+            <View style={{ zIndex: activeInput === "source" ? 9000 : 1 }}>
+              <View style={[styles.searchBox, { marginBottom: 12 }]}>
+                <View style={styles.iconContainer}>
+                  <View style={styles.dotIcon} />
+                </View>
+                <TextInput
+                  ref={sourceInputRef}
+                  style={styles.input}
+                  placeholder="Source Stop"
+                  placeholderTextColor="#9CA3AF"
+                  value={sourceSearch}
+                  onChangeText={setSourceSearch}
+                  onFocus={() => handleFocus("source")}
+                  onPressIn={() => handleFocus("source")}
+                  editable={!!selectedFullRouteId}
+                />
+                {sourceSearch.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSourceSearch("");
+                      setActiveInput("source");
+                      sourceInputRef.current?.focus();
+                    }}
+                  >
+                    <RemixIcon
+                      name="close-circle-fill"
+                      size={20}
+                      color="#CCC"
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
 
             {/* Destination Input Container */}
             <View style={{ zIndex: activeInput === "dest" ? 9000 : 1 }}>
-              <SearchInput
-                inputRef={destInputRef}
-                placeholder="Destination Stop"
-                value={destSearch}
-                onChangeText={setDestSearch}
-                onFocus={() => handleFocus("dest")}
-                icon={<RemixIcon name="map-pin-2-fill" size={24} color="#000" />}
-                showClose={destSearch.length > 0}
-                onClear={() => {
-                  setDestSearch("");
-                  setActiveInput("dest");
-                  destInputRef.current?.focus();
-                }}
-                editable={!!selectedFullRouteId}
-              />
+              <View style={[styles.searchBox]}>
+                <View style={styles.iconContainer}>
+                  <RemixIcon name="map-pin-2-fill" size={24} color="#000" />
+                </View>
+                <TextInput
+                  ref={destInputRef}
+                  style={styles.input}
+                  placeholder="Destination Stop"
+                  placeholderTextColor="#9CA3AF"
+                  value={destSearch}
+                  onChangeText={setDestSearch}
+                  onFocus={() => handleFocus("dest")}
+                  onPressIn={() => handleFocus("dest")}
+                  editable={!!selectedFullRouteId}
+                />
+                {destSearch.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setDestSearch("");
+                      setActiveInput("dest");
+                      destInputRef.current?.focus();
+                    }}
+                  >
+                    <RemixIcon
+                      name="close-circle-fill"
+                      size={20}
+                      color="#CCC"
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           </View>
 
@@ -884,40 +869,28 @@ export const BookingScreen = ({ navigation }: any) => {
         {renderBottomSummary()}
 
         {activeInput && (
-          <View style={styles.overlayContainer} pointerEvents="box-none">
+          <View style={styles.overlayContainer}>
             <TouchableOpacity
               activeOpacity={1}
               style={styles.backdrop}
               onPress={() => setActiveInput(null)}
             />
-            <Animated.View
-              entering={FadeIn.duration(200)}
+
+            <View
               style={[
-                activeInput === "route"
-                  ? styles.routeDropdownWrapper
+                activeInput === "route" 
+                  ? styles.routeDropdownWrapper 
                   : styles.sourceDestDropdownWrapper,
-                activeInput === "route"
-                  ? {
-                      left: routeMeasuredPos.x + 25,
-                      width: routeMeasuredPos.width - 16,
-                      top: routeMeasuredPos.y + routeMeasuredPos.height + 8,
-                      maxHeight: Math.min(
-                        windowHeight * 0.75,
-                        windowHeight - (routeMeasuredPos.y + routeMeasuredPos.height - 100) - keyboardHeight
-                      ),
-                    }
-                  : {
-                      left: sourceDestMeasuredPos.x + 25,
-                      width: sourceDestMeasuredPos.width - 16,
-                      top: sourceDestMeasuredPos.y + sourceDestMeasuredPos.height - 50,
-                      maxHeight: Math.min(
-                        windowHeight * 0.7,
-                        windowHeight - (sourceDestMeasuredPos.y + sourceDestMeasuredPos.height - 80) - keyboardHeight
-                      ),
-                    },
+                {
+                  left: activeInput === "route" ? measuredPos.x + 8 : measuredPos.x + 40,
+                  width: activeInput === "route" ? measuredPos.width - 16 : measuredPos.width - 35,
+                  ...(measuredPos.y > windowHeight * 0.35
+                    ? { bottom: windowHeight - measuredPos.y + (activeInput === "route" ? 10 : 120) }
+                    : { top: measuredPos.y + measuredPos.height + (activeInput === "route" ? 8 : 5) }),
+                },
               ]}
             >
-              <FlashList
+              <FlatList
                 data={
                   activeInput === "route"
                     ? filteredRoutes
@@ -925,21 +898,15 @@ export const BookingScreen = ({ navigation }: any) => {
                       ? filteredSources
                       : filteredDests
                 }
-                contentContainerStyle={
-                  activeInput === "route"
-                    ? styles.routeListContent
-                    : styles.sourceDestListContent
-                }
+                contentContainerStyle={activeInput === "route" ? styles.routeListContent : styles.sourceDestListContent}
                 keyExtractor={(item, index) => `${activeInput}-${index}`}
                 keyboardShouldPersistTaps="always"
                 nestedScrollEnabled={true}
                 showsVerticalScrollIndicator={true}
-                estimatedItemSize={activeInput === "route" ? 100 : 50}
-                renderItem={
-                  activeInput === "route"
-                    ? renderRouteItem
-                    : renderSourceDestItem
-                }
+                initialNumToRender={200}
+                maxToRenderPerBatch={200}
+                windowSize={10}
+                removeClippedSubviews={false}
                 ListEmptyComponent={() => (
                   <View style={activeInput === "route" ? styles.routeEmpty : styles.sourceDestEmpty}>
                     <Text style={activeInput === "route" ? styles.routeEmptyText : styles.sourceDestEmptyText}>
@@ -949,8 +916,9 @@ export const BookingScreen = ({ navigation }: any) => {
                     </Text>
                   </View>
                 )}
+                renderItem={activeInput === "route" ? renderRouteItem : renderSourceDestItem}
               />
-            </Animated.View>
+            </View>
           </View>
         )}
 
@@ -1041,6 +1009,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 12,
     height: 52,
+      
   },
   iconContainer: { marginRight: 12 },
   dotIcon: { width: 14, height: 14, borderRadius: 7, backgroundColor: "#000" },
@@ -1088,9 +1057,9 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 8,
   },
-  routeNumberText: {
-    fontSize: 18,
-    fontWeight: "700",
+  routeNumberText: { 
+    fontSize: 18, 
+    fontWeight: "700", 
     color: "#000",
   },
   routeVisualPath: {
@@ -1137,7 +1106,7 @@ const styles = StyleSheet.create({
   // --- 2. SOURCE/DEST DROPDOWN STYLING (Isolated but restored to original look) ---
   sourceDestDropdownWrapper: {
     position: "absolute",
-    top: 5,
+    top:5,
     backgroundColor: "white",
     borderRadius: 12,
     elevation: 20,

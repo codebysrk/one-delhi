@@ -12,7 +12,6 @@ import {
   StatusBar,
   ScrollView,
 } from "react-native";
-import { FlashList } from "@shopify/flash-list";
 import { WebView } from "react-native-webview";
 import * as Location from "expo-location";
 import { useFocusEffect } from "@react-navigation/native";
@@ -270,7 +269,6 @@ export const MapScreen = ({ navigation }: any) => {
               scrollEnabled={false} 
               pointerEvents="auto"
               androidHardwareAccelerationDisabled={false} // Performance boost
-              androidLayerType="hardware"
               cacheEnabled={true}
             />
           )}
@@ -300,13 +298,16 @@ export const MapScreen = ({ navigation }: any) => {
             </View>
           </GestureDetector>
 
-          <FlashList
+          <Animated.FlatList
             data={stopsToShow}
             renderItem={renderStopItem}
             keyExtractor={item => item.id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
-            estimatedItemSize={70}
+            initialNumToRender={10}
+            maxToRenderPerBatch={10}
+            windowSize={5}
+            removeClippedSubviews={true} // Performance boost for large lists
           />
         </Animated.View>
       </View>
