@@ -18,24 +18,15 @@ import {
   Keyboard,
   Modal,
   useWindowDimensions,
-  KeyboardAvoidingView,
   BackHandler,
   FlatList,
+  Platform,
 } from "react-native";
-import { ScrollView } from "react-native-gesture-handler";
-import { Platform } from "react-native";
 import { useAppStore } from "../../store/useAppStore";
 import { RemixIcon } from "../../components/RemixIcon";
 import dtcData from "../../data/dtc_data.json";
 import { useFocusEffect } from "@react-navigation/native";
-import { db } from "../../services/firebase";
-import { collection, getDocs } from "firebase/firestore";
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSpring,
-  Layout,
   FadeIn,
   FadeOut,
 } from "react-native-reanimated";
@@ -45,6 +36,74 @@ interface Route {
   name: string;
   stops: string[];
 }
+
+// Fare slab configuration
+interface FareSlab {
+  minStops: number;
+  maxStops: number;
+  nonACFare: number;
+  acFare: number;
+}
+
+const FARE_SLABS: FareSlab[] = [
+  { minStops: 1, maxStops: 5, nonACFare: 5, acFare: 10 },
+  { minStops: 6, maxStops: 15, nonACFare: 10, acFare: 15 },
+  { minStops: 16, maxStops: Infinity, nonACFare: 15, acFare: 25 },
+];
+
+// Fare calculation utilities
+const getFareForSlab = (
+  stopCount: number,
+  busType: "AC" | "Non-AC",
+): { fare: number; slab: FareSlab } => {
+  const applicableSlab = FARE_SLABS.find(
+    (slab) => stopCount >= slab.minStops && stopCount <= slab.maxStops,
+  );
+
+  if (!applicableSlab) {
+    return { fare: 0, slab: FARE_SLABS[2] }; // Default to highest slab
+  }
+
+  const fare =
+    busType === "AC" ? applicableSlab.acFare : applicableSlab.nonACFare;
+  return { fare, slab: applicableSlab };
+};
+
+const validateManualFare = (
+  fare: number,
+  qty: number,
+): {
+  isValid: boolean;
+  status: "VALID" | "INVALID" | "MIN" | "MAX" | "EMPTY";
+  message?: string;
+} => {
+  if (isNaN(fare) || fare <= 0) {
+    return {
+      isValid: false,
+      status: "INVALID",
+      message: "Fare must be a positive number",
+    };
+  }
+
+  if (fare < 5) {
+    return { isValid: false, status: "MIN", message: `Minimum fare is ₹5` };
+  }
+
+  if (fare > 100) {
+    return { isValid: false, status: "MAX", message: "Maximum fare is ₹100" };
+  }
+
+  const maxTotal = fare * qty;
+  if (maxTotal > 500) {
+    return {
+      isValid: false,
+      status: "MAX",
+      message: "Maximum total fare is ₹500",
+    };
+  }
+
+  return { isValid: true, status: "VALID" };
+};
 
 const TimerPill = React.memo(({ timeLeft }: { timeLeft: number }) => {
   const formatTime = (seconds: number) => {
@@ -71,7 +130,6 @@ export const BookingScreen = ({ navigation }: any) => {
   const [timeLeft, setTimeLeft] = useState(180);
   const [busType, setBusType] = useState<"AC" | "Non-AC">("AC");
   const [qty, setQty] = useState(1);
-  const [baseFare, setBaseFare] = useState(5);
 
   const [routeSearch, setRouteSearch] = useState("");
   const [sourceSearch, setSourceSearch] = useState("");
@@ -80,24 +138,23 @@ export const BookingScreen = ({ navigation }: any) => {
     "route" | "source" | "dest" | null
   >(null);
 
-  const [isFareLoading, setIsFareLoading] = useState(false);
   const [isManualFare, setIsManualFare] = useState(false);
   const [manualTotal, setManualTotal] = useState("");
-  const [lastTap, setLastTap] = useState(0);
   const [selectedFullRouteId, setSelectedFullRouteId] = useState("");
   const [dbRoutes, setDbRoutes] = useState<Route[]>([]);
   const [isDbLoading, setIsDbLoading] = useState(true);
 
+  // Fare calculation state
+  const [validationStatus, setValidationStatus] = useState<
+    "VALID" | "INVALID" | "MIN" | "MAX" | "EMPTY"
+  >("VALID");
+
   const { height: windowHeight } = useWindowDimensions();
   const [showToast, setShowToast] = useState(false);
-  const scrollRef = useRef<ScrollView>(null);
   const routeInputRef = useRef<TextInput>(null);
   const sourceInputRef = useRef<TextInput>(null);
   const destInputRef = useRef<TextInput>(null);
   const isSelecting = useRef(false);
-  const [inputLayouts, setInputLayouts] = useState<
-    Record<string, { y: number; height: number }>
-  >({});
   const [measuredPos, setMeasuredPos] = useState({
     x: 0,
     y: 0,
@@ -106,20 +163,13 @@ export const BookingScreen = ({ navigation }: any) => {
   });
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
-  const buyBtnStyle = useAnimatedStyle(() => {
-    const isReady =
-      routeSearch &&
-      sourceSearch &&
-      destSearch &&
-      (!isManualFare || manualTotal.length > 0);
-    return {
-      transform: [{ scale: withSpring(isReady ? 1 : 0.98) }],
-    };
-  }, [routeSearch, sourceSearch, destSearch, isManualFare, manualTotal]);
-
   useEffect(() => {
-    const showSubscription = Keyboard.addListener("keyboardDidShow", () => setIsKeyboardVisible(true));
-    const hideSubscription = Keyboard.addListener("keyboardDidHide", () => setIsKeyboardVisible(false));
+    const showSubscription = Keyboard.addListener("keyboardDidShow", () =>
+      setIsKeyboardVisible(true),
+    );
+    const hideSubscription = Keyboard.addListener("keyboardDidHide", () =>
+      setIsKeyboardVisible(false),
+    );
     return () => {
       showSubscription.remove();
       hideSubscription.remove();
@@ -153,14 +203,14 @@ export const BookingScreen = ({ navigation }: any) => {
   }, []);
 
   useEffect(() => {
-    if (timeLeft <= 0 || isFareLoading) return;
+    if (timeLeft <= 0) return;
 
     const interval = setInterval(() => {
       setTimeLeft((prev) => Math.max(0, prev - 1));
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isFareLoading]);
+  }, []);
 
   // Handle footer visibility
   useFocusEffect(
@@ -198,50 +248,96 @@ export const BookingScreen = ({ navigation }: any) => {
     }
   }, [timeLeft, navigation, resetForm]);
 
-  useEffect(() => {
-    if (isManualFare) return;
-
-    if (routeSearch && sourceSearch && destSearch) {
-      setIsFareLoading(true);
-      const routeId = routeSearch.split("-")[0].trim().toLowerCase();
-      const foundRoute = dbRoutes.find(
-        (r) =>
-          r.id?.toLowerCase() === routeId || r.name?.toLowerCase() === routeId,
-      );
-
-      if (foundRoute) {
-        const srcIdx = foundRoute.stops.indexOf(sourceSearch);
-        const dstIdx = foundRoute.stops.indexOf(destSearch);
-
-        if (srcIdx !== -1 && dstIdx !== -1) {
-          const stopDiff = Math.abs(dstIdx - srcIdx);
-          let newFare = 5;
-
-          if (stopDiff <= 3) newFare = 5;
-          else if (stopDiff <= 6) newFare = 10;
-          else if (stopDiff <= 10) newFare = 15;
-          else newFare = 20;
-
-          setBaseFare(newFare);
-          setIsFareLoading(false);
-          setActiveInput(null);
-        } else {
-          setIsFareLoading(false);
-        }
-      } else {
-        setIsFareLoading(false);
-      }
-    } else {
-      setBaseFare(5);
-      setIsFareLoading(false);
+  // Auto fare calculation based on stop count and bus type
+  const calculateAutoFare = useCallback(() => {
+    if (!routeSearch || !sourceSearch || !destSearch || !selectedFullRouteId) {
+      return { fare: 0, slab: FARE_SLABS[0], isValid: true };
     }
-  }, [routeSearch, sourceSearch, destSearch, busType, isManualFare]);
 
-  const calculateTotal = useCallback(() => {
-    const premium = busType === "AC" ? 5 : 0;
-    const amount = (baseFare + premium) * qty;
-    return (amount * 0.9).toFixed(1);
-  }, [baseFare, busType, qty]);
+    const foundRoute = dbRoutes.find(
+      (r) =>
+        r.id?.toLowerCase() === selectedFullRouteId?.toLowerCase() ||
+        r.name?.toLowerCase() === selectedFullRouteId?.toLowerCase(),
+    );
+
+    if (!foundRoute) {
+      return { fare: 0, slab: FARE_SLABS[0], isValid: false };
+    }
+
+    const srcIdx = foundRoute.stops.indexOf(sourceSearch);
+    const dstIdx = foundRoute.stops.indexOf(destSearch);
+
+    if (srcIdx === -1 || dstIdx === -1) {
+      return { fare: 0, slab: FARE_SLABS[0], isValid: false };
+    }
+
+    const stopCount = Math.abs(dstIdx - srcIdx);
+    const { fare, slab } = getFareForSlab(stopCount, busType);
+    return {
+      fare,
+      slab,
+      isValid: true,
+      validationStatus: "VALID",
+      validationMessage: "",
+    };
+  }, [
+    routeSearch,
+    sourceSearch,
+    destSearch,
+    selectedFullRouteId,
+    busType,
+    dbRoutes,
+  ]);
+
+  // Real-time fare calculation updates handled in getCurrentFare function
+
+  // Unified fare calculation function
+  const getCurrentFare = useCallback(() => {
+    if (isManualFare) {
+      const validation = validateManualFare(Number(manualTotal), qty);
+      setValidationStatus(validation.status);
+
+      if (!validation.isValid) {
+        return {
+          fare: 0,
+          slab: FARE_SLABS[0],
+          isValid: false,
+          source: "MANUAL",
+          validationStatus: validation.status,
+          validationMessage: validation.message,
+        };
+      }
+
+      const manualFarePerTicket = Number(manualTotal) / qty;
+      return {
+        fare: manualFarePerTicket,
+        slab: null,
+        isValid: true,
+        source: "MANUAL",
+        validationStatus: "VALID",
+        validationMessage: undefined,
+      };
+    } else {
+      const autoResult = calculateAutoFare();
+      return {
+        ...autoResult,
+        source: "AUTO",
+      };
+    }
+  }, [isManualFare, manualTotal, qty, calculateAutoFare]);
+
+  const getFinalFare = useCallback(() => {
+    const currentFare = getCurrentFare();
+    const finalFare = currentFare.fare * qty;
+    const discountedFare = finalFare * 0.9;
+
+    return {
+      ...currentFare,
+      originalTotal: finalFare.toFixed(1),
+      finalFare: discountedFare.toFixed(1),
+      total: discountedFare.toFixed(1),
+    };
+  }, [getCurrentFare, qty]);
 
   const handleBuy = useCallback(() => {
     if (!routeSearch || !sourceSearch || !destSearch) {
@@ -264,21 +360,26 @@ export const BookingScreen = ({ navigation }: any) => {
         return;
       }
     }
+    const currentFare = getCurrentFare();
+    const finalFare = getFinalFare();
+
     const ticketData = {
       route: selectedFullRouteId || routeSearch.split("-")[0].trim(),
       source: sourceSearch,
       dest: destSearch,
       qty: qty,
       busType: busType,
-      baseFare: isManualFare ? Number(manualTotal) / qty : baseFare,
-      total: isManualFare
-        ? ((Number(manualTotal) || 0) * 0.9).toFixed(1)
-        : calculateTotal(),
+      fare: currentFare.fare,
+      baseFare: currentFare.fare,
+      finalFare: finalFare.total,
+      fareSource: currentFare.source,
+      validationStatus: currentFare.validationStatus,
+      validationMessage: currentFare.validationMessage,
+      slab: currentFare.slab,
+      total: finalFare.total,
     };
 
-    setIsFareLoading(true);
     setTimeout(() => {
-      setIsFareLoading(false);
       navigation.navigate("Payment", { ticketData });
     }, 2000);
   }, [
@@ -287,8 +388,8 @@ export const BookingScreen = ({ navigation }: any) => {
     destSearch,
     isManualFare,
     manualTotal,
-    baseFare,
-    calculateTotal,
+    getCurrentFare,
+    getFinalFare,
     navigation,
   ]);
 
@@ -342,7 +443,7 @@ export const BookingScreen = ({ navigation }: any) => {
     // If it's a full selection, show all stops of the route
     if (currentRouteStops.includes(sourceSearch)) return currentRouteStops;
 
-    const searchLower = sourceSearch.toLowerCase();
+    const searchLower = sourceSearch.toLowerCase().trim();
     return currentRouteStops.filter((s) =>
       s.toLowerCase().includes(searchLower),
     );
@@ -363,43 +464,74 @@ export const BookingScreen = ({ navigation }: any) => {
     // If it's a full selection, show all remaining stops
     if (stopsToFilter.includes(destSearch)) return stopsToFilter;
 
-    const searchLower = destSearch.toLowerCase();
+    const searchLower = destSearch.toLowerCase().trim();
     return stopsToFilter.filter((s) => s.toLowerCase().includes(searchLower));
   }, [destSearch, activeInput, currentRouteStops, sourceSearch]);
 
-  const handleFocus = useCallback((type: "route" | "source" | "dest") => {
-    if (isSelecting.current) return;
+  const dropdownPlacement = useMemo(() => {
+    if (!activeInput) return null;
 
-    // When route is clicked, clear everything to start fresh
-    if (type === "route") {
-      setRouteSearch("");
-      setSelectedFullRouteId(null);
-      setSourceSearch("");
-      setDestSearch("");
+    const SAFE_MARGIN = 50;
+    const inputTop = measuredPos.y;
+    const inputBottom = measuredPos.y + measuredPos.height;
+
+    const spaceAbove = inputTop - SAFE_MARGIN;
+    const spaceBelow = windowHeight - inputBottom - SAFE_MARGIN;
+
+    // Decide direction: prefer downward unless space is very limited
+    const openUpward = spaceBelow < 250 && spaceAbove > spaceBelow;
+
+    if (openUpward) {
+      return {
+        bottom: windowHeight - inputTop,
+        maxHeight: spaceAbove,
+        positionStyle: { bottom: windowHeight - inputTop, maxHeight: spaceAbove },
+      };
+    } else {
+      return {
+        top: inputBottom,
+        maxHeight: spaceBelow,
+        positionStyle: { top: inputBottom, maxHeight: spaceBelow },
+      };
     }
+  }, [activeInput, measuredPos, windowHeight]);
 
-    // Double check: don't open source/dest if no route is selected
-    if ((type === "source" || type === "dest") && !selectedFullRouteId) {
-      return;
-    }
+  const handleFocus = useCallback(
+    (type: "route" | "source" | "dest") => {
+      if (isSelecting.current) return;
 
-    if (type === "source") setSourceSearch("");
-    if (type === "dest") setDestSearch("");
+      // When route is clicked, clear everything to start fresh
+      if (type === "route") {
+        setRouteSearch("");
+        setSelectedFullRouteId(null);
+        setSourceSearch("");
+        setDestSearch("");
+      }
 
-    const ref =
-      type === "route"
-        ? routeInputRef
-        : type === "source"
-          ? sourceInputRef
-          : destInputRef;
+      // Double check: don't open source/dest if no route is selected
+      if ((type === "source" || type === "dest") && !selectedFullRouteId) {
+        return;
+      }
 
-    // Measure and open dropdown
-    ref.current?.measure((x, y, width, height, pageX, pageY) => {
-      const finalY = pageY || 0;
-      setMeasuredPos({ x: pageX, y: finalY, width, height });
-      setActiveInput(type);
-    });
-  }, [selectedFullRouteId, measuredPos.height, measuredPos.y, windowHeight]);
+      if (type === "source") setSourceSearch("");
+      if (type === "dest") setDestSearch("");
+
+      const ref =
+        type === "route"
+          ? routeInputRef
+          : type === "source"
+            ? sourceInputRef
+            : destInputRef;
+
+      // Measure and open dropdown
+      ref.current?.measure((x, y, width, height, pageX, pageY) => {
+        const finalY = pageY || 0;
+        setMeasuredPos({ x: pageX, y: finalY, width, height });
+        setActiveInput(type);
+      });
+    },
+    [selectedFullRouteId],
+  );
 
   const handleSelect = useCallback(
     (type: "route" | "source" | "dest", item: any) => {
@@ -434,94 +566,86 @@ export const BookingScreen = ({ navigation }: any) => {
   );
 
   // 1. DEDICATED ROUTE SUGGESTION SYSTEM
-  const renderRouteItem = useCallback(({ item, index }: { item: any; index: number }) => (
-    <TouchableOpacity
-      activeOpacity={0.7}
-      style={[styles.routeItem, index === 0 && { borderTopWidth: 0 }]}
-      onPress={() => handleSelect("route", item)}
-    >
-      <View style={styles.routeItemContent}>
-        <View style={styles.routeIconHeader}>
-          <RemixIcon name="bus-fill" size={20} color="#D32F2F" />
-          <Text style={styles.routeNumberText}>
-            {item.id?.replace(/UP$|DOWN$/, "")}
-          </Text>
-        </View>
-        <View style={styles.routeVisualPath}>
-          <View style={styles.routePathVisualizer}>
-            <View style={styles.routeCircle} />
-            <View style={styles.routeLine} />
-            <View style={styles.routeCircle} />
-          </View>
-          <View style={styles.routeLabels}>
-            <Text style={styles.routeTerminalLabel} numberOfLines={1}>
-              {item.stops?.[0]}
-            </Text>
-            <Text style={styles.routeTerminalLabel} numberOfLines={1}>
-              {item.stops?.[item.stops.length - 1]}
+  const renderRouteItem = useCallback(
+    ({ item, index }: { item: any; index: number }) => (
+      <TouchableOpacity
+        activeOpacity={0.7}
+        style={[styles.routeItem, index === 0 && { borderTopWidth: 0 }]}
+        onPress={() => handleSelect("route", item)}
+      >
+        <View style={styles.routeItemContent}>
+          <View style={styles.routeIconHeader}>
+            <RemixIcon name="bus-fill" size={22} color="#D32F2F" />
+            <Text style={styles.routeNumberText}>
+              {item.id?.replace(/UP$|DOWN$/, "")}
             </Text>
           </View>
-        </View>
-      </View>
-    </TouchableOpacity>
-  ), [handleSelect]);
-
-  // 2. DEDICATED SOURCE/DESTINATION SYSTEM
-  const renderSourceDestItem = useCallback(({ item, index }: { item: any; index: number }) => (
-    <TouchableOpacity
-      activeOpacity={0.6}
-      style={[styles.sourceDestItem, index === 0 && { borderTopWidth: 0 }]}
-      onPress={() => handleSelect(activeInput as any, item)}
-    >
-      <View style={styles.sourceDestLayout}>
-        <RemixIcon name="map-pin-fill" size={18} color="#666" />
-        <Text style={styles.sourceDestItemText} numberOfLines={1}>
-          {item}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  ), [activeInput, handleSelect]);
-
-  const renderHeader = useCallback(
-    () => (
-      <View style={styles.fixedHeader}>
-        <SafeAreaView>
-          <View style={styles.headerTop}>
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={styles.backBtn}
-            >
-              <RemixIcon name="arrow-left-line" size={26} color="white" />
-            </TouchableOpacity>
-            <View style={styles.headerTitleContainer}>
-              <Text style={styles.headerTitle}>Buy tickets</Text>
+          <View style={styles.routeVisualPath}>
+            <View style={styles.routePathVisualizer}>
+              <View style={[styles.routeCircle, styles.routeCircleTop]} />
+              <View style={styles.routeLine} />
+              <View style={[styles.routeCircle, styles.routeCircleBottom]} />
             </View>
-            <View style={{ width: 40 }} />
+            <View style={styles.routeLabels}>
+              <Text style={styles.routeTerminalLabel} numberOfLines={1}>
+                {item.stops?.[0]}
+              </Text>
+              <Text style={styles.routeTerminalLabel} numberOfLines={1}>
+                {item.stops?.[item.stops.length - 1]}
+              </Text>
+            </View>
           </View>
-        </SafeAreaView>
-      </View>
+        </View>
+      </TouchableOpacity>
     ),
-    [navigation],
+    [handleSelect],
   );
 
-  const renderBookingCard = useCallback(
-    () => (
-      <View style={styles.mainCardWrapper}>
-        <View style={styles.mainCard}>
-          <View
-            style={[
-              styles.cardSection,
-              { zIndex: activeInput === "route" ? 9999 : 100 },
-            ]}
-            onLayout={(event) => {
-              const layout = event.nativeEvent.layout;
-              setInputLayouts((prev) => ({ ...prev, route: layout }));
-            }}
-          >
-            <Text style={styles.label}>Route Info</Text>
-            <View style={styles.searchBox}>
-              <View style={styles.iconContainer}>
-                <RemixIcon name="route-fill" size={24} color="#000" />
+  const renderSourceDestItem = useCallback(
+    ({ item, index }: { item: any; index: number }) => (
+      <TouchableOpacity
+        activeOpacity={0.6}
+        style={[styles.stopItem, index === 0 && { borderTopWidth: 0 }]}
+        onPress={() => handleSelect(activeInput as any, item)}
+      >
+        <View style={styles.stopItemRow}>
+          <RemixIcon name="map-pin-fill" size={16} color="#666" />
+          <Text style={styles.stopItemText} numberOfLines={1}>
+            {item}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    ),
+    [activeInput, handleSelect],
+  );
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#D32F2F" />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <SafeAreaView>
+          <View style={styles.headerRow}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+              <RemixIcon name="arrow-left-line" size={26} color="#FFF" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Buy tickets</Text>
+            <View style={styles.backBtn} />
+          </View>
+        </SafeAreaView>
+        <TimerPill timeLeft={timeLeft} />
+      </View>
+
+      {/* Content */}
+      <View style={styles.content}>
+        <View style={styles.card}>
+          {/* Route Input */}
+          <View style={styles.inputSection}>
+            <Text style={styles.inputLabel}>Route Info</Text>
+            <View style={[styles.inputBox, activeInput === "route" && styles.inputBoxFocused]}>
+              <View style={styles.inputIcon}>
+                <RemixIcon name="bus-fill" size={22} color="#D32F2F" />
               </View>
               <TextInput
                 ref={routeInputRef}
@@ -531,133 +655,65 @@ export const BookingScreen = ({ navigation }: any) => {
                 value={routeSearch}
                 onChangeText={setRouteSearch}
                 onFocus={() => handleFocus("route")}
-                onPressIn={() => handleFocus("route")}
                 autoCorrect={false}
                 autoCapitalize="characters"
               />
-              {routeSearch.length > 0 && (
-                <TouchableOpacity
-                  onPress={() => {
-                    setRouteSearch("");
-                    setActiveInput("route");
-                    routeInputRef.current?.focus();
-                  }}
-                >
-                  <RemixIcon name="close-circle-fill" size={20} color="#CCC" />
-                </TouchableOpacity>
-              )}
+              <RemixIcon name="arrow-down-s-line" size={20} color="#9CA3AF" />
             </View>
           </View>
 
-          <View
-            style={[
-              styles.cardSection,
-              {
-                zIndex:
-                  activeInput === "source" || activeInput === "dest"
-                    ? 8888
-                    : 50,
-              },
-            ]}
-          >
-            <Text style={styles.label}>From - To</Text>
-
-            {/* Source Input Container */}
-            <View style={{ zIndex: activeInput === "source" ? 9000 : 1 }}>
-              <View style={[styles.searchBox, { marginBottom: 12 }]}>
-                <View style={styles.iconContainer}>
-                  <View style={styles.dotIcon} />
-                </View>
-                <TextInput
-                  ref={sourceInputRef}
-                  style={styles.input}
-                  placeholder="Source Stop"
-                  placeholderTextColor="#9CA3AF"
-                  value={sourceSearch}
-                  onChangeText={setSourceSearch}
-                  onFocus={() => handleFocus("source")}
-                  onPressIn={() => handleFocus("source")}
-                  editable={!!selectedFullRouteId}
-                />
-                {sourceSearch.length > 0 && (
-                  <TouchableOpacity
-                    onPress={() => {
-                      setSourceSearch("");
-                      setActiveInput("source");
-                      sourceInputRef.current?.focus();
-                    }}
-                  >
-                    <RemixIcon
-                      name="close-circle-fill"
-                      size={20}
-                      color="#CCC"
-                    />
-                  </TouchableOpacity>
-                )}
+          {/* Source/Destination */}
+          <View style={styles.inputSection}>
+            <Text style={styles.inputLabel}>From - To</Text>
+            <View style={[styles.inputBox, activeInput === "source" && styles.inputBoxFocused]}>
+              <View style={styles.inputIcon}>
+                <View style={styles.stopDot} />
               </View>
+              <TextInput
+                ref={sourceInputRef}
+                style={styles.input}
+                placeholder="Source Stop"
+                placeholderTextColor="#9CA3AF"
+                value={sourceSearch}
+                onChangeText={setSourceSearch}
+                onFocus={() => handleFocus("source")}
+                editable={!!selectedFullRouteId}
+              />
+              <RemixIcon name="arrow-down-s-line" size={20} color="#9CA3AF" />
             </View>
 
-            {/* Destination Input Container */}
-            <View style={{ zIndex: activeInput === "dest" ? 9000 : 1 }}>
-              <View style={[styles.searchBox]}>
-                <View style={styles.iconContainer}>
-                  <RemixIcon name="map-pin-2-fill" size={24} color="#000" />
-                </View>
-                <TextInput
-                  ref={destInputRef}
-                  style={styles.input}
-                  placeholder="Destination Stop"
-                  placeholderTextColor="#9CA3AF"
-                  value={destSearch}
-                  onChangeText={setDestSearch}
-                  onFocus={() => handleFocus("dest")}
-                  onPressIn={() => handleFocus("dest")}
-                  editable={!!selectedFullRouteId}
-                />
-                {destSearch.length > 0 && (
-                  <TouchableOpacity
-                    onPress={() => {
-                      setDestSearch("");
-                      setActiveInput("dest");
-                      destInputRef.current?.focus();
-                    }}
-                  >
-                    <RemixIcon
-                      name="close-circle-fill"
-                      size={20}
-                      color="#CCC"
-                    />
-                  </TouchableOpacity>
-                )}
+            <View style={[styles.inputBox, activeInput === "dest" && styles.inputBoxFocused]}>
+              <View style={styles.inputIcon}>
+                <RemixIcon name="map-pin-fill" size={20} color="#000" />
               </View>
+              <TextInput
+                ref={destInputRef}
+                style={styles.input}
+                placeholder="Destination Stop"
+                placeholderTextColor="#9CA3AF"
+                value={destSearch}
+                onChangeText={setDestSearch}
+                onFocus={() => handleFocus("dest")}
+                editable={!!selectedFullRouteId}
+              />
+              <RemixIcon name="arrow-down-s-line" size={20} color="#9CA3AF" />
             </View>
           </View>
 
-          <View style={styles.cardSection}>
-            <Text style={styles.label}>Bus Type</Text>
-            <View style={styles.row}>
-              {["AC", "Non-AC"].map((type) => (
+          {/* Bus Type */}
+          <View style={styles.inputSection}>
+            <Text style={styles.inputLabel}>Bus Type</Text>
+            <View style={styles.typeRow}>
+              {(["AC", "Non-AC"] as const).map((type) => (
                 <TouchableOpacity
                   key={type}
-                  activeOpacity={0.8}
                   style={[
                     styles.typeBtn,
-                    busType === type &&
-                      (type === "AC"
-                        ? styles.typeBtnActive
-                        : styles.typeBtnActiveGreen),
+                    busType === type && (type === "AC" ? styles.typeBtnActive : styles.typeBtnActiveNonAC)
                   ]}
-                  onPress={() => {
-                    setBusType(type as any);
-                    setIsManualFare(false);
-                  }}
+                  onPress={() => setBusType(type)}
                 >
-                  <Text
-                    style={[
-                      styles.typeBtnText,
-                      busType === type && styles.typeBtnTextActive,
-                    ]}
-                  >
+                  <Text style={[styles.typeBtnText, busType === type && styles.typeBtnTextActive]}>
                     {type}
                   </Text>
                 </TouchableOpacity>
@@ -666,400 +722,382 @@ export const BookingScreen = ({ navigation }: any) => {
           </View>
         </View>
       </View>
-    ),
-    [activeInput, routeSearch, sourceSearch, destSearch, busType, handleFocus],
-  );
 
-  const renderBottomSummary = useCallback(
-    () => (
-      <View style={styles.bottomCardSticky}>
-        <Text style={styles.labelDark}>Number of tickets</Text>
-        <View style={[styles.row, { marginBottom: 15 }]}>
+      {/* Bottom Section */}
+      <View style={styles.bottom}>
+        <Text style={styles.bottomLabel}>Number of tickets</Text>
+        <View style={styles.qtyRow}>
           {[1, 2, 3].map((n) => (
             <TouchableOpacity
               key={n}
-              activeOpacity={0.7}
               style={[styles.qtyBtn, qty === n && styles.qtyBtnActive]}
-              onPress={() => {
-                if (isManualFare && manualTotal) {
-                  const oldTotal = Number(manualTotal) || 0;
-                  const newTotal = (oldTotal / qty) * n;
-                  setManualTotal(newTotal.toFixed(1).toString());
-                }
-                setQty(n);
-              }}
+              onPress={() => setQty(n)}
             >
-              <Text
-                style={[
-                  styles.qtyBtnText,
-                  qty === n && styles.qtyBtnTextActive,
-                ]}
-              >
-                {n}
-              </Text>
+              <Text style={[styles.qtyBtnText, qty === n && styles.qtyBtnTextActive]}>{n}</Text>
             </TouchableOpacity>
           ))}
         </View>
-        <View style={styles.priceContainer}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.labelDark}>Amount Payable</Text>
+
+        <View style={styles.fareRow}>
+          <View>
+            <Text style={styles.bottomLabel}>Amount Payable</Text>
             {routeSearch && sourceSearch && destSearch ? (
-              <TouchableOpacity
-                activeOpacity={1}
-                onPress={() => {
-                  const now = Date.now();
-                  if (now - lastTap < 300) {
-                    setIsManualFare(true);
-                    setIsFareLoading(false);
-                    const originalTotal =
-                      (baseFare + (busType === "AC" ? 5 : 0)) * qty;
-                    setManualTotal(originalTotal.toFixed(1).toString());
-                  }
-                  setLastTap(now);
-                }}
-              >
-                {isManualFare ? (
-                  <View style={styles.priceRow}>
-                    <View
-                      style={{ flexDirection: "row", alignItems: "center" }}
-                    >
-                      <Text style={styles.oldPrice}>₹</Text>
-                      <TextInput
-                        style={[
-                          styles.oldPrice,
-                          {
-                            minWidth: 20,
-                            padding: 0,
-                            margin: 0,
-                            height: 35,
-                            textAlignVertical: "center",
-                          },
-                        ]}
-                        value={manualTotal}
-                        onChangeText={(val) => {
-                          const num = Number(val);
-                          const max = 25 * qty;
-                          if (num > max) {
-                            setManualTotal(max.toFixed(1).toString());
-                          } else {
-                            setManualTotal(val);
-                          }
-                        }}
-                        keyboardType="numeric"
-                        autoFocus
-                        selectTextOnFocus
-                        onBlur={() => {
-                          const val = Number(manualTotal);
-                          const min = 5 * qty;
-                          const max = 25 * qty;
-                          if (val < min)
-                            setManualTotal(min.toFixed(1).toString());
-                          if (val > max)
-                            setManualTotal(max.toFixed(1).toString());
-                          if (!manualTotal) setIsManualFare(false);
-                        }}
-                      />
-                    </View>
-                    <Text style={styles.newPrice}>
-                      ₹{((Number(manualTotal) || 0) * 0.9).toFixed(1)}
-                    </Text>
-                  </View>
-                ) : (
-                  <View style={styles.priceRow}>
-                    <Text style={styles.oldPrice}>
-                      ₹
-                      {((baseFare + (busType === "AC" ? 5 : 0)) * qty).toFixed(
-                        1,
-                      )}
-                    </Text>
-                    <Text style={styles.newPrice}>₹{calculateTotal()}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
+              <View style={styles.priceRow}>
+                <Text style={styles.oldPrice}>₹{getFinalFare().originalTotal}</Text>
+                <Text style={styles.newPrice}>₹{getFinalFare().total}</Text>
+              </View>
             ) : (
-              <View style={{ height: 35 }} />
+              <View style={{ height: 36 }} />
             )}
           </View>
-          {routeSearch && sourceSearch && destSearch && !isFareLoading && (
-            <View style={styles.discountPill}>
+          {routeSearch && sourceSearch && destSearch && (
+            <View style={styles.discountBadge}>
               <Text style={styles.discountText}>10.0% off</Text>
             </View>
           )}
         </View>
+
         <TouchableOpacity
-          activeOpacity={0.9}
-          disabled={
-            !routeSearch ||
-            !sourceSearch ||
-            !destSearch ||
-            isFareLoading ||
-            (isManualFare && !manualTotal)
-          }
           style={[
             styles.buyBtn,
-            (!routeSearch ||
-              !sourceSearch ||
-              !destSearch ||
-              isFareLoading ||
-              (isManualFare && !manualTotal)) && {
-              opacity: 0.5,
-              backgroundColor: "#9CA3AF",
-            },
+            (!routeSearch || !sourceSearch || !destSearch) && styles.buyBtnDisabled,
           ]}
           onPress={handleBuy}
+          disabled={!routeSearch || !sourceSearch || !destSearch}
         >
-          <Animated.View style={buyBtnStyle}>
-            <Text style={styles.buyText}>BUY</Text>
-          </Animated.View>
+          <Text style={styles.buyText}>BUY</Text>
         </TouchableOpacity>
       </View>
-    ),
-    [
-      qty,
-      isManualFare,
-      manualTotal,
-      routeSearch,
-      sourceSearch,
-      destSearch,
-      isFareLoading,
-      lastTap,
-      baseFare,
-      busType,
-      calculateTotal,
-      handleBuy,
-      buyBtnStyle,
-    ],
-  );
 
-  return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <View style={[styles.mainContainer, { height: windowHeight }]}>
-        <StatusBar barStyle="light-content" />
-        <View style={styles.redBg} />
-
-        <View style={{ zIndex: 2000 }}>
-          {renderHeader()}
-          <TimerPill timeLeft={timeLeft} />
-          {renderBookingCard()}
+      {/* Dropdown List */}
+      {activeInput && dropdownPlacement && (
+        <View
+          style={[
+            activeInput === "route" ? styles.routeDropdown : styles.stopDropdown,
+            {
+              position: "absolute",
+              left: measuredPos.x,
+              width: measuredPos.width,
+              zIndex: 1000,
+              elevation: 100,
+              ...dropdownPlacement.positionStyle,
+            },
+          ]}
+        >
+          <FlatList
+            data={
+              activeInput === "route"
+                ? filteredRoutes
+                : activeInput === "source"
+                ? filteredSources
+                : filteredDests
+            }
+            keyExtractor={(item, index) => `${activeInput}-${index}`}
+            keyboardShouldPersistTaps="always"
+            nestedScrollEnabled={true}
+            showsVerticalScrollIndicator={true}
+            initialNumToRender={50}
+            maxToRenderPerBatch={50}
+            windowSize={10}
+            bounces={true}
+            ListEmptyComponent={
+              <View style={styles.emptyItem}>
+                <Text style={styles.emptyItemText}>
+                  {!routeSearch &&
+                  (activeInput === "source" || activeInput === "dest")
+                    ? "Please select a route first"
+                    : "No results found"}
+                </Text>
+              </View>
+            }
+            renderItem={
+              activeInput === "route" ? renderRouteItem : renderSourceDestItem
+            }
+          />
         </View>
+      )}
 
-        <TouchableOpacity
-          activeOpacity={1}
-          style={{ flex: 1 }}
-          onPress={Keyboard.dismiss}
+      {/* Toast */}
+      {showToast && (
+        <Animated.View
+          entering={FadeIn.duration(400)}
+          exiting={FadeOut.duration(400)}
+          style={styles.toast}
         >
-          <ScrollView
-            ref={scrollRef}
-            style={styles.contentScroll}
-            contentContainerStyle={styles.scrollContentContainer}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            scrollEnabled={activeInput ? false : true}
-            pointerEvents={activeInput ? "none" : "auto"}
-            bounces={false}
-            overScrollMode="never"
-          >
-            {/* Any extra scrollable content can go here */}
-          </ScrollView>
-        </TouchableOpacity>
-
-        {renderBottomSummary()}
-
-        {activeInput && (
-          <View style={styles.overlayContainer}>
-            <TouchableOpacity
-              activeOpacity={1}
-              style={styles.backdrop}
-              onPress={() => setActiveInput(null)}
-            />
-
-            <View
-              style={[
-                activeInput === "route" 
-                  ? styles.routeDropdownWrapper 
-                  : styles.sourceDestDropdownWrapper,
-                {
-                  left: activeInput === "route" ? measuredPos.x + 8 : measuredPos.x + 40,
-                  width: activeInput === "route" ? measuredPos.width - 16 : measuredPos.width - 35,
-                  ...(measuredPos.y > windowHeight * 0.35
-                    ? { bottom: windowHeight - measuredPos.y + (activeInput === "route" ? 10 : 120) }
-                    : { top: measuredPos.y + measuredPos.height + (activeInput === "route" ? 8 : 5) }),
-                },
-              ]}
-            >
-              <FlatList
-                data={
-                  activeInput === "route"
-                    ? filteredRoutes
-                    : activeInput === "source"
-                      ? filteredSources
-                      : filteredDests
-                }
-                contentContainerStyle={activeInput === "route" ? styles.routeListContent : styles.sourceDestListContent}
-                keyExtractor={(item, index) => `${activeInput}-${index}`}
-                keyboardShouldPersistTaps="always"
-                nestedScrollEnabled={true}
-                showsVerticalScrollIndicator={true}
-                initialNumToRender={200}
-                maxToRenderPerBatch={200}
-                windowSize={10}
-                removeClippedSubviews={false}
-                ListEmptyComponent={() => (
-                  <View style={activeInput === "route" ? styles.routeEmpty : styles.sourceDestEmpty}>
-                    <Text style={activeInput === "route" ? styles.routeEmptyText : styles.sourceDestEmptyText}>
-                      {!routeSearch && (activeInput === "source" || activeInput === "dest")
-                        ? "Please select a route first"
-                        : "No results found"}
-                    </Text>
-                  </View>
-                )}
-                renderItem={activeInput === "route" ? renderRouteItem : renderSourceDestItem}
-              />
-            </View>
-          </View>
-        )}
-
-        {/* Session Timeout Modal */}
-        {/* Toast Notification */}
-        {showToast && (
-          <Animated.View
-            entering={FadeIn.duration(400)}
-            exiting={FadeOut.duration(400)}
-            style={styles.toastContainer}
-          >
-            <Text style={styles.toastText}>Session expired</Text>
-          </Animated.View>
-        )}
-      </View>
-    </KeyboardAvoidingView>
+          <Text style={styles.toastText}>Session expired</Text>
+        </Animated.View>
+      )}
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: "#D32F2F", position: "relative" },
-  redBg: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "#D32F2F",
+  container: {
+    flex: 1,
+    backgroundColor: "#F3F4F6",
   },
-  contentScroll: { flex: 1 },
-  scrollContentContainer: { paddingBottom: 350 },
-  fixedHeader: {
+  header: {
     backgroundColor: "#D32F2F",
-    zIndex: 1000,
     paddingTop: Platform.OS === "android" ? StatusBar.currentHeight || 0 : 0,
-    paddingBottom: 5,
   },
-  headerTop: {
+  headerRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     height: 56,
-    justifyContent: "space-between",
   },
-  backBtn: { padding: 4, zIndex: 10 },
-  headerTitleContainer: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
+  backBtn: {
+    width: 40,
+    height: 40,
     justifyContent: "center",
     alignItems: "center",
   },
-  headerTitle: { color: "white", fontSize: 24, fontWeight: "600" },
-  timerContainer: { alignItems: "center", marginVertical: 15 },
+  headerTitle: {
+    color: "#FFF",
+    fontSize: 20,
+    fontWeight: "600",
+  },
+  timerContainer: {
+    alignItems: "center",
+    paddingBottom: 16,
+  },
   timerPill: {
-    backgroundColor: "white",
+    backgroundColor: "#FFF",
     paddingHorizontal: 20,
     paddingVertical: 8,
-    borderRadius: 10,
+    borderRadius: 20,
   },
-  timerText: { fontSize: 14, color: "#000" },
-  timerBold: { fontWeight: "700" },
-  mainCardWrapper: { paddingHorizontal: 16 },
-  mainCard: {
-    backgroundColor: "white",
+  timerText: {
+    fontSize: 14,
+    color: "#000",
+  },
+  timerBold: {
+    fontWeight: "700",
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  card: {
+    backgroundColor: "#FFF",
     borderRadius: 12,
     padding: 12,
-    elevation: 4,
+    elevation: 2,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 6,
+    shadowRadius: 4,
   },
-  cardSection: { marginBottom: 12, position: "relative" },
-  label: { fontSize: 14, fontWeight: "600", color: "#111", marginBottom: 8 },
-  labelDark: {
-    fontSize: 15,
+  inputSection: {
+    marginBottom: 10,
+  },
+  inputLabel: {
+    fontSize: 14,
     fontWeight: "600",
-    color: "#000",
-    marginBottom: 8,
+    color: "#111",
+    marginBottom: 4,
   },
-  searchBox: {
+  inputBox: {
     backgroundColor: "#F3F4F6",
     borderRadius: 8,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
-    height: 52,
-      
+    height: 46,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "transparent",
   },
-  iconContainer: { marginRight: 12 },
-  dotIcon: { width: 14, height: 14, borderRadius: 7, backgroundColor: "#000" },
-  input: { flex: 1, fontSize: 16, color: "#000", fontWeight: "500" },
-  suggestionsWrapper: {
+  inputBoxFocused: {
+    borderColor: "#D32F2F",
+    backgroundColor: "#FFF",
+  },
+  inputIcon: {
+    width: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    color: "#000",
+    fontWeight: "500",
+  },
+  stopDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "#000",
+  },
+  typeRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  typeBtn: {
+    width: 100,
+    height: 40,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#FFF",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  typeBtnActive: {
+    backgroundColor: "#D32F2F",
+    borderColor: "#D32F2F",
+  },
+  typeBtnActiveNonAC: {
+    backgroundColor: "#11C76A",
+    borderColor: "#11C76A",
+  },
+  typeBtnText: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#333",
+  },
+  typeBtnTextActive: {
+    color: "#FFF",
+  },
+  bottom: {
+    backgroundColor: "#FFF",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: Platform.OS === "ios" ? 32 : 16,
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+  },
+  bottomLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111",
+    marginBottom: 8,
+  },
+  qtyRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 16,
+  },
+  qtyBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#DDD",
+    backgroundColor: "#FFF",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  qtyBtnActive: {
+    backgroundColor: "#D32F2F",
+    borderColor: "#D32F2F",
+  },
+  qtyBtnText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#333",
+  },
+  qtyBtnTextActive: {
+    color: "#FFF",
+  },
+  fareRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    marginBottom: 16,
+  },
+  priceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  oldPrice: {
+    fontSize: 20,
+    color: "#9CA3AF",
+    textDecorationLine: "line-through",
+  },
+  newPrice: {
+    fontSize: 24,
+    color: "#D32F2F",
+    fontWeight: "700",
+  },
+  discountBadge: {
+    backgroundColor: "#11C76A",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  discountText: {
+    color: "#FFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  buyBtn: {
+    backgroundColor: "#D32F2F",
+    paddingVertical: 14,
+    alignItems: "center",
+    borderRadius: 4,
+  },
+  buyBtnDisabled: {
+    backgroundColor: "#9CA3AF",
+  },
+  buyText: {
+    color: "#FFF",
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+  backdrop: {
     position: "absolute",
-    top: 60,
+    top: 0,
     left: 0,
     right: 0,
-    backgroundColor: "white",
-    elevation: 15,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    zIndex: 9999,
-    overflow: "hidden",
-    maxHeight: 350, // Added to enable scrolling when content is long
+    bottom: 0,
+    backgroundColor: "transparent",
   },
-  // --- 1. ROUTE DROPDOWN STYLING (Isolated but restored to original look) ---
-  routeDropdownWrapper: {
-    position: "absolute",
-    backgroundColor: "white",
+  routeDropdown: {
+    backgroundColor: "#FFF",
     borderRadius: 12,
     elevation: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    zIndex: 99999,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    maxHeight: 400,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "#DDD",
-    maxHeight: Dimensions.get("window").height * 0.85,
+  },
+  stopDropdown: {
+    backgroundColor: "#FFF",
+    borderRadius: 0,
+    elevation: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    maxHeight: 400,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
   routeItem: {
-    padding: 10,
+    padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "#ddddddca",
+    borderBottomColor: "#F0F0F0",
   },
   routeItemContent: { flex: 1 },
   routeIconHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    marginBottom: 8,
+    gap: 10,
+    marginBottom: 6,
   },
-  routeNumberText: { 
-    fontSize: 18, 
-    fontWeight: "700", 
+  routeNumberText: {
+    fontSize: 18,
+    fontWeight: "700",
     color: "#000",
   },
   routeVisualPath: {
@@ -1079,7 +1117,13 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     borderWidth: 1.5,
     borderColor: "#D32F2F",
-    backgroundColor: "white",
+    backgroundColor: "#FFF",
+  },
+  routeCircleTop: {
+    backgroundColor: "#D32F2F",
+  },
+  routeCircleBottom: {
+    backgroundColor: "#FFF",
   },
   routeLine: {
     width: 1.5,
@@ -1099,264 +1143,44 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     lineHeight: 14,
   },
-  routeListContent: { paddingBottom: 10 },
-  routeEmpty: { padding: 30, alignItems: "center" },
-  routeEmptyText: { color: "#9CA3AF", fontSize: 14, fontWeight: "500" },
-
-  // --- 2. SOURCE/DEST DROPDOWN STYLING (Isolated but restored to original look) ---
-  sourceDestDropdownWrapper: {
-    position: "absolute",
-    top:5,
-    backgroundColor: "white",
-    borderRadius: 12,
-    elevation: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    zIndex: 99998,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#DDD",
-    maxHeight: Dimensions.get("window").height * 0.85,
-  },
-  sourceDestItem: {
-    padding: 10,
+  stopItem: {
+    padding: 14,
+    paddingLeft: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#ddddddca",
+    borderBottomColor: "#F0F0F0",
+    backgroundColor: "#FAFAFA",
   },
-  sourceDestLayout: {
+  stopItemRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
   },
-  sourceDestItemText: {
-    fontSize: 14,
-    color: "#1F2937",
+  stopItemText: {
+    fontSize: 15,
+    color: "#000",
     fontWeight: "500",
   },
-  sourceDestListContent: { paddingBottom: 10 },
-  sourceDestEmpty: { padding: 30, alignItems: "center" },
-  sourceDestEmptyText: { color: "#9CA3AF", fontSize: 14, fontWeight: "500" },
-
-  // SHARED (Only for main app layout, not dropdowns)
-  overlayContainer: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 999999,
-    pointerEvents: "box-none",
-  },
-  backdrop: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  routePathContainer: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    paddingLeft: 4,
-  },
-  pathVisual: {
+  emptyItem: {
+    padding: 30,
     alignItems: "center",
-    marginRight: 15,
-    paddingTop: 4,
   },
-  pathCircle: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    borderWidth: 1.5,
-    borderColor: "#D32F2F",
-    backgroundColor: "white",
-    marginTop: -3,
-  },
-  pathLine: {
-    width: 1.5,
-    height: 20,
-    backgroundColor: "#D32F2F",
-    marginVertical: -1,
-  },
-  pathLabels: {
-    flex: 1,
-    gap: 8,
-    justifyContent: "space-between",
-    paddingTop: 0,
-  },
-  terminalLabel: {
+  emptyItemText: {
+    color: "#9CA3AF",
     fontSize: 14,
-    color: "#6B7280",
-    fontWeight: "400",
-    lineHeight: 14,
+    fontWeight: "500",
   },
-
-  routeSuggestionContent: { flex: 1 },
-  routeMainRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 4,
-  },
-  routeIdText: { fontSize: 16, fontWeight: "500", color: "#111" },
-  routeDetailsRow: { paddingLeft: 34 },
-  routeTerminalText: { fontSize: 13, color: "#6B7280", fontWeight: "500" },
-  routeVisualLine: {
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 2,
-  },
-  hollowCircle: {
-    width: 9,
-    height: 9,
-    borderRadius: 4.5,
-    borderWidth: 1.5,
-    borderColor: "#D32F2F",
-    backgroundColor: "white",
-  },
-  verticalLine: {
-    width: 1.5,
-    flex: 1,
-    backgroundColor: "#D32F2F",
-    marginVertical: -1,
-  },
-  routeStopsCol: { flex: 1, gap: 2 },
-  stopNameText: {
-    fontSize: 12,
-    color: "#6B7280",
-    fontWeight: "400",
-    lineHeight: 16,
-  },
-  row: { flexDirection: "row", gap: 10 },
-  typeBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#EEE",
-    backgroundColor: "white",
-    minWidth: 60,
-    alignItems: "center",
-  },
-  typeBtnActive: { backgroundColor: "#D32F2F", borderColor: "#D32F2F" },
-  typeBtnActiveGreen: { backgroundColor: "#4CAF50", borderColor: "#4CAF50" },
-  typeBtnText: { fontSize: 16, color: "#333", fontWeight: "500" },
-  typeBtnTextActive: { color: "white" },
-  qtyBtn: {
-    width: 43,
-    height: 43,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#DDD",
-    backgroundColor: "white",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  qtyBtnActive: { backgroundColor: "#D32F2F", borderColor: "#D32F2F" },
-  qtyBtnText: { fontSize: 18, color: "#333", fontWeight: "500" },
-  qtyBtnTextActive: { color: "white" },
-  bottomCardSticky: {
+  toast: {
     position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "white",
-    padding: 20,
-    paddingBottom: Platform.OS === "ios" ? 40 : 20,
-    elevation: 25,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -12 },
-    shadowOpacity: 0.2,
-    shadowRadius: 15,
-    zIndex: 1000,
-  },
-  priceContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    marginBottom: 0,
-  },
-  priceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 15,
-    marginTop: 2,
-  },
-  oldPrice: {
-    fontSize: 26,
-    color: "#000000ff",
-    textDecorationLine: "line-through",
-  },
-  newPrice: { fontSize: 26, color: "#D32F2F", fontWeight: "600" },
-  discountPill: {
-    backgroundColor: "#11C76A",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  discountText: { color: "white", fontSize: 18, fontWeight: "400" },
-  buyBtn: {
-    backgroundColor: "#D32F2F",
-    paddingVertical: 14,
-    alignItems: "center",
-    borderRadius: 2,
-    marginTop: 10,
-  },
-  buyText: {
-    color: "white",
-    fontSize: 14,
-    fontWeight: "600",
-    letterSpacing: 1.2,
-  },
-
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    backgroundColor: "white",
-    borderRadius: 16,
-    padding: 24,
-    alignItems: "center",
-    width: "80%",
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#000",
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  modalSub: {
-    fontSize: 14,
-    color: "#666",
-    textAlign: "center",
-    marginBottom: 24,
-  },
-  modalBtn: {
-    backgroundColor: "#D32F2F",
-    paddingHorizontal: 40,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  modalBtnText: { color: "white", fontSize: 16, fontWeight: "600" },
-  toastContainer: {
-    position: "absolute",
-    top: "80%",
+    top: "50%",
     alignSelf: "center",
     backgroundColor: "rgba(0,0,0,0.8)",
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
-    zIndex: 10000,
   },
-  toastText: { color: "white", fontSize: 14, fontWeight: "500" },
-  emptySearch: { padding: 30, alignItems: "center", justifyContent: "center" },
-  emptySearchText: { color: "#9CA3AF", fontSize: 14, fontWeight: "500" },
+  toastText: {
+    color: "#FFF",
+    fontSize: 14,
+    fontWeight: "500",
+  },
 });

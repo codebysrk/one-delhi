@@ -13,6 +13,7 @@ type RootStackParamList = {
   Pass: undefined;
   History: undefined;
   Ticket: undefined;
+  ComingSoon: undefined;
 };
 
 interface HomeScreenProps {
@@ -29,8 +30,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     const timer = setInterval(() => {
       setTick((prev) => prev + 1);
     }, 60000);
-    return () => clearInterval(timer);
-  }, []);
+    return () => {
+      clearInterval(timer);
+      setShowFooter(false);
+    };
+  }, [setShowFooter]);
 
   // Find the latest valid active ticket
   const latestTicket = useMemo(

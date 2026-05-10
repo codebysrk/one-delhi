@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
   validatedLabel: { color: '#000000cb', fontSize: 18, fontWeight: '500', letterSpacing: 0.5 },
   validatedValue: { color: '#000', fontSize: 18, fontWeight: '400' },
   
-  divider: { height: 1, backgroundColor: '#E0E0E0', marginBottom: 12 },
+  divider: { height: 1, backgroundColor: '#000000', marginBottom: 12 },
   
   dataRow: { flexDirection: 'row', justifyContent: 'space-between' },
   dataCol: { flex: 1 },

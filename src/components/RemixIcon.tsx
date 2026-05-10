@@ -2,7 +2,7 @@ import React from 'react';
 import Svg, { Path } from 'react-native-svg';
 
 interface RemixIconProps {
-  name: 'bus-fill' | 'ticket-fill' | 'coupon-fill' | 'map-2-fill' | 'charging-pile-fill' | 'question-fill' | 'user-fill' | 'history-fill' | 'arrow-left-line' | 'map-pin-2-fill' | 'loader-line' | 'route-fill' | 'calendar-line' | 'time-line' | 'arrow-right-s-line' | 'ticket-2-line' | 'user-3-line' | 'history-line' | 'chat-poll-line' | 'information-line' | 'shield-user-line' | 'logout-box-r-line';
+  name: 'bus-fill' | 'ticket-fill' | 'coupon-fill' | 'map-2-fill' | 'charging-pile-fill' | 'question-fill' | 'user-fill' | 'history-fill' | 'arrow-left-line' | 'map-pin-2-fill' | 'loader-line' | 'route-fill' | 'calendar-line' | 'time-line' | 'arrow-right-s-line' | 'ticket-2-line' | 'user-3-line' | 'history-line' | 'chat-poll-line' | 'information-line' | 'shield-user-line' | 'logout-box-r-line' | 'close-circle-fill' | 'map-pin-fill';
   size?: number;
   color?: string;
 }
@@ -29,7 +29,9 @@ const PATHS = {
   'chat-poll-line': "M21 3C21.5523 3 22 3.44772 22 4V18C22 18.5523 21.5523 19 21 19H6.45507L2 22.5V4C2 3.44772 2.44772 3 3 3H21ZM20 5H4V18.3848L5.54493 17H20V5ZM13 11V15H11V11H13ZM17 9V15H15V9H17ZM9 13V15H7V13H9Z",
   'information-line': "M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM11 7H13V9H11V7ZM11 11H13V17H11V11Z",
   'shield-user-line': "M11 2L19 5V11C19 14.1311 17.1598 16.9946 14.5 18.5L12 19.8647L9.5 18.5C6.84021 16.9946 5 14.1311 5 11V5L13 2H11ZM17 6.3073L12 4.4323L7 6.3073V11C7 13.1611 8.24354 15.1114 10.0519 16.2081L12 17.3873L13.9481 16.2081C15.7565 15.1114 17 13.1611 17 11V6.3073ZM12 11C13.6569 11 15 9.65685 15 8C15 6.34315 13.6569 5 12 5C10.3431 5 9 6.34315 9 8C9 9.65685 10.3431 11 12 11ZM12 13C10.3431 13 7 13.6569 7 15V16H17V15C17 13.6569 13.6569 13 12 13Z",
-  'logout-box-r-line': "M5 22C4.44772 22 4 21.5523 4 21V3C4 2.44772 4.44772 2 5 2H19C19.5523 2 20 2.44772 20 3V6H18V4H6V20H18V18H20V21C20 21.5523 19.5523 22 19 22H5ZM16 16L21 12L16 8V11H10V13H16V16Z"
+  'logout-box-r-line': "M5 22C4.44772 22 4 21.5523 4 21V3C4 2.44772 4.44772 2 5 2H19C19.5523 2 20 2.44772 20 3V6H18V4H6V20H18V18H20V21C20 21.5523 19.5523 22 19 22H5ZM16 16L21 12L16 8V11H10V13H16V16Z",
+  'close-circle-fill': "M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 10.5858L9.17157 7.75736L7.75736 9.17157L10.5858 12L7.75736 14.8284L9.17157 16.2426L12 13.4142L14.8284 16.2426L16.2426 14.8284L13.4142 12L16.2426 9.17157L14.8284 7.75736L12 10.5858Z",
+  'map-pin-fill': "M18.364 17.364L12 23.7279L5.63604 17.364C2.12132 13.8492 2.12132 8.15076 5.63604 4.63604C9.15076 1.12132 14.8492 1.12132 18.364 4.63604C21.8787 8.15076 21.8787 13.8492 18.364 17.364ZM12 13C13.6569 13 15 11.6569 15 10C15 8.34315 13.6569 7 12 7C10.3431 7 9 8.34315 9 10C9 11.6569 10.3431 13 12 13Z"
 };
 
 export const RemixIcon = ({ name, size = 24, color = "#000" }: RemixIconProps) => (

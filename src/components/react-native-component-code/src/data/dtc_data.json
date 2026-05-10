@@ -1,0 +1,74 @@
+{
+  "routes": [
+    {
+      "id": "544UP",
+      "name": "Badarpur to RK Puram",
+      "stops": [
+        "Badarpur Border",
+        "Jaitpur Crossing",
+        "Okhla Phase 1",
+        "Kalkaji Depot",
+        "Nehru Place Terminal",
+        "Sant Nagar",
+        "Kailash Colony",
+        "LSR College",
+        "Moolchand Hospital",
+        "AIIMS",
+        "Safdarjung Hospital",
+        "Mohammadpur",
+        "RK Puram Sector 1"
+      ]
+    },
+    {
+      "id": "544DOWN",
+      "name": "RK Puram to Badarpur",
+      "stops": [
+        "RK Puram Sector 1",
+        "Mohammadpur",
+        "Safdarjung Hospital",
+        "AIIMS",
+        "Moolchand Hospital",
+        "LSR College",
+        "Kailash Colony",
+        "Sant Nagar",
+        "Nehru Place Terminal",
+        "Kalkaji Depot",
+        "Okhla Phase 1",
+        "Jaitpur Crossing",
+        "Badarpur Border"
+      ]
+    },
+    {
+      "id": "764UP",
+      "name": "Nehru Place to Najafgarh",
+      "stops": [
+        "Nehru Place Terminal",
+        "Pamplona",
+        "IIT Gate",
+        "Munirka",
+        "Vasant Kunj",
+        "Mahipalpur",
+        "Kapashera",
+        "Dwarka Sector 21",
+        "Najafgarh Terminal"
+      ]
+    },
+    {
+      "id": "511UP",
+      "name": "Badarpur to Dhaula Kuan",
+      "stops": [
+        "Badarpur Border",
+        "Prahlad Pur",
+        "Surajkund Crossing",
+        "Sangam Vihar",
+        "Ambedkar Nagar",
+        "Pushp Vihar",
+        "Saket Metro",
+        "Malviya Nagar",
+        "Hauz Khas",
+        "Green Park",
+        "Dhaula Kuan"
+      ]
+    }
+  ]
+}

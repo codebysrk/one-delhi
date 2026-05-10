@@ -49,20 +49,24 @@ export const BottomSheet = ({ isVisible, onClose, children, height: customHeight
 
   const gesture = Gesture.Pan()
     .onStart(() => {
+      'worklet';
       context.value = { y: translateY.value };
     })
     .onUpdate((event) => {
+      'worklet';
       translateY.value = event.translationY + context.value.y;
       translateY.value = Math.max(translateY.value, MAX_TRANSLATE_Y);
     })
     .onEnd(() => {
+      'worklet';
       if (translateY.value > -height + 100) {
         scrollTo(0);
         runOnJS(onClose)();
       } else {
         scrollTo(-height);
       }
-    });
+    })
+    .simultaneousWithExternalGesture(Gesture.Native());
 
   const rBottomSheetStyle = useAnimatedStyle(() => {
     return {

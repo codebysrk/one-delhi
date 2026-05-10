@@ -34,7 +34,6 @@
     "react-hook-form": "^7.75.0",
     "react-native": "0.72.10",
     "react-native-dropdown-picker": "^5.4.6",
-    "react-native-dropdown-select-list": "^2.0.5",
     "react-native-gesture-handler": "~2.12.0",
     "react-native-get-random-values": "~1.9.0",
     "react-native-maps": "1.7.1",

@@ -55,7 +55,18 @@ export const PaymentScreen = ({ navigation, route }: any) => {
         tid: tid
       };
 
-      await addDoc(collection(db, "tickets"), finalTicket);
+      // Sanitize payload: remove undefined values and apply defaults
+      const sanitizedTicket = JSON.parse(JSON.stringify(finalTicket, (key, value) => {
+        if (value === undefined) return null; // Convert undefined to null or omit
+        return value;
+      }));
+
+      // Alternative sanitization to completely remove undefined keys
+      const cleanTicket = Object.fromEntries(
+        Object.entries(finalTicket).filter(([_, v]) => v !== undefined)
+      );
+
+      await addDoc(collection(db, "tickets"), cleanTicket);
       addTicket({ 
         ...finalTicket, 
         fare: ticketData.total, 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -116,7 +116,7 @@ export const RootNavigator = () => {
   const { user, setUser, setTickets, resetStore, showFooter } = useAppStore();
   const [initializing, setInitializing] = useState(true);
 
-  const fetchUserTickets = async (userId: string) => {
+  const fetchUserTickets = useCallback(async (userId: string) => {
     try {
       const q = query(
         collection(db, "tickets"), 
@@ -131,21 +131,29 @@ export const RootNavigator = () => {
       setTickets(userTickets);
     } catch (error) {
       console.error("Error fetching user tickets:", error);
+      setTickets([]); // Set empty array on error to prevent stale data
     }
-  };
+  }, [setTickets]);
 
   useEffect(() => {
-    const subscriber = onAuthStateChanged(auth, (firebaseUser) => {
+    let isMounted = true;
+    const subscriber = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!isMounted) return;
+      
       if (firebaseUser) {
         setUser(firebaseUser);
-        fetchUserTickets(firebaseUser.uid); // Load in background
+        await fetchUserTickets(firebaseUser.uid); // Load in background
       } else {
         resetStore();
       }
-      if (initializing) setInitializing(false);
+      if (initializing && isMounted) setInitializing(false);
     });
-    return subscriber;
-  }, []);
+    
+    return () => {
+      isMounted = false;
+      subscriber?.();
+    };
+  }, [fetchUserTickets, resetStore, setUser, initializing]);
 
   if (initializing) return null;
 

@@ -60,8 +60,9 @@ export const LoginScreen = ({ navigation }: any) => {
       </View>
 
       <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flex}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <ScrollView 
           contentContainerStyle={styles.scrollContent}
@@ -132,14 +133,15 @@ export const LoginScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
 
-            <Button
-              label="LOGIN"
-              onPress={handleSubmit(onLogin)}
-              loading={loading}
-              disabled={!isValid || loading}
-              icon={<LogIn size={20} color={COLORS.white} />}
-              style={styles.submitBtn}
-            />
+            <View style={styles.submitBtn}>
+              <Button
+                label="LOGIN"
+                onPress={handleSubmit(onLogin)}
+                loading={loading}
+                disabled={!isValid || loading}
+                icon={<LogIn size={20} color={COLORS.white} />}
+              />
+            </View>
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>Don't have an account? </Text>
