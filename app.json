@@ -9,7 +9,7 @@
     "jsEngine": "hermes",
     "splash": {
       "image": "./assets/images/splash.png",
-      "resizeMode": "cover",
+      "resizeMode": "contain",
       "backgroundColor": "#D32F2F"
     },
     "assetBundlePatterns": [

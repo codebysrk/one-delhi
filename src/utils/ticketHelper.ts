@@ -1,9 +1,7 @@
 // Ticket Status Constants
 export enum TicketStatus {
-  ACTIVE = 'active',
-  EXPIRED = 'expired',
-  INVALID = 'invalid',
-  CANCELLED = 'cancelled'
+  ACTIVE = 'Active',
+  INVALID = 'INVALID'
 }
 
 /**
@@ -12,8 +10,10 @@ export enum TicketStatus {
  */
 export const getRouteNumberOnly = (route: string): string => {
   if (!route) return '';
-  // Split by space or parenthesis to get only the code part
-  return route.split(/[\s(]/)[0].trim();
+  // 1. Get the first part (before space or bracket)
+  const base = route.split(/[\s(]/)[0].trim();
+  // 2. Strip UP or DOWN suffix for clean display
+  return base.replace(/UP$|DOWN$/, '');
 };
 
 /**

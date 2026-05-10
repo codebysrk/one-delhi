@@ -51,7 +51,7 @@ export const PaymentScreen = ({ navigation, route }: any) => {
         time: timeStr,
         timestamp: now.getTime(),
         userId: auth.currentUser?.uid,
-        status: 'active',
+        status: 'Active',
         tid: tid
       };
 
@@ -59,7 +59,7 @@ export const PaymentScreen = ({ navigation, route }: any) => {
       addTicket({ 
         ...finalTicket, 
         fare: ticketData.total, 
-        status: 'active' as any,
+        status: 'Active' as any,
         tid: tid
       });
       setPaymentStatus('idle');
@@ -94,7 +94,7 @@ export const PaymentScreen = ({ navigation, route }: any) => {
             <View style={styles.summaryTopRow}>
               <View style={styles.busInfo}>
                 <MaterialCommunityIcons name="bus" size={24} color="#000" />
-                <Text style={styles.busRouteText}>{getRouteNumberOnly(ticketData.route)}</Text>
+                <Text style={styles.busRouteText}>{ticketData.route}</Text>
               </View>
               <Text style={styles.fareCalcText}>
                 ₹{Number(ticketData.baseFare).toFixed(1)} x {ticketData.qty} = <Text style={styles.fareGreen}>₹{ticketData.total}</Text>

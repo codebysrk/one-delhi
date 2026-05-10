@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, SafeAreaView, StatusBar, Platform } from 'react-native';
+import { FlashList } from "@shopify/flash-list";
 import { useAppStore } from '../../store/useAppStore';
 import { RemixIcon } from '../../components/RemixIcon';
 import { InvalidStamp } from '../../components/InvalidStamp';
@@ -68,12 +69,13 @@ export const HistoryScreen = ({ navigation }: any) => {
       </View>
 
       {tickets.length > 0 ? (
-        <FlatList
+        <FlashList
           data={sortedTickets}
           renderItem={renderTicketItem}
           keyExtractor={(item, index) => item.id || index.toString()}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          estimatedItemSize={160}
         />
       ) : (
         <View style={styles.emptyContainer}>

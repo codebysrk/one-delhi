@@ -9,13 +9,12 @@ interface TicketCardProps {
   showTimer?: boolean;
 }
 
-export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onPress, showTimer }) => {
+export const TicketCard: React.FC<TicketCardProps> = React.memo(({ ticket, onPress, showTimer }) => {
   const expired = isTicketExpired(ticket.timestamp);
   const isInvalid = ticket.status === TicketStatus.INVALID;
-  const isCancelled = ticket.status === TicketStatus.CANCELLED;
   
-  const showStamp = expired || isInvalid || isCancelled;
-  const stampColor = isInvalid || isCancelled ? '#D32F2F' : '#616161';
+  const showStamp = expired || isInvalid;
+  const stampColor = '#D32F2F';
 
   const getFormattedActiveDateTime = () => {
     const d = new Date(ticket.timestamp);
@@ -80,7 +79,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onPress, showTim
       </View>
     </TouchableOpacity>
   );
-};
+});
 
 const styles = StyleSheet.create({
   card: { 
