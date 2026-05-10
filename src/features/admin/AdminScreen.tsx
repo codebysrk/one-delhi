@@ -2,33 +2,67 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Alert, ActivityIndicator, StyleSheet } from 'react-native';
 import { Screen } from '../../components/Screen';
 import { db } from '../../services/firebase';
-import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
-import { Shield, Trash2, Users, CreditCard, TrendingUp, Download, RefreshCw } from 'lucide-react-native';
+import { collection, getDocs, deleteDoc, doc, query, limit, orderBy, startAfter, writeBatch } from 'firebase/firestore';
+import { useAppStore } from '../../store/useAppStore';
+import { Shield, Trash2, Users, CreditCard, TrendingUp, Download, RefreshCw, Lock } from 'lucide-react-native';
 import { moderateScale, verticalScale } from '../../core/responsive';
 
-export const AdminScreen = () => {
+export const AdminScreen = ({ navigation }: any) => {
+  const { userProfile } = useAppStore();
   const [stats, setStats] = useState({ tickets: 0, revenue: 0, users: 0 });
   const [recentTickets, setRecentTickets] = useState<any[]>([]);
+  const [lastDoc, setLastDoc] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  const fetchAdminData = async () => {
-    setLoading(true);
+  // Security Check
+  if (userProfile?.role !== 'admin') {
+    return (
+      <View style={styles.deniedContainer}>
+        <Lock size={64} color="#D32F2F" />
+        <Text style={styles.deniedTitle}>Access Denied</Text>
+        <Text style={styles.deniedText}>You don't have permission to access this area.</Text>
+        <TouchableOpacity style={styles.deniedBtn} onPress={() => navigation.goBack()}>
+          <Text style={styles.deniedBtnText}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const fetchAdminData = async (loadMore = false) => {
+    if (loadMore) setLoadingMore(true);
+    else setLoading(true);
+
     try {
+      // Stats stay global for now, but in prod these should come from a metadata doc
       const ticketsSnap = await getDocs(collection(db, "tickets"));
       const usersSnap = await getDocs(collection(db, "users"));
+      
       let totalRevenue = 0;
-      let tickets: any[] = [];
       ticketsSnap.forEach(doc => {
-        const data = doc.data();
-        tickets.push({ id: doc.id, ...data });
-        totalRevenue += parseFloat(data.total || 0);
+        totalRevenue += parseFloat(doc.data().total || 0);
       });
-      tickets.sort((a, b) => (b.syncedAt || 0) - (a.syncedAt || 0));
       setStats({ tickets: ticketsSnap.size, revenue: Math.round(totalRevenue), users: usersSnap.size });
-      setRecentTickets(tickets.slice(0, 10));
+
+      // Paginated Tickets
+      let q = query(collection(db, "tickets"), orderBy("timestamp", "desc"), limit(10));
+      if (loadMore && lastDoc) {
+        q = query(collection(db, "tickets"), orderBy("timestamp", "desc"), startAfter(lastDoc), limit(10));
+      }
+
+      const snap = await getDocs(q);
+      const tickets = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      
+      setLastDoc(snap.docs[snap.docs.length - 1]);
+      if (loadMore) setRecentTickets(prev => [...prev, ...tickets]);
+      else setRecentTickets(tickets);
+
     } catch (error) {
       console.error(error);
-    } finally { setLoading(false); }
+    } finally { 
+      setLoading(false); 
+      setLoadingMore(false);
+    }
   };
 
   useEffect(() => { fetchAdminData(); }, []);
@@ -55,8 +89,9 @@ export const AdminScreen = () => {
           onPress: async () => {
             setLoading(true);
             const snap = await getDocs(collection(db, "tickets"));
-            const promises = snap.docs.map(d => deleteDoc(doc(db, "tickets", d.id)));
-            await Promise.all(promises);
+            const batch = writeBatch(db);
+            snap.docs.forEach(d => batch.delete(d.ref));
+            await batch.commit();
             fetchAdminData();
             Alert.alert("Success", "All tickets deleted.");
           }
@@ -77,8 +112,9 @@ export const AdminScreen = () => {
           onPress: async () => {
             setLoading(true);
             const snap = await getDocs(collection(db, "users"));
-            const promises = snap.docs.map(d => deleteDoc(doc(db, "users", d.id)));
-            await Promise.all(promises);
+            const batch = writeBatch(db);
+            snap.docs.forEach(d => batch.delete(d.ref));
+            await batch.commit();
             fetchAdminData();
             Alert.alert("Success", "All user profiles deleted.");
           }
@@ -125,27 +161,40 @@ export const AdminScreen = () => {
       <Text style={styles.sectionTitle}>Recent Tickets</Text>
       {loading ? <ActivityIndicator color="#D32F2F" size="large" style={{ marginVertical: 40 }} /> : (
         <View style={{ gap: 12, marginBottom: 40 }}>
-          {recentTickets.length > 0 ? recentTickets.map((t) => (
-            <View key={t.id} style={styles.ticketItem}>
-              <View style={styles.ticketMain}>
-                <View style={styles.ticketIcon}>
-                  <Text style={styles.ticketRouteText}>{t.route}</Text>
-                </View>
-                <View style={styles.ticketInfo}>
-                  <Text style={styles.ticketPath} numberOfLines={1}>{t.src} → {t.dst}</Text>
-                  <View style={styles.ticketMeta}>
-                     <Text style={styles.ticketTime}>{t.date} • {t.time}</Text>
+          {recentTickets.length > 0 ? (
+            <>
+              {recentTickets.map((t) => (
+                <View key={t.id} style={styles.ticketItem}>
+                  <View style={styles.ticketMain}>
+                    <View style={styles.ticketIcon}>
+                      <Text style={styles.ticketRouteText}>{t.route}</Text>
+                    </View>
+                    <View style={styles.ticketInfo}>
+                      <Text style={styles.ticketPath} numberOfLines={1}>{t.source || t.src} → {t.dest || t.dst}</Text>
+                      <View style={styles.ticketMeta}>
+                        <Text style={styles.ticketTime}>{t.date} • {t.time}</Text>
+                      </View>
+                    </View>
+                  </View>
+                  <View style={styles.ticketRight}>
+                    <Text style={styles.ticketFare}>₹{t.total}</Text>
+                    <View style={styles.paxBadge}>
+                      <Text style={styles.paxText}>{t.qty} Pax</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-              <View style={styles.ticketRight}>
-                <Text style={styles.ticketFare}>₹{t.total}</Text>
-                <View style={styles.paxBadge}>
-                  <Text style={styles.paxText}>{t.qty} Pax</Text>
-                </View>
-              </View>
-            </View>
-          )) : (
+              ))}
+              {lastDoc && (
+                <TouchableOpacity 
+                  style={styles.loadMoreBtn} 
+                  onPress={() => fetchAdminData(true)}
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? <ActivityIndicator color="#D32F2F" /> : <Text style={styles.loadMoreText}>Load More</Text>}
+                </TouchableOpacity>
+              )}
+            </>
+          ) : (
             <View style={styles.emptyTickets}>
               <Text style={styles.emptyText}>No recent tickets found</Text>
             </View>
@@ -211,6 +260,23 @@ const styles = StyleSheet.create({
   },
   paxText: { color: '#4B5563', fontSize: moderateScale(10), fontWeight: '700' },
   emptyTickets: { alignItems: 'center', paddingVertical: 40 },
-  emptyText: { color: '#9CA3AF', fontSize: moderateScale(14) }
+  emptyText: { color: '#9CA3AF', fontSize: moderateScale(14) },
+  
+  loadMoreBtn: { 
+    padding: 15, 
+    alignItems: 'center', 
+    backgroundColor: 'white', 
+    borderRadius: 12, 
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#EEE'
+  },
+  loadMoreText: { color: '#D32F2F', fontWeight: 'bold' },
+
+  deniedContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40, backgroundColor: 'white' },
+  deniedTitle: { fontSize: 24, fontWeight: 'bold', color: '#111', marginTop: 20 },
+  deniedText: { fontSize: 16, color: '#666', textAlign: 'center', marginTop: 10, marginBottom: 30 },
+  deniedBtn: { backgroundColor: '#D32F2F', paddingHorizontal: 30, paddingVertical: 12, borderRadius: 25 },
+  deniedBtnText: { color: 'white', fontWeight: 'bold' }
 });
 

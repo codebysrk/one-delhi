@@ -5,10 +5,12 @@ import { Ticket } from '../utils/ticketHelper';
 
 interface AppState {
   user: any | null;
+  userProfile: any | null;
   tickets: Ticket[];
   loading: boolean;
   showFooter: boolean;
   setUser: (user: any) => void;
+  setUserProfile: (profile: any) => void;
   setTickets: (tickets: Ticket[]) => void;
   addTicket: (ticket: Ticket) => void;
   setLoading: (loading: boolean) => void;
@@ -20,18 +22,20 @@ export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
       user: null,
+      userProfile: null,
       tickets: [],
       loading: false,
       showFooter: true,
 
       setUser: (user) => set({ user }),
+      setUserProfile: (userProfile) => set({ userProfile }),
       setTickets: (tickets) => set({ tickets }),
       addTicket: (ticket) => set((state) => ({ 
         tickets: [ticket, ...state.tickets] 
       })),
       setLoading: (loading) => set({ loading }),
       setShowFooter: (show) => set({ showFooter: show }),
-      resetStore: () => set({ user: null, tickets: [], loading: false }),
+      resetStore: () => set({ user: null, userProfile: null, tickets: [], loading: false }),
     }),
     {
       name: 'railone-storage',

@@ -6,7 +6,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { RemixIcon } from '../../components/RemixIcon';
 
 export const ProfileScreen = ({ navigation }: any) => {
-  const { user, setUser } = useAppStore();
+  const { user, userProfile, setUser } = useAppStore();
 
   const handleLogout = async () => {
     Alert.alert(
@@ -31,7 +31,9 @@ export const ProfileScreen = ({ navigation }: any) => {
     { icon: 'history-line', label: "My History", action: () => navigation.navigate('History'), color: '#666' },
     { icon: 'chat-poll-line', label: "Give Feedback", color: '#666' },
     { icon: 'information-line', label: "About One Delhi", color: '#666' },
-    { icon: 'shield-user-line', label: "Admin Panel", action: () => navigation.navigate('Admin'), color: '#D32F2F' },
+    ...(userProfile?.role === 'admin' ? [
+      { icon: 'shield-user-line', label: "Admin Panel", action: () => navigation.navigate('Admin'), color: '#D32F2F' }
+    ] : []),
   ];
 
   return (

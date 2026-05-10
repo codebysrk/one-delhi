@@ -2,18 +2,24 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Animated, Platform, StatusBar, Image } from 'react-native';
 import { useAppStore } from '../../store/useAppStore';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
-import { getLatestActiveTicket, getRouteNumberOnly, formatTimeTo12hr } from '../../utils/ticketHelper';
+import { getLatestActiveTicket, getRouteNumberOnly, formatTimeTo12hr, isTicketExpired } from '../../utils/ticketHelper';
 import QRCode from 'react-native-qrcode-svg';
 import { useKeepAwake } from 'expo-keep-awake';
+import { InvalidStamp } from '../../components/InvalidStamp';
 
 const logoImg = require('../../../assets/images/logo.webp');
 
-export const TicketScreen = ({ navigation }: any) => {
+export const TicketScreen = ({ navigation, route }: any) => {
   useKeepAwake(); // Keeps screen on during ticket inspection
   const { tickets, setShowFooter } = useAppStore();
-  const activeTicket = getLatestActiveTicket(tickets);
+  
+  // Support opening specific ticket from history OR showing latest active
+  const ticketFromParams = route?.params?.ticket;
+  const activeTicket = ticketFromParams || getLatestActiveTicket(tickets);
   
   const [showQR, setShowQR] = useState(false);
+  const isExpired = activeTicket ? isTicketExpired(activeTicket.timestamp) : false;
+  const isInvalid = activeTicket?.status === 'INVALID' || isExpired;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -71,15 +77,17 @@ export const TicketScreen = ({ navigation }: any) => {
             {/* Elite Ticket / QR View Toggle */}
             {!showQR ? (
               <View style={styles.ticketCard}>
-                <Text style={styles.deptTitle}>Transport Dept. of Delhi</Text>
+                <View style={styles.cardHeaderArea}>
+                  <Text style={styles.deptTitle}>Transport Dept. of Delhi</Text>
+                </View>
                 
                 <View style={styles.validationSummary}>
                   <Text style={styles.validatedLabel}>VALIDATED</Text>
                   <Text style={styles.validatedValue}>₹{(activeTicket.qty * (activeTicket.baseFare || 10)).toFixed(1)}</Text>
                 </View>
-
+ 
                 <View style={styles.divider} />
-
+ 
                 <View style={styles.dataRow}>
                   <View style={styles.dataCol}>
                     <Text style={styles.label}>Bus Route</Text>
@@ -90,7 +98,7 @@ export const TicketScreen = ({ navigation }: any) => {
                     <Text style={[styles.largeValue, { fontWeight: '700' }]}>₹{Number(activeTicket.total).toFixed(1)}</Text>
                   </View>
                 </View>
-
+ 
                 <View style={[styles.dataRow, { marginTop: 12 }]}>
                   <View style={{ flex: 2.5 }}>
                     <Text style={styles.label}>Booking Time</Text>
@@ -101,27 +109,37 @@ export const TicketScreen = ({ navigation }: any) => {
                     <Text style={styles.mediumValue}>{activeTicket.qty}</Text>
                   </View>
                 </View>
-
+ 
                 <View style={styles.stopBox}>
                   <Text style={styles.label}>Starting stop</Text>
                   <Text style={styles.stopText}>{activeTicket.source || activeTicket.src || 'Starting Point'}</Text>
                 </View>
-
+ 
                 <View style={[styles.stopBox, { marginTop: 12 }]}>
                   <Text style={styles.label}>Ending stop</Text>
                   <Text style={styles.stopText}>{activeTicket.dest || activeTicket.dst || 'Destination'}</Text>
                 </View>
-
+ 
                 <Text style={styles.tidLabel}>{activeTicket.tid || activeTicket.id || 'T0000000000'}</Text>
-
+ 
                 <TouchableOpacity 
                   style={styles.qrButton} 
                   onPress={() => setShowQR(true)}
                   activeOpacity={0.9}
                 >
-                  <MaterialCommunityIcons name="qrcode" size={24} color="white" />
+                  <MaterialCommunityIcons name="qrcode-scan" size={20} color="white" />
                   <Text style={styles.qrButtonText}>Show QR code</Text>
                 </TouchableOpacity>
+
+                {isInvalid && (
+                  <View style={styles.cardStampOverlay}>
+                    <InvalidStamp 
+                      text="INVALID" 
+                      color="#D32F2F" 
+                      rotation="-15deg"
+                    />
+                  </View>
+                )}
               </View>
             ) : (
               <TouchableOpacity 
@@ -208,8 +226,11 @@ const styles = StyleSheet.create({
     fontWeight: '500', 
     color: '#000', 
     textAlign: 'center', 
-    marginBottom: 12,
-    letterSpacing: 0.2
+    marginBottom: 8,
+    letterSpacing: 0.1
+  },
+  cardHeaderArea: {
+    paddingVertical: 4,
   },
   validationSummary: { 
     flexDirection: 'row', 
@@ -278,6 +299,17 @@ const styles = StyleSheet.create({
   logoImg: { width: 100, height: 32 },
   poweredText: { color: 'rgba(255,255,255,0.8)', fontSize: 10, fontWeight: '400' },
 
+  cardStampOverlay: {
+    position: 'absolute',
+    top: '45%',
+    left: '5%',
+    right: '5%',
+    alignItems: 'center',
+    zIndex: 100,
+    elevation: 100,
+    // Add transform to scale the stamp up like in image
+    transform: [{ scale: 1.4 }]
+  },
   errorContainer: { flex: 1, backgroundColor: '#A00E0E', justifyContent: 'center', alignItems: 'center', padding: 20 },
   errorText: { color: 'white', fontSize: 18, fontWeight: 'bold', marginBottom: 20 },
   errorBackBtn: { backgroundColor: 'white', paddingHorizontal: 30, paddingVertical: 12, borderRadius: 25 },

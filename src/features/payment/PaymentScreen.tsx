@@ -8,6 +8,7 @@ import { generateTicketId, getRouteNumberOnly } from '../../utils/ticketHelper';
 import { db, auth } from '../../services/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { PaytmIcon, PhonePeIcon, GPayIcon, AmazonPayIcon } from '../../components/PaymentIcons';
+import { sanitizePayload } from '../../utils/firebaseUtils';
 
 export const PaymentScreen = ({ navigation, route }: any) => {
   const { ticketData = {} } = route.params || {};
@@ -55,16 +56,8 @@ export const PaymentScreen = ({ navigation, route }: any) => {
         tid: tid
       };
 
-      // Sanitize payload: remove undefined values and apply defaults
-      const sanitizedTicket = JSON.parse(JSON.stringify(finalTicket, (key, value) => {
-        if (value === undefined) return null; // Convert undefined to null or omit
-        return value;
-      }));
-
-      // Alternative sanitization to completely remove undefined keys
-      const cleanTicket = Object.fromEntries(
-        Object.entries(finalTicket).filter(([_, v]) => v !== undefined)
-      );
+      // Sanitize payload: remove all undefined values recursively
+      const cleanTicket = sanitizePayload(finalTicket);
 
       await addDoc(collection(db, "tickets"), cleanTicket);
       addTicket({ 

@@ -19,7 +19,7 @@ import { AdminScreen } from '../features/admin/AdminScreen';
 import { useAppStore } from '../store/useAppStore';
 import { db, auth } from '../services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
 import { RemixIcon } from '../components/RemixIcon';
 import { COLORS } from '../core/theme';
 import { Rocket } from 'lucide-react-native';
@@ -53,9 +53,10 @@ const MainTabs = () => {
             height: 65,
             paddingBottom: 10,
           },
-          tabBarActiveTintColor: '#111',
+          tabBarActiveTintColor: '#D32F2F',
           tabBarInactiveTintColor: '#555',
           headerShown: false,
+          lazy: true,
         }}
       >
         <Tab.Screen 
@@ -113,8 +114,19 @@ const MainTabs = () => {
 };
 
 export const RootNavigator = () => {
-  const { user, setUser, setTickets, resetStore, showFooter } = useAppStore();
+  const { user, setUser, userProfile, setUserProfile, setTickets, resetStore, showFooter } = useAppStore();
   const [initializing, setInitializing] = useState(true);
+
+  const fetchUserProfile = useCallback(async (userId: string) => {
+    try {
+      const docSnap = await getDoc(doc(db, "users", userId));
+      if (docSnap.exists()) {
+        setUserProfile(docSnap.data());
+      }
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+    }
+  }, [setUserProfile]);
 
   const fetchUserTickets = useCallback(async (userId: string) => {
     try {
@@ -142,6 +154,7 @@ export const RootNavigator = () => {
       
       if (firebaseUser) {
         setUser(firebaseUser);
+        await fetchUserProfile(firebaseUser.uid); // Load profile
         await fetchUserTickets(firebaseUser.uid); // Load in background
       } else {
         resetStore();
@@ -160,7 +173,13 @@ export const RootNavigator = () => {
   return (
     <View style={{ flex: 1, backgroundColor: '#FFF' }}>
       <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Navigator 
+          screenOptions={{ 
+            headerShown: false,
+            animation: 'slide_from_right',
+            animationDuration: 200,
+          }} 
+        >
           {!user ? (
             <>
               <Stack.Screen name="Login" component={LoginScreen} />

@@ -96,44 +96,49 @@ const styles = StyleSheet.create({
   header: { 
     backgroundColor: '#FFF', 
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    zIndex: 10,
   },
   headerContent: { 
     flexDirection: 'row', 
     alignItems: 'center', 
     paddingHorizontal: 16,
-    height: 50
+    height: 50,
   },
   backBtn: { padding: 4 },
   
-  listContent: { paddingBottom: 40, paddingHorizontal: 16 },
+  listContent: { paddingTop: 16, paddingBottom: 40, paddingHorizontal: 16 },
   
   cardWrapper: { 
     backgroundColor: 'white', 
     marginBottom: 16, 
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    overflow: 'hidden',
-    elevation: 1,
+    elevation: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+    borderRadius: 8,
+    overflow: 'hidden',
   },
   greyHeader: {
-    height: 14,
+    height: 15,
+    marginTop: 6,
     backgroundColor: '#808080',
     width: '100%',
   },
   cardInner: {
-    padding: 15,
-    paddingBottom: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
     position: 'relative',
   },
   stampOverlay: {
     position: 'absolute',
-    top: 45,
-    right: 45,
+    top: '35%',
+    left: '27%',
     zIndex: 20,
   },
   mainRow: {
@@ -143,11 +148,11 @@ const styles = StyleSheet.create({
   },
   leftCol: {
     flex: 1,
-    gap: 12,
+    gap: 6,
   },
   rightCol: {
     alignItems: 'flex-end',
-    gap: 12,
+    gap: 6,
   },
   routeText: {
     fontSize: 18,

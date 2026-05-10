@@ -19,6 +19,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
+import { FlashList } from "@shopify/flash-list";
 import * as Location from "expo-location";
 import { useFocusEffect } from "@react-navigation/native";
 import {
@@ -105,13 +106,24 @@ export const MapScreen = ({ navigation }: any) => {
           return;
         }
 
-        let initialLocation = await Location.getCurrentPositionAsync({});
+        // 1. Get last known position for instant load
+        let lastLocation = await Location.getLastKnownPositionAsync({});
+        if (lastLocation) {
+          setLocation(lastLocation);
+          setLoading(false);
+          const centerJs = `centerMap(${lastLocation.coords.latitude}, ${lastLocation.coords.longitude});`;
+          webViewRef.current?.injectJavaScript(centerJs);
+        }
+
+        // 2. Get high accuracy position in background
+        let initialLocation = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
         setLocation(initialLocation);
         setLoading(false);
 
-        // Auto-center on load
         const centerJs = `centerMap(${initialLocation.coords.latitude}, ${initialLocation.coords.longitude});`;
-        setTimeout(() => webViewRef.current?.injectJavaScript(centerJs), 1000);
+        webViewRef.current?.injectJavaScript(centerJs);
 
         locationWatcher = await Location.watchPositionAsync(
           { accuracy: Location.Accuracy.High, distanceInterval: 5 },
@@ -330,6 +342,14 @@ export const MapScreen = ({ navigation }: any) => {
             scrollEnabled={false}
             pointerEvents="auto"
             cacheEnabled={true}
+            domStorageEnabled={true}
+            androidLayerType="hardware"
+            startInLoadingState={true}
+            renderLoading={() => (
+              <View style={styles.loader}>
+                <ActivityIndicator size="large" color="#B91C1C" />
+              </View>
+            )}
           />
         )}
 
@@ -377,16 +397,13 @@ export const MapScreen = ({ navigation }: any) => {
           </View>
         </GestureDetector>
 
-        <Animated.FlatList
+        <FlashList
           data={stopsToShow}
           renderItem={renderStopItem}
           keyExtractor={(item) => item.id}
+          estimatedItemSize={70}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
-          initialNumToRender={10}
-          maxToRenderPerBatch={10}
-          windowSize={5}
-          removeClippedSubviews={true} // Performance boost for large lists
         />
       </Animated.View>
     </View>
@@ -396,7 +413,7 @@ export const MapScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF" },
   headerArea: {
-    height: 140,
+    height: 165,
     borderBottomLeftRadius: 50,
     borderBottomRightRadius: 50,
     overflow: "hidden",
@@ -409,8 +426,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    height: 70,
-    marginTop: -20,
+    height: 60,
+    marginTop: 0,
   },
   logoBox: { alignItems: "center" },
   settingsIcon: { padding: 8 },
@@ -418,7 +435,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingHorizontal: 16,
     alignItems: "center",
-    marginTop: -5,
+    marginTop: 0,
     gap: 12,
   },
   searchPill: {

@@ -7,9 +7,10 @@ interface TicketCardProps {
   ticket: Ticket;
   onPress: () => void;
   showTimer?: boolean;
+  largeText?: boolean;
 }
 
-export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onPress, showTimer }) => {
+export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onPress, showTimer, largeText }) => {
   const expired = isTicketExpired(ticket.timestamp);
   const isInvalid = ticket.status === TicketStatus.INVALID;
   
@@ -29,6 +30,8 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onPress, showTim
 
   const displayDateTime = !showStamp ? getFormattedActiveDateTime() : `${ticket.date} | ${formatTimeTo12hr(ticket.time)}`;
 
+  const textStyle = [styles.mainText, largeText && styles.largeMainText];
+
   return (
     <TouchableOpacity 
       style={styles.card} 
@@ -40,22 +43,22 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onPress, showTim
       
       <View style={styles.body}>
         <View style={styles.dataRow}>
-          <Text style={styles.mainText}>{getRouteNumberOnly(ticket.route || ticket.id || 'Bus')}</Text>
-          <Text style={styles.mainText}>₹{(Number(ticket.qty || 1) * Number(ticket.baseFare || 10)).toFixed(1)}</Text>
+          <Text style={textStyle}>{getRouteNumberOnly(ticket.route || ticket.id || 'Bus')}</Text>
+          <Text style={textStyle}>₹{(Number(ticket.qty || 1) * Number(ticket.baseFare || 10)).toFixed(1)}</Text>
         </View>
  
         <View style={styles.dataRow}>
-          <Text style={styles.mainText}>{displayDateTime}</Text>
-          <Text style={styles.mainText}>x {ticket.qty || 1}</Text>
+          <Text style={textStyle}>{displayDateTime}</Text>
+          <Text style={textStyle}>x {ticket.qty || 1}</Text>
         </View>
-
+ 
         <View style={styles.dataRow}>
-          <Text style={styles.mainText} numberOfLines={1}>{ticket.source || ticket.src || ticket.from || 'Boarding'}</Text>
-          <Text style={styles.mainText}>₹{Number(ticket.total || ticket.fare || 0).toFixed(1)}</Text>
+          <Text style={textStyle} numberOfLines={1}>{ticket.source || ticket.src || ticket.from || 'Boarding'}</Text>
+          <Text style={textStyle}>₹{Number(ticket.total || ticket.fare || 0).toFixed(1)}</Text>
         </View>
-
+ 
         <View style={styles.destRow}>
-          <Text style={styles.mainText} numberOfLines={2}>{ticket.dest || ticket.dst || ticket.to || 'Destination'}</Text>
+          <Text style={textStyle} numberOfLines={2}>{ticket.dest || ticket.dst || ticket.to || 'Destination'}</Text>
         </View>
 
         <View style={styles.tidContainer}>
@@ -73,7 +76,8 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onPress, showTim
         {showStamp && (
           <InvalidStamp 
             text="INVALID" 
-            color={stampColor} 
+            color={stampColor}
+            style={styles.stampOverlay}
           />
         )}
       </View>
@@ -114,6 +118,9 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     letterSpacing: -0.2
   },
+  largeMainText: {
+    fontSize: 18,
+  },
   
   tidContainer: {
     alignItems: 'center',
@@ -134,4 +141,10 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   timerText: { fontSize: 12, color: '#D32F2F', fontWeight: '600' },
+  stampOverlay: {
+    position: 'absolute',
+    top: '30%',
+    left: '25%',
+    zIndex: 10,
+  }
 });

@@ -10,9 +10,19 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 
+import { Asset } from 'expo-asset';
+
 SplashScreen.preventAutoHideAsync();
 
-
+function cacheImages(images: any[]) {
+  return images.map(image => {
+    if (typeof image === 'string') {
+      return Image.prefetch(image);
+    } else {
+      return Asset.fromModule(image).downloadAsync();
+    }
+  });
+}
 
 export default function App() {
   const { width, height } = useWindowDimensions();
@@ -24,10 +34,16 @@ export default function App() {
   useEffect(() => {
     async function prepare() {
       try {
-        if (fontsLoaded) {
-          // Artificial delay to show custom splash
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
+        // Pre-load images
+        const imageAssets = cacheImages([
+          require('./assets/images/logo.webp'),
+          require('./assets/images/map-header-logo.webp'),
+          require('./assets/images/map-header.webp'),
+          require('./assets/images/splash.png'),
+          require('./assets/images/transit_header.webp'),
+        ]);
+
+        await Promise.all([...imageAssets]);
       } catch (e) {
         console.warn(e);
       } finally {
@@ -40,9 +56,7 @@ export default function App() {
     prepare();
   }, [fontsLoaded]);
 
-  if (!fontsLoaded) return null;
-
-  if (!appIsReady) {
+  if (!fontsLoaded || !appIsReady) {
     return (
       <View style={styles.splashContainer}>
         <StatusBar style="light" />

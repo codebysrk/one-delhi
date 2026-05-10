@@ -12,6 +12,7 @@ import { auth, db } from '../../services/firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { useAppStore } from '../../store/useAppStore';
+import { sanitizePayload } from '../../utils/firebaseUtils';
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 const phoneRegex = /^[6-9]\d{9}$/;
@@ -53,12 +54,15 @@ export const SignupScreen = ({ navigation }: any) => {
       const trimmedName = data.fullName.trim();
       await updateProfile(user, { displayName: trimmedName });
       
-      await setDoc(doc(db, "users", user.uid), {
+      const userProfile = sanitizePayload({
         name: trimmedName,
         email: data.email,
         phone: data.phone,
+        role: 'user', // Default role
         createdAt: Date.now()
       });
+      
+      await setDoc(doc(db, "users", user.uid), userProfile);
       
       setUser(user);
     } catch (error: any) {

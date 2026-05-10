@@ -19,9 +19,9 @@ import {
   Modal,
   useWindowDimensions,
   BackHandler,
-  FlatList,
   Platform,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { useAppStore } from "../../store/useAppStore";
 import { RemixIcon } from "../../components/RemixIcon";
 import dtcData from "../../data/dtc_data.json";
@@ -124,6 +124,118 @@ const TimerPill = React.memo(({ timeLeft }: { timeLeft: number }) => {
   );
 });
 
+const BusTypeSelector = React.memo(
+  ({
+    busType,
+    onTypeChange,
+  }: {
+    busType: "AC" | "Non-AC";
+    onTypeChange: (type: "AC" | "Non-AC") => void;
+  }) => (
+    <View style={styles.inputSection}>
+      <Text style={styles.inputLabel}>Bus Type</Text>
+      <View style={styles.typeRow}>
+        {(["AC", "Non-AC"] as const).map((type) => (
+          <TouchableOpacity
+            key={type}
+            style={[
+              styles.typeBtn,
+              busType === type &&
+                (type === "AC" ? styles.typeBtnActive : styles.typeBtnActiveNonAC),
+            ]}
+            onPress={() => onTypeChange(type)}
+          >
+            <Text
+              style={[
+                styles.typeBtnText,
+                busType === type && styles.typeBtnTextActive,
+              ]}
+            >
+              {type}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  ),
+);
+
+const QuantitySelector = React.memo(
+  ({ qty, onQtyChange }: { qty: number; onQtyChange: (n: number) => void }) => (
+    <>
+      <Text style={styles.bottomLabel}>Number of tickets</Text>
+      <View style={styles.qtyRow}>
+        {[1, 2, 3].map((n) => (
+          <TouchableOpacity
+            key={n}
+            style={[styles.qtyBtn, qty === n && styles.qtyBtnActive]}
+            onPress={() => onQtyChange(n)}
+          >
+            <Text
+              style={[styles.qtyBtnText, qty === n && styles.qtyBtnTextActive]}
+            >
+              {n}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </>
+  ),
+);
+
+const FareDisplay = React.memo(
+  ({
+    finalFare,
+    showDiscount,
+    isEditing,
+    onPress,
+    manualTotal,
+    onManualChange,
+    onBlur,
+  }: {
+    finalFare: { total: string; originalTotal: string };
+    showDiscount: boolean;
+    isEditing: boolean;
+    onPress: () => void;
+    manualTotal: string;
+    onManualChange: (v: string) => void;
+    onBlur: () => void;
+  }) => (
+    <View style={styles.fareRow}>
+      <View>
+        <Text style={styles.bottomLabel}>Amount Payable</Text>
+        <View style={styles.priceRow}>
+          <Text style={styles.oldPrice}>₹{finalFare.originalTotal}</Text>
+          <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+            {isEditing ? (
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Text style={styles.newPrice}>₹</Text>
+                <TextInput
+                  style={[styles.newPrice, { minWidth: 40, padding: 0 }]}
+                  value={manualTotal}
+                  onChangeText={onManualChange}
+                  onBlur={onBlur}
+                  onSubmitEditing={onBlur}
+                  keyboardType="numeric"
+                  autoFocus
+                  selectTextOnFocus
+                />
+              </View>
+            ) : (
+              <Text style={styles.newPrice}>₹{finalFare.total}</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+      {showDiscount && (
+        <View style={styles.discountBadge}>
+          <Text style={styles.discountText}>10.0% off</Text>
+        </View>
+      )}
+    </View>
+  ),
+);
+
 export const BookingScreen = ({ navigation }: any) => {
   // --- 1. Hooks & State ---
   const { setShowFooter } = useAppStore();
@@ -148,6 +260,23 @@ export const BookingScreen = ({ navigation }: any) => {
   const [validationStatus, setValidationStatus] = useState<
     "VALID" | "INVALID" | "MIN" | "MAX" | "EMPTY"
   >("VALID");
+  const [isEditingFare, setIsEditingFare] = useState(false);
+  const lastTap = useRef<number | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const startTimeRef = useRef<number>(Date.now());
+  const initialTimeRef = useRef<number>(180);
+
+  const handleFarePress = () => {
+    const now = Date.now();
+    if (lastTap.current && now - lastTap.current < 300) {
+      if (!isManualFare) {
+        setManualTotal(getFinalFare().total);
+      }
+      setIsEditingFare(true);
+    } else {
+      lastTap.current = now;
+    }
+  };
 
   const { height: windowHeight } = useWindowDimensions();
   const [showToast, setShowToast] = useState(false);
@@ -190,6 +319,8 @@ export const BookingScreen = ({ navigation }: any) => {
   useEffect(() => {
     setSourceSearch("");
     setDestSearch("");
+    setIsManualFare(false);
+    setManualTotal("");
   }, [routeSearch]);
 
   // --- 2. Effects ---
@@ -202,14 +333,32 @@ export const BookingScreen = ({ navigation }: any) => {
     }
   }, []);
 
-  useEffect(() => {
-    if (timeLeft <= 0) return;
 
-    const interval = setInterval(() => {
-      setTimeLeft((prev) => Math.max(0, prev - 1));
+
+  // Real-Time Sync Timer Logic
+  useEffect(() => {
+    startTimeRef.current = Date.now();
+    initialTimeRef.current = timeLeft; // Current state value as starting point
+
+    if (timerRef.current) clearInterval(timerRef.current);
+
+    timerRef.current = setInterval(() => {
+      const elapsedSeconds = Math.floor((Date.now() - startTimeRef.current) / 1000);
+      const newTime = Math.max(0, initialTimeRef.current - elapsedSeconds);
+      
+      setTimeLeft(newTime);
+
+      if (newTime <= 0 && timerRef.current) {
+        clearInterval(timerRef.current);
+      }
     }, 1000);
 
-    return () => clearInterval(interval);
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
   }, []);
 
   // Handle footer visibility
@@ -295,7 +444,6 @@ export const BookingScreen = ({ navigation }: any) => {
   const getCurrentFare = useCallback(() => {
     if (isManualFare) {
       const validation = validateManualFare(Number(manualTotal), qty);
-      setValidationStatus(validation.status);
 
       if (!validation.isValid) {
         return {
@@ -325,6 +473,16 @@ export const BookingScreen = ({ navigation }: any) => {
       };
     }
   }, [isManualFare, manualTotal, qty, calculateAutoFare]);
+
+  // Sync validation status via effect to avoid re-render loops
+  useEffect(() => {
+    if (isManualFare) {
+      const validation = validateManualFare(Number(manualTotal), qty);
+      setValidationStatus(validation.status);
+    } else {
+      setValidationStatus("VALID");
+    }
+  }, [isManualFare, manualTotal, qty]);
 
   const getFinalFare = useCallback(() => {
     const currentFare = getCurrentFare();
@@ -503,13 +661,13 @@ export const BookingScreen = ({ navigation }: any) => {
       // When route is clicked, clear everything to start fresh
       if (type === "route") {
         setRouteSearch("");
-        setSelectedFullRouteId(null);
+        setSelectedFullRouteId("");
         setSourceSearch("");
         setDestSearch("");
       }
 
-      // Double check: don't open source/dest if no route is selected
-      if ((type === "source" || type === "dest") && !selectedFullRouteId) {
+      // Double check: don't open source/dest if no route is selected or matched
+      if ((type === "source" || type === "dest") && currentRouteStops.length === 0) {
         return;
       }
 
@@ -530,7 +688,7 @@ export const BookingScreen = ({ navigation }: any) => {
         setActiveInput(type);
       });
     },
-    [selectedFullRouteId],
+    [currentRouteStops],
   );
 
   const handleSelect = useCallback(
@@ -575,7 +733,7 @@ export const BookingScreen = ({ navigation }: any) => {
       >
         <View style={styles.routeItemContent}>
           <View style={styles.routeIconHeader}>
-            <RemixIcon name="bus-fill" size={22} color="#D32F2F" />
+            <RemixIcon name="bus-2-fill" size={22} color="#000000ff" />
             <Text style={styles.routeNumberText}>
               {item.id?.replace(/UP$|DOWN$/, "")}
             </Text>
@@ -609,7 +767,6 @@ export const BookingScreen = ({ navigation }: any) => {
         onPress={() => handleSelect(activeInput as any, item)}
       >
         <View style={styles.stopItemRow}>
-          <RemixIcon name="map-pin-fill" size={16} color="#666" />
           <Text style={styles.stopItemText} numberOfLines={1}>
             {item}
           </Text>
@@ -645,7 +802,7 @@ export const BookingScreen = ({ navigation }: any) => {
             <Text style={styles.inputLabel}>Route Info</Text>
             <View style={[styles.inputBox, activeInput === "route" && styles.inputBoxFocused]}>
               <View style={styles.inputIcon}>
-                <RemixIcon name="bus-fill" size={22} color="#D32F2F" />
+                <RemixIcon name="route-fill" size={24} color="#000" />
               </View>
               <TextInput
                 ref={routeInputRef}
@@ -677,7 +834,7 @@ export const BookingScreen = ({ navigation }: any) => {
                 value={sourceSearch}
                 onChangeText={setSourceSearch}
                 onFocus={() => handleFocus("source")}
-                editable={!!selectedFullRouteId}
+                editable={currentRouteStops.length > 0}
               />
               <RemixIcon name="arrow-down-s-line" size={20} color="#9CA3AF" />
             </View>
@@ -694,97 +851,71 @@ export const BookingScreen = ({ navigation }: any) => {
                 value={destSearch}
                 onChangeText={setDestSearch}
                 onFocus={() => handleFocus("dest")}
-                editable={!!selectedFullRouteId}
+                editable={currentRouteStops.length > 0}
               />
               <RemixIcon name="arrow-down-s-line" size={20} color="#9CA3AF" />
             </View>
           </View>
 
           {/* Bus Type */}
-          <View style={styles.inputSection}>
-            <Text style={styles.inputLabel}>Bus Type</Text>
-            <View style={styles.typeRow}>
-              {(["AC", "Non-AC"] as const).map((type) => (
-                <TouchableOpacity
-                  key={type}
-                  style={[
-                    styles.typeBtn,
-                    busType === type && (type === "AC" ? styles.typeBtnActive : styles.typeBtnActiveNonAC)
-                  ]}
-                  onPress={() => setBusType(type)}
-                >
-                  <Text style={[styles.typeBtnText, busType === type && styles.typeBtnTextActive]}>
-                    {type}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+          <BusTypeSelector
+            busType={busType}
+            onTypeChange={(type) => {
+              setBusType(type);
+              setIsManualFare(false);
+              setManualTotal("");
+            }}
+          />
         </View>
       </View>
 
       {/* Bottom Section */}
       <View style={styles.bottom}>
-        <Text style={styles.bottomLabel}>Number of tickets</Text>
-        <View style={styles.qtyRow}>
-          {[1, 2, 3].map((n) => (
-            <TouchableOpacity
-              key={n}
-              style={[styles.qtyBtn, qty === n && styles.qtyBtnActive]}
-              onPress={() => setQty(n)}
-            >
-              <Text style={[styles.qtyBtnText, qty === n && styles.qtyBtnTextActive]}>{n}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <QuantitySelector qty={qty} onQtyChange={setQty} />
 
-        <View style={styles.fareRow}>
-          <View>
-            <Text style={styles.bottomLabel}>Amount Payable</Text>
-            {routeSearch && sourceSearch && destSearch ? (
-              <View style={styles.priceRow}>
-                <Text style={styles.oldPrice}>₹{getFinalFare().originalTotal}</Text>
-                <Text style={styles.newPrice}>₹{getFinalFare().total}</Text>
-              </View>
-            ) : (
-              <View style={{ height: 36 }} />
-            )}
-          </View>
-          {routeSearch && sourceSearch && destSearch && (
-            <View style={styles.discountBadge}>
-              <Text style={styles.discountText}>10.0% off</Text>
-            </View>
-          )}
-        </View>
+        <FareDisplay
+          finalFare={getFinalFare()}
+          showDiscount={!!(routeSearch && sourceSearch && destSearch)}
+          isEditing={isEditingFare}
+          onPress={handleFarePress}
+          manualTotal={manualTotal}
+          onManualChange={(val) => {
+            setIsManualFare(true);
+            setManualTotal(val);
+          }}
+          onBlur={() => setIsEditingFare(false)}
+        />
 
         <TouchableOpacity
           style={[
             styles.buyBtn,
-            (!routeSearch || !sourceSearch || !destSearch) && styles.buyBtnDisabled,
+            (!routeSearch || !sourceSearch || !destSearch || validationStatus !== "VALID") && styles.buyBtnDisabled,
           ]}
           onPress={handleBuy}
-          disabled={!routeSearch || !sourceSearch || !destSearch}
+          disabled={!routeSearch || !sourceSearch || !destSearch || validationStatus !== "VALID"}
         >
           <Text style={styles.buyText}>BUY</Text>
         </TouchableOpacity>
       </View>
 
       {/* Dropdown List */}
-      {activeInput && dropdownPlacement && (
+      {activeInput && dropdownPlacement && measuredPos.width > 0 && (
         <View
           style={[
             activeInput === "route" ? styles.routeDropdown : styles.stopDropdown,
             {
               position: "absolute",
-              left: measuredPos.x,
-              width: measuredPos.width,
+              left: measuredPos.x + 60,
+              width: measuredPos.width - 40,
               zIndex: 1000,
               elevation: 100,
               ...dropdownPlacement.positionStyle,
             },
           ]}
         >
-          <FlatList
+          <FlashList
+            estimatedItemSize={activeInput === "route" ? 85 : 48}
+            showsVerticalScrollIndicator={false}
             data={
               activeInput === "route"
                 ? filteredRoutes
@@ -795,11 +926,9 @@ export const BookingScreen = ({ navigation }: any) => {
             keyExtractor={(item, index) => `${activeInput}-${index}`}
             keyboardShouldPersistTaps="always"
             nestedScrollEnabled={true}
-            showsVerticalScrollIndicator={true}
-            initialNumToRender={50}
-            maxToRenderPerBatch={50}
-            windowSize={10}
-            bounces={true}
+            initialNumToRender={20}
+            maxToRenderPerBatch={20}
+
             ListEmptyComponent={
               <View style={styles.emptyItem}>
                 <Text style={styles.emptyItemText}>
@@ -834,7 +963,7 @@ export const BookingScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "#D32F2F",
   },
   header: {
     backgroundColor: "#D32F2F",
@@ -904,7 +1033,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
+    paddingLeft: 6, // Shifted icon further left
+    paddingRight: 12,
     height: 46,
     marginBottom: 8,
     borderWidth: 1,
@@ -915,7 +1045,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF",
   },
   inputIcon: {
-    width: 32,
+    width: 30, // Increased slightly for larger icon
     alignItems: "center",
     justifyContent: "center",
   },
@@ -924,6 +1054,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#000",
     fontWeight: "500",
+    paddingLeft: 4, // Tighten gap after icon
+    textAlign: 'left', // Ensure it starts from left
   },
   stopDot: {
     width: 12,
@@ -936,7 +1068,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   typeBtn: {
-    width: 100,
+    paddingHorizontal: 10,
     height: 40,
     borderRadius: 8,
     borderWidth: 1,
@@ -1059,13 +1191,13 @@ const styles = StyleSheet.create({
   },
   routeDropdown: {
     backgroundColor: "#FFF",
-    borderRadius: 12,
+    borderRadius: 0,
     elevation: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
-    maxHeight: 400,
+    height: 400,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "#DDD",
@@ -1078,13 +1210,15 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
-    maxHeight: 400,
+    height: 400,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
   routeItem: {
-    padding: 14,
+    height: 85,
+    paddingHorizontal: 14,
+    justifyContent: "center",
     borderBottomWidth: 1,
     borderBottomColor: "#F0F0F0",
   },
@@ -1096,8 +1230,8 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   routeNumberText: {
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 16,
+    fontWeight: "500",
     color: "#000",
   },
   routeVisualPath: {
@@ -1138,14 +1272,15 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   routeTerminalLabel: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#6B7280",
-    fontWeight: "500",
+    fontWeight: "400",
     lineHeight: 14,
   },
   stopItem: {
-    padding: 14,
-    paddingLeft: 16,
+    height: 48,
+    paddingHorizontal: 16,
+    justifyContent: "center",
     borderBottomWidth: 1,
     borderBottomColor: "#F0F0F0",
     backgroundColor: "#FAFAFA",
@@ -1156,9 +1291,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   stopItemText: {
-    fontSize: 15,
+    fontSize: 14,
     color: "#000",
-    fontWeight: "500",
+    fontWeight: "400",
   },
   emptyItem: {
     padding: 30,

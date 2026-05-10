@@ -46,7 +46,8 @@
     "react-native-webview": "13.2.2",
     "tailwind-merge": "^2.2.0",
     "zod": "^4.4.3",
-    "zustand": "^4.4.7"
+    "zustand": "^4.4.7",
+    "expo-asset": "~8.10.1"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

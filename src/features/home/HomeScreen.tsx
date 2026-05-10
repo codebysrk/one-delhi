@@ -118,6 +118,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               ticket={latestTicket}
               onPress={() => navigation.navigate("Ticket")}
               showTimer={false}
+              largeText={true}
             />
           ) : (
             <View style={styles.topEmptyCard}>
