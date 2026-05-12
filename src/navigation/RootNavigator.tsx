@@ -6,6 +6,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { LoginScreen } from '../features/auth/LoginScreen';
 import { SignupScreen } from '../features/auth/SignupScreen';
 import { MapScreen } from '../features/home/MapScreen';
+import { SearchScreen } from '../features/home/SearchScreen';
+import { RouteDetailScreen } from '../features/home/RouteDetailScreen';
 import { HomeScreen } from '../features/home/HomeScreen';
 import { BookingScreen } from '../features/booking/BookingScreen';
 import { PaymentScreen } from '../features/payment/PaymentScreen';
@@ -188,6 +190,8 @@ export const RootNavigator = () => {
           ) : (
             <>
               <Stack.Screen name="Main" component={MainTabs} />
+              <Stack.Screen name="Search" component={SearchScreen} />
+              <Stack.Screen name="RouteDetail" component={RouteDetailScreen} options={{ presentation: 'modal' }} />
               <Stack.Screen name="Booking" component={BookingScreen} />
               <Stack.Screen name="Payment" component={PaymentScreen} />
               <Stack.Screen name="Pass" component={PassScreen} />

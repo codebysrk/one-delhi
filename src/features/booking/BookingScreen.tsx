@@ -325,12 +325,53 @@ export const BookingScreen = ({ navigation }: any) => {
 
   // --- 2. Effects ---
 
-  // Use data from dtc_data.json
+  // Fetch data from Firestore
   useEffect(() => {
-    if (dtcData && dtcData.routes) {
-      setDbRoutes(dtcData.routes as Route[]);
-      setIsDbLoading(false);
-    }
+    const fetchRoutes = async () => {
+      try {
+        const { getDocs, collection } = require("firebase/firestore");
+        const { db } = require("../../services/firebase");
+        
+        setIsDbLoading(true);
+        const querySnapshot = await getDocs(collection(db, "routes"));
+        const fetchedRoutes: Route[] = [];
+        
+        querySnapshot.forEach((doc: any) => {
+          const r = doc.data();
+          if (r.directions?.up) {
+            fetchedRoutes.push({
+              id: `${r.route}UP`,
+              name: `${r.route} UP`,
+              stops: r.directions.up.stops
+            });
+          }
+          if (r.directions?.down) {
+            fetchedRoutes.push({
+              id: `${r.route}DOWN`,
+              name: `${r.route} DOWN`,
+              stops: r.directions.down.stops
+            });
+          }
+        });
+        
+        setDbRoutes(fetchedRoutes);
+      } catch (error) {
+        console.error("Error fetching routes:", error);
+        // Fallback to local data if firestore fails
+        if (dtcData && dtcData.routes) {
+          const flattened: Route[] = [];
+          dtcData.routes.forEach((r: any) => {
+            if (r.directions?.up) flattened.push({ id: `${r.route}UP`, name: `${r.route} UP`, stops: r.directions.up.stops });
+            if (r.directions?.down) flattened.push({ id: `${r.route}DOWN`, name: `${r.route} DOWN`, stops: r.directions.down.stops });
+          });
+          setDbRoutes(flattened);
+        }
+      } finally {
+        setIsDbLoading(false);
+      }
+    };
+
+    fetchRoutes();
   }, []);
 
 

@@ -236,15 +236,45 @@ export const MapScreen = ({ navigation }: any) => {
     [],
   );
 
-  const stopsToShow = useMemo(
-    () =>
-      dtcData.routes[0]?.stops.slice(0, 20).map((stopName, idx) => ({
-        id: idx.toString(),
-        name: stopName,
-        dir: idx % 2 === 0 ? "towards Terminal" : "towards Cambridge Sch...",
-      })) || [],
-    [],
-  );
+  const [stopsToShow, setStopsToShow] = useState<any[]>([]);
+
+  // Fetch stops from Firestore
+  useEffect(() => {
+    const fetchStops = async () => {
+      try {
+        const { getDocs, collection, query, limit } = require("firebase/firestore");
+        const { db } = require("../../services/firebase");
+        
+        // Fetch first route's stops as default
+        const routesRef = collection(db, "routes");
+        const q = query(routesRef, limit(1));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          const r = querySnapshot.docs[0].data();
+          const stops = r.directions?.up?.stops || [];
+          setStopsToShow(stops.slice(0, 20).map((stopName: string, idx: number) => ({
+            id: idx.toString(),
+            name: stopName,
+            dir: idx % 2 === 0 ? "towards Terminal" : "towards Cambridge Sch...",
+          })));
+        }
+      } catch (error) {
+        console.error("Error fetching stops for MapScreen:", error);
+        // Fallback to local data
+        const stops = dtcData.routes[0]?.directions?.up?.stops;
+        if (stops) {
+          setStopsToShow(stops.slice(0, 20).map((stopName, idx) => ({
+            id: idx.toString(),
+            name: stopName,
+            dir: idx % 2 === 0 ? "towards Terminal" : "towards Cambridge Sch...",
+          })));
+        }
+      }
+    };
+
+    fetchStops();
+  }, []);
 
   const renderStopItem = useCallback(
     ({ item, index }: { item: any; index: number }) => (
@@ -301,7 +331,11 @@ export const MapScreen = ({ navigation }: any) => {
               </View>
 
               <View style={styles.searchContainer}>
-                <View style={styles.searchPill}>
+                <TouchableOpacity 
+                  style={styles.searchPill}
+                  activeOpacity={0.9}
+                  onPress={() => navigation.navigate("Search")}
+                >
                   <Search
                     size={22}
                     color="rgba(255,255,255,0.7)"
@@ -317,7 +351,7 @@ export const MapScreen = ({ navigation }: any) => {
                   <Text style={[styles.searchLabel, { marginLeft: 4 }]}>
                     Search 500+ Route
                   </Text>
-                </View>
+                </TouchableOpacity>
                 <TouchableOpacity style={styles.bellBtn}>
                   <Bell size={24} color="white" />
                   <View style={styles.yellowDot} />
