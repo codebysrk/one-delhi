@@ -1291,7 +1291,49 @@
       "id": "OMSUP",
       "name": "OMS (Outer Ring Road Circle)",
       "stops": ["Anand Vihar", "Noida Mode", "Sarai Kale Khan", "Ashram", "Nehru Place", "IIT Gate", "Dhaula Kuan", "Punjabi Bagh", "Azadpur", "ISBT Kashmere Gate"]
-    }
+    },
+{
+  "id": "516UP",
+  "name": "516 (Safdurjung Terminal to dera village)",
+  "stops": [
+    "Safdurjung Terminal",
+    "Vikas Sadan",
+    "INA Colony / Kidwai nagar",
+    "INA Metro Station( Dilli Haat)",
+    "AIIMS / Safdurjung Hospital",
+    "Yusuf Sarai",
+    "Green Park",
+    "Hauz Khas",
+    "Padhmini Enclave",
+    "IIT Gate",
+    "Mothers International School",
+    "Adhchini Village",
+    "MMTC / Adhchini Village",
+    "PTS",
+    "DDA Flats Lado Sarai",
+    "T.B. Hospital",
+    "Qutab",
+    "Mehrauli",
+    "Qutab Minar",
+    "Lado Sarai Crossing",
+    "Ahinsa Sthal",
+    "Andheria Bagh More",
+    "Andheria More / Chhatarpur Metro Station",
+    "Chhatarpur Mandir",
+    "Chhattarpur",
+    "Chhatarpur Extension",
+    "Rajpur Crossing",
+    "Chhatarpur Ext / Nanda Hospital",
+    "Satbari Village",
+    "Mallu Farm",
+    "Chandan Holla",
+    "Shani Dham Mandir",
+    "Fatehpur Beri",
+    "Harswaroop Colony",
+    "Dera More",
+    "dera village"
+  ]
+}
   ],
   "allStops": [
     "Anand Vihar ISBT", "Old Delhi Railway Station", "Mehrauli", "Saket Metro Station", "AIIMS", "ITO", "Lajpat Nagar", "Nehru Place", "Hasan Pur Village", "Shakarpur X-ing", "Westend DLF", "Saidulajab", "Uttam Nagar", "Janakpuri", "Dhaula Kuan", "IIT Gate", "India Gate", "New Delhi Railway Station", "Nizamuddin Railway Station", "Mandi Village (T)"
