@@ -39,23 +39,31 @@ export const formatTimeTo12hr = (timeStr: string): string => {
 
 
 export interface Ticket {
-  id: string;
-  route: string;
-  src: string;
-  dst: string;
-  source?: string;
-  dest?: string;
-  fare: number;
-  total: number;
-  qty: number;
-  time: string;
-  date?: string;
-  timestamp: number;
   tid: string;
-  status: TicketStatus;
+  id?: string; // Document ID
   userId: string;
-  type?: 'AC' | 'Non-AC';
-  baseFare?: number;
+  route: string;
+  source: string;
+  dest: string;
+  src?: string; // Backward compatibility
+  dst?: string; // Backward compatibility
+  busType: 'AC' | 'Non-AC';
+  fare: number;
+  baseFare: number;
+  finalFare: string;
+  total: string;
+  qty: number;
+  status: 'Active' | 'Expired' | 'INVALID';
+  date: string;
+  time: string;
+  timestamp: number;
+  fareSource: string;
+  slab: {
+    acFare: number;
+    nonACFare: number;
+    maxStops: number;
+    minStops: number;
+  };
 }
 
 /**

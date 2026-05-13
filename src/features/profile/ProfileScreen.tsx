@@ -4,9 +4,10 @@ import { auth } from '../../services/firebase';
 import { signOut } from 'firebase/auth';
 import { useAppStore } from '../../store/useAppStore';
 import { RemixIcon } from '../../components/RemixIcon';
+import { logActivity } from '../../services/logService';
 
 export const ProfileScreen = ({ navigation }: any) => {
-  const { user, userProfile, setUser } = useAppStore();
+  const { user, userProfile, deviceId, resetStore } = useAppStore();
 
   const handleLogout = async () => {
     Alert.alert(
@@ -14,12 +15,22 @@ export const ProfileScreen = ({ navigation }: any) => {
       "Are you sure you want to logout?",
       [
         { text: "Cancel", style: "cancel" },
-        { 
-          text: "Logout", 
+        {
+          text: "Logout",
           style: "destructive",
           onPress: async () => {
+            try {
+              // Log before signing out
+              await logActivity({
+                type: 'USER',
+                action: 'LOGOUT',
+                details: 'User manually logged out of the application.',
+                targetId: user?.uid,
+                targetType: 'AUTH'
+              });
+            } catch {}
             await signOut(auth);
-            setUser(null);
+            resetStore();
           }
         }
       ]
@@ -27,10 +38,10 @@ export const ProfileScreen = ({ navigation }: any) => {
   };
 
   const menuItems = [
-    { icon: 'user-3-line', label: "Account Details", color: '#666' },
+    { icon: 'user-3-line', label: "Account Details", color: '#666', action: undefined },
     { icon: 'history-line', label: "My History", action: () => navigation.navigate('History'), color: '#666' },
-    { icon: 'chat-poll-line', label: "Give Feedback", color: '#666' },
-    { icon: 'information-line', label: "About One Delhi", color: '#666' },
+    { icon: 'question-answer-line', label: "Help & Support", action: () => navigation.navigate('Help'), color: '#666' },
+    { icon: 'information-line', label: "About One Delhi", color: '#666', action: undefined },
     ...(userProfile?.role === 'admin' ? [
       { icon: 'shield-user-line', label: "Admin Panel", action: () => navigation.navigate('Admin'), color: '#D32F2F' }
     ] : []),
@@ -60,8 +71,9 @@ export const ProfileScreen = ({ navigation }: any) => {
                <RemixIcon name="user-fill" size={32} color="#999" />
             </View>
             <View style={styles.userInfo}>
-               <Text style={styles.userName}>{user?.displayName || 'Delhi Traveler'}</Text>
-               <Text style={styles.userEmail}>{user?.email}</Text>
+               <Text style={styles.userName}>{userProfile?.name || user?.displayName || 'Delhi Traveler'}</Text>
+               <Text style={styles.userEmail}>{userProfile?.email || user?.email}</Text>
+               {userProfile?.phone ? <Text style={styles.userPhone}>{userProfile.phone}</Text> : null}
             </View>
           </View>
 
@@ -147,6 +159,7 @@ const styles = StyleSheet.create({
   userInfo: { marginLeft: 15 },
   userName: { fontSize: 18, fontWeight: '700', color: '#111' },
   userEmail: { fontSize: 13, color: '#666', marginTop: 2 },
+  userPhone: { fontSize: 12, color: '#888', marginTop: 2 },
   menuBox: { 
     backgroundColor: 'white', 
     marginHorizontal: 16, 

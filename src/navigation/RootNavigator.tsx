@@ -16,6 +16,10 @@ import { SettingsScreen } from '../features/profile/SettingsScreen';
 import { EVScreen } from '../features/ev/EVScreen';
 import { PassScreen } from '../features/pass/PassScreen';
 import { AdminScreen } from '../features/admin/AdminScreen';
+import { SearchScreen } from '../features/home/SearchScreen';
+import { RouteDetailScreen } from '../features/home/RouteDetailScreen';
+import { NotificationScreen } from '../features/notifications/NotificationScreen';
+import { HelpScreen } from '../features/profile/HelpScreen';
 import { useAppStore } from '../store/useAppStore';
 import { db, auth } from '../services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -23,6 +27,10 @@ import { collection, query, where, getDocs, orderBy, doc, getDoc } from 'firebas
 import { RemixIcon } from '../components/RemixIcon';
 import { COLORS } from '../core/theme';
 import { Rocket } from 'lucide-react-native';
+import { registerDevice, listenToDeviceSecurity, clearForceLogout } from '../services/deviceService';
+import { logActivity } from '../services/logService';
+import { signOut } from 'firebase/auth';
+import { Alert } from 'react-native';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -149,14 +157,85 @@ export const RootNavigator = () => {
 
   useEffect(() => {
     let isMounted = true;
+    let securityUnsubscribe: (() => void) | null = null;
+
+    const handleSecurityAction = async (action: 'BANNED' | 'LOGOUT', type: 'USER' | 'DEVICE') => {
+      if (securityUnsubscribe) securityUnsubscribe();
+      
+      const currentState = useAppStore.getState();
+      
+      // Clear forceLogout flag before signing out
+      if (action === 'LOGOUT' && currentState.deviceId) {
+        await clearForceLogout(currentState.deviceId).catch(() => {});
+      }
+      
+      await signOut(auth);
+      resetStore();
+      
+      const message = action === 'BANNED'
+        ? `Your ${type.toLowerCase()} has been banned. Please contact support.`
+        : 'You have been remotely logged out by the administrator.';
+
+      Alert.alert('Security Alert', message);
+    };
+
     const subscriber = onAuthStateChanged(auth, async (firebaseUser) => {
       if (!isMounted) return;
       
       if (firebaseUser) {
-        setUser(firebaseUser);
-        await fetchUserProfile(firebaseUser.uid); // Load profile
-        await fetchUserTickets(firebaseUser.uid); // Load in background
+        // 1. Fetch Profile
+        const docSnap = await getDoc(doc(db, "users", firebaseUser.uid));
+        if (docSnap.exists()) {
+          const profile = docSnap.data();
+          
+          // 2. Check if User is BANNED
+          if (profile.status === 'BANNED') {
+            await handleSecurityAction('BANNED', 'USER');
+            return;
+          }
+          
+          setUser(firebaseUser);
+          setUserProfile(profile);
+
+          // 3. Register Device
+          const deviceResult = await registerDevice(
+            firebaseUser.uid,
+            profile.name || 'User',
+            profile.email
+          );
+
+          if (deviceResult) {
+            const { deviceId, status, forceLogout } = deviceResult;
+            useAppStore.getState().setDeviceId(deviceId);
+
+            // 4. Check if Device is BANNED or FORCE LOGOUT
+            if (status === 'BANNED') {
+              await handleSecurityAction('BANNED', 'DEVICE');
+              return;
+            }
+            if (forceLogout) {
+              await handleSecurityAction('LOGOUT', 'DEVICE');
+              return;
+            }
+
+            // 5. Listen for realtime security updates
+            securityUnsubscribe = listenToDeviceSecurity(deviceId, async (action) => {
+               await handleSecurityAction(action, 'DEVICE');
+            });
+
+            // 6. Log Login
+            await logActivity({
+              type: 'SYSTEM',
+              action: 'SESSION_START',
+              details: 'User session restored automatically.',
+              targetId: firebaseUser.uid,
+              targetType: 'AUTH'
+            });
+          }
+        }
+        await fetchUserTickets(firebaseUser.uid); 
       } else {
+        if (securityUnsubscribe) securityUnsubscribe();
         resetStore();
       }
       if (initializing && isMounted) setInitializing(false);
@@ -165,8 +244,9 @@ export const RootNavigator = () => {
     return () => {
       isMounted = false;
       subscriber?.();
+      if (securityUnsubscribe) securityUnsubscribe();
     };
-  }, [fetchUserTickets, resetStore, setUser, initializing]);
+  }, [fetchUserTickets, resetStore, setUser, initializing, setUserProfile]);
 
   if (initializing) return null;
 
@@ -188,6 +268,9 @@ export const RootNavigator = () => {
           ) : (
             <>
               <Stack.Screen name="Main" component={MainTabs} />
+              <Stack.Screen name="Search" component={SearchScreen} />
+              <Stack.Screen name="RouteDetail" component={RouteDetailScreen} options={{ presentation: 'modal' }} />
+              <Stack.Screen name="Notifications" component={NotificationScreen} />
               <Stack.Screen name="Booking" component={BookingScreen} />
               <Stack.Screen name="Payment" component={PaymentScreen} />
               <Stack.Screen name="Pass" component={PassScreen} />
@@ -195,6 +278,7 @@ export const RootNavigator = () => {
               <Stack.Screen name="History" component={HistoryScreen} />
               <Stack.Screen name="Admin" component={AdminScreen} />
               <Stack.Screen name="Profile" component={ProfileScreen} />
+              <Stack.Screen name="Help" component={HelpScreen} />
               <Stack.Screen name="Settings" component={SettingsScreen} />
               <Stack.Screen name="ComingSoon" component={ComingSoon} />
             </>

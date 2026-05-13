@@ -9,12 +9,14 @@ interface AppState {
   tickets: Ticket[];
   loading: boolean;
   showFooter: boolean;
+  deviceId: string | null;
   setUser: (user: any) => void;
   setUserProfile: (profile: any) => void;
   setTickets: (tickets: Ticket[]) => void;
   addTicket: (ticket: Ticket) => void;
   setLoading: (loading: boolean) => void;
   setShowFooter: (show: boolean) => void;
+  setDeviceId: (id: string | null) => void;
   resetStore: () => void;
 }
 
@@ -26,6 +28,7 @@ export const useAppStore = create<AppState>()(
       tickets: [],
       loading: false,
       showFooter: true,
+      deviceId: null,
 
       setUser: (user) => set({ user }),
       setUserProfile: (userProfile) => set({ userProfile }),
@@ -35,7 +38,8 @@ export const useAppStore = create<AppState>()(
       })),
       setLoading: (loading) => set({ loading }),
       setShowFooter: (show) => set({ showFooter: show }),
-      resetStore: () => set({ user: null, userProfile: null, tickets: [], loading: false }),
+      setDeviceId: (deviceId) => set({ deviceId }),
+      resetStore: () => set({ user: null, userProfile: null, tickets: [], loading: false, deviceId: null }),
     }),
     {
       name: 'railone-storage',

@@ -8,9 +8,11 @@ import { AuthInput } from '../../components/auth/AuthInput';
 import { Button } from '../../components/Button';
 import { COLORS, SPACING, SHADOWS, RADII } from '../../core/theme';
 import { Mail, Lock, LogIn, ChevronRight, CheckSquare, Square } from 'lucide-react-native';
-import { auth } from '../../services/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth, db } from '../../services/firebase';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { useAppStore } from '../../store/useAppStore';
+import { logActivity } from '../../services/logService';
+import { doc, getDoc } from 'firebase/firestore';
 
 
 
@@ -36,7 +38,38 @@ export const LoginScreen = ({ navigation }: any) => {
     setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
-      setUser(userCredential.user);
+      const user = userCredential.user;
+
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        if (userData.status === 'BANNED') {
+          await signOut(auth);
+          
+          await logActivity({
+            type: 'SECURITY',
+            action: 'LOGIN_BLOCKED',
+            details: 'Access denied: User account is banned.',
+            targetId: user.uid,
+            targetType: 'USER'
+          });
+
+          Alert.alert('Access Denied', 'Your account has been banned. Please contact support.');
+          setLoading(false);
+          return;
+        }
+      }
+
+      await logActivity({
+        type: 'USER',
+        action: 'LOGIN_SUCCESS',
+        details: 'User successfully logged into the application.',
+        targetId: user.uid,
+        targetType: 'AUTH'
+      });
+
+      setUser(user);
     } catch (error: any) {
       let msg = error.message;
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {

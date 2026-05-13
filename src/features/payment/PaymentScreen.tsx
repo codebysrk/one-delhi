@@ -9,6 +9,7 @@ import { db, auth } from '../../services/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { PaytmIcon, PhonePeIcon, GPayIcon, AmazonPayIcon } from '../../components/PaymentIcons';
 import { sanitizePayload } from '../../utils/firebaseUtils';
+import { logActivity } from '../../services/logService';
 
 export const PaymentScreen = ({ navigation, route }: any) => {
   const { ticketData = {} } = route.params || {};
@@ -60,6 +61,16 @@ export const PaymentScreen = ({ navigation, route }: any) => {
       const cleanTicket = sanitizePayload(finalTicket);
 
       await addDoc(collection(db, "tickets"), cleanTicket);
+      
+      await logActivity({
+        type: 'USER',
+        action: 'BUY_TICKET',
+        details: `Ticket purchased for route ${ticketData.route}: ₹${ticketData.total}`,
+        targetId: tid,
+        targetType: 'TICKET',
+        newValue: { route: ticketData.route, fare: ticketData.total, qty: ticketData.qty }
+      });
+
       addTicket({ 
         ...finalTicket, 
         fare: ticketData.total, 

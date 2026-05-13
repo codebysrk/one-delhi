@@ -1,0 +1,28 @@
+{
+  "project_info": {
+    "project_number": "645784683590",
+    "project_id": "onedelhii",
+    "storage_bucket": "onedelhii.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:645784683590:android:placeholder",
+        "android_client_info": {
+          "package_name": "com.onedelhi.app"
+        }
+      },
+      "api_key": [
+        {
+          "current_key": "AIzaSyCcmJeDPobzD-6IcJF96-IHdLkvPudi-N0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
