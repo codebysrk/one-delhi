@@ -34,10 +34,22 @@ export interface LogData {
   timestamp: number;
 }
 
+import * as Device from 'expo-device';
+import Constants from 'expo-constants';
+
 export const logAction = async (data: Omit<LogData, 'timestamp'>): Promise<void> => {
   try {
+    const deviceMeta = {
+      model: Device.modelName,
+      os: Device.osName,
+      osVersion: Device.osVersion,
+      appVersion: Constants.expoConfig?.version || '1.0.0',
+      isRooted: !Device.isDevice, // Basic check
+    };
+
     const logData = sanitizePayload({
       ...data,
+      deviceMeta,
       timestamp: Date.now(),
     });
     await addDoc(collection(db, 'logs'), logData);
