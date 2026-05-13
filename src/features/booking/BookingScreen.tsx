@@ -255,6 +255,9 @@ export const BookingScreen = ({ navigation }: any) => {
   const [selectedFullRouteId, setSelectedFullRouteId] = useState("");
   const [dbRoutes, setDbRoutes] = useState<Route[]>([]);
   const [isDbLoading, setIsDbLoading] = useState(true);
+  const [routeSelection, setRouteSelection] = useState<{start:number;end:number}|undefined>(undefined);
+  const [sourceSelection, setSourceSelection] = useState<{start:number;end:number}|undefined>(undefined);
+  const [destSelection, setDestSelection] = useState<{start:number;end:number}|undefined>(undefined);
 
   // Fare calculation state
   const [validationStatus, setValidationStatus] = useState<
@@ -743,10 +746,17 @@ export const BookingScreen = ({ navigation }: any) => {
         const displayId = item.id.replace(/UP$|DOWN$/, "");
         setRouteSearch(`${displayId}-${destination}`);
         setSelectedFullRouteId(item.id);
+        // Reset cursor to beginning so start of text is visible
+        setRouteSelection({ start: 0, end: 0 });
+        setTimeout(() => setRouteSelection(undefined), 300);
       } else if (type === "source") {
         setSourceSearch(item);
+        setSourceSelection({ start: 0, end: 0 });
+        setTimeout(() => setSourceSelection(undefined), 300);
       } else if (type === "dest") {
         setDestSearch(item);
+        setDestSelection({ start: 0, end: 0 });
+        setTimeout(() => setDestSelection(undefined), 300);
       }
 
       // 2. Hide keyboard and blur inputs
@@ -855,6 +865,9 @@ export const BookingScreen = ({ navigation }: any) => {
                 onFocus={() => handleFocus("route")}
                 autoCorrect={false}
                 autoCapitalize="characters"
+                multiline={false}
+                scrollEnabled
+                selection={routeSelection}
               />
               <RemixIcon name="arrow-down-s-line" size={20} color="#9CA3AF" />
             </View>
@@ -876,6 +889,9 @@ export const BookingScreen = ({ navigation }: any) => {
                 onChangeText={setSourceSearch}
                 onFocus={() => handleFocus("source")}
                 editable={currentRouteStops.length > 0}
+                multiline={false}
+                scrollEnabled
+                selection={sourceSelection}
               />
               <RemixIcon name="arrow-down-s-line" size={20} color="#9CA3AF" />
             </View>
@@ -893,6 +909,9 @@ export const BookingScreen = ({ navigation }: any) => {
                 onChangeText={setDestSearch}
                 onFocus={() => handleFocus("dest")}
                 editable={currentRouteStops.length > 0}
+                multiline={false}
+                scrollEnabled
+                selection={destSelection}
               />
               <RemixIcon name="arrow-down-s-line" size={20} color="#9CA3AF" />
             </View>
@@ -1092,11 +1111,14 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    height: "100%",
     fontSize: 16,
     color: "#000",
     fontWeight: "500",
-    paddingLeft: 4, // Tighten gap after icon
-    textAlign: 'left', // Ensure it starts from left
+    paddingLeft: 4,
+    paddingVertical: 0,
+    textAlign: "left",
+    minWidth: 0,
   },
   stopDot: {
     width: 12,

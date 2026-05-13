@@ -8,6 +8,7 @@ import {
   SafeAreaView,
   StatusBar,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { RemixIcon } from "../../components/RemixIcon";
@@ -104,14 +105,20 @@ export const SearchScreen = ({ navigation }: any) => {
             <RemixIcon name="arrow-left-line" size={26} color="#333" />
           </TouchableOpacity>
           
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search 500+ Route"
-            placeholderTextColor="#999"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoFocus
-          />
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search 500+ Route"
+              placeholderTextColor="#999"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoFocus
+              multiline={false}
+              scrollEnabled
+              textAlign="left"
+              numberOfLines={1}
+            />
+          </View>
         </View>
 
         {loading ? (
@@ -154,16 +161,28 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#E5E5E5",
     backgroundColor: "#FFF",
+    overflow: "visible",
   },
   backBtn: {
     padding: 4,
     marginRight: 10,
+    flexShrink: 0,
+  },
+  inputWrapper: {
+    flex: 1,
+    minWidth: 0,
+    overflow: "visible",
+    justifyContent: "center",
   },
   searchInput: {
     flex: 1,
     fontSize: 18,
     color: "#555",
     fontWeight: "400",
+    textAlign: "left",
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+    margin: 0,
   },
   loaderBox: {
     flex: 1,

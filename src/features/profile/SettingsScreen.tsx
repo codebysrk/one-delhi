@@ -13,14 +13,16 @@ import {
   FileText, 
   Car, 
   QrCode,
-  ArrowRight
+  ArrowRight,
+  Trash2
 } from 'lucide-react-native';
 import { useAppStore } from '../../store/useAppStore';
-import { auth } from '../../services/firebase';
+import { deleteAccount } from '../../services/authService';
 import { updateProfile } from 'firebase/auth';
+import { auth } from '../../services/firebase';
 
 export const SettingsScreen = ({ navigation }: any) => {
-  const { user, setUser, setShowFooter } = useAppStore();
+  const { user, setUser, setShowFooter, resetStore } = useAppStore();
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
 
@@ -49,6 +51,35 @@ export const SettingsScreen = ({ navigation }: any) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "Are you sure you want to delete your account? This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive", 
+          onPress: async () => {
+            setLoading(true);
+            const result = await deleteAccount();
+            if (result.success) {
+              resetStore();
+              Alert.alert("Deleted", "Your account has been successfully deleted.");
+            } else {
+              if (result.error.includes('recent-login')) {
+                Alert.alert("Re-authentication Required", "For security reasons, you need to log in again before deleting your account.");
+              } else {
+                Alert.alert("Error", result.error);
+              }
+            }
+            setLoading(false);
+          } 
+        }
+      ]
+    );
   };
 
   const basicInfo = [
@@ -137,6 +168,16 @@ export const SettingsScreen = ({ navigation }: any) => {
                 <Text style={styles.otherLabel}>{item.label}</Text>
               </TouchableOpacity>
             ))}
+            
+            <TouchableOpacity 
+              style={[styles.otherRow, { marginTop: 10 }]}
+              onPress={handleDeleteAccount}
+            >
+              <View style={styles.iconBox}>
+                <Trash2 size={22} color="#E74C3C" />
+              </View>
+              <Text style={[styles.otherLabel, { color: '#E74C3C', fontWeight: '600' }]}>Delete Account</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
