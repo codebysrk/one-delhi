@@ -1,39 +1,48 @@
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "./firebase";
-import { useAppStore } from "../store/useAppStore";
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from './firebase';
+import { sanitizePayload } from '../utils/firebaseUtils';
 
-export type LogType = 'ADMIN' | 'USER' | 'SYSTEM' | 'SECURITY';
+export type LogAction =
+  | 'LOGIN'
+  | 'LOGOUT'
+  | 'SIGNUP'
+  | 'BUY_TICKET'
+  | 'DEVICE_REGISTERED'
+  | 'DEVICE_BANNED'
+  | 'DEVICE_UNBANNED'
+  | 'USER_BANNED'
+  | 'USER_UNBANNED'
+  | 'FORCE_LOGOUT'
+  | 'ADMIN_CREATED'
+  | 'PROFILE_UPDATE'
+  | 'ADMIN_ACTION'
+  | 'SEARCH_ROUTE'
+  | 'NOTIFICATION_SENT';
 
-export interface LogOptions {
-  type: LogType;
-  action: string;
+export interface LogData {
+  userId: string;
+  userName: string;
+  userEmail: string;
+  action: LogAction;
   details: string;
+  type: 'SYSTEM' | 'USER' | 'ADMIN';
+  deviceId?: string;
+  deviceName?: string;
+  ipAddress?: string;
+  targetType?: 'USER' | 'ROUTE' | 'TICKET' | 'DEVICE';
   targetId?: string;
-  targetType?: 'USER' | 'ROUTE' | 'TICKET' | 'NOTIFICATION' | 'DEVICE' | 'AUTH';
-  oldValue?: any;
-  newValue?: any;
-  notes?: string;
+  timestamp: number;
 }
 
-/**
- * Logs an activity to the global audit log collection.
- * Aligned with the Admin Dashboard logging schema.
- */
-export const logActivity = async (options: LogOptions) => {
-  const { user, userProfile, deviceId } = useAppStore.getState();
-  
+export const logAction = async (data: Omit<LogData, 'timestamp'>): Promise<void> => {
   try {
-    await addDoc(collection(db, 'logs'), {
-      ...options,
-      userId: user?.uid || 'guest',
-      userName: userProfile?.name || user?.displayName || 'Delhi Traveler',
-      userEmail: user?.email || 'guest@onedelhi.gov.in',
-      timestamp: serverTimestamp(),
-      deviceId: deviceId || 'Unknown Device',
-      platform: 'Mobile Client',
+    const logData = sanitizePayload({
+      ...data,
+      timestamp: Date.now(),
     });
+    await addDoc(collection(db, 'logs'), logData);
   } catch (error) {
-    // Logging should never crash the app flow
-    console.error('[LogService] Logging failed:', error);
+    // Logging must never crash the app
+    console.error('[LogService] Failed to write log:', error);
   }
 };

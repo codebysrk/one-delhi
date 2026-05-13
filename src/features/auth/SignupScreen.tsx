@@ -13,7 +13,7 @@ import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { useAppStore } from '../../store/useAppStore';
 import { sanitizePayload } from '../../utils/firebaseUtils';
-import { logActivity } from '../../services/logService';
+import { logAction } from '../../services/logService';
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 const phoneRegex = /^[6-9]\d{9}$/;
@@ -66,12 +66,16 @@ export const SignupScreen = ({ navigation }: any) => {
       
       await setDoc(doc(db, "users", user.uid), userProfile);
       
-      await logActivity({
-        type: 'USER',
-        action: 'SIGNUP_SUCCESS',
+      await logAction({
+        userId: user.uid,
+        userName: trimmedName,
+        userEmail: data.email,
+        action: 'SIGNUP',
         details: 'New user account created successfully.',
+        type: 'USER',
+        targetType: 'USER',
         targetId: user.uid,
-        targetType: 'AUTH'
+        deviceId: useAppStore.getState().deviceId || undefined
       });
 
       setUser(user);

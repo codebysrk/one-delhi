@@ -311,9 +311,14 @@ export const RouteDetailScreen = ({ route, navigation }: any) => {
       
       <RouteHeader 
         routeNumber={routeData.routeNumber} 
+        busCount={routeData.totalBuses} 
         onBack={() => navigation.goBack()} 
       />
 
+      <RouteInfo 
+        origin={routeData.origin} 
+        destination={routeData.destination} 
+      />
       <View style={styles.mapContainer}>
         <WebView
           ref={webViewRef}

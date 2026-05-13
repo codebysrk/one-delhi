@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { doc, setDoc, updateDoc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
 import { sanitizePayload } from '../utils/firebaseUtils';
-import { logActivity } from './logService';
+import { logAction } from './logService';
 
 const DEVICE_ID_KEY = '@one_delhi_device_id';
 
@@ -79,13 +79,16 @@ export const registerDevice = async (
 
       await setDoc(deviceRef, deviceData);
 
-      await logActivity({
-        type: 'SYSTEM',
+      await logAction({
+        userId,
+        userName,
+        userEmail,
         action: 'DEVICE_REGISTERED',
         details: `New device registered: ${deviceData.deviceName} (${deviceData.model})`,
-        targetId: deviceId,
-        targetType: 'DEVICE',
-        newValue: { model: deviceData.model, platform: deviceData.platform, ip: ipAddress }
+        type: 'SYSTEM',
+        deviceId,
+        deviceName: deviceData.deviceName,
+        ipAddress,
       });
     } else {
       // Existing device — update activity

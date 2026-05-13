@@ -1,16 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Animated, Platform, StatusBar, Image } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Animated, Platform, StatusBar, Image, Alert } from 'react-native';
 import { useAppStore } from '../../store/useAppStore';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { getLatestActiveTicket, getRouteNumberOnly, formatTimeTo12hr, isTicketExpired } from '../../utils/ticketHelper';
 import QRCode from 'react-native-qrcode-svg';
 import { useKeepAwake } from 'expo-keep-awake';
 import { InvalidStamp } from '../../components/InvalidStamp';
+import * as ScreenCapture from 'expo-screen-capture';
+import { usePreventScreenCapture } from 'expo-screen-capture';
+import { logAction } from '../../services/logService';
+import { auth } from '../../services/firebase';
 
 const logoImg = require('../../../assets/images/logo.webp');
 
 export const TicketScreen = ({ navigation, route }: any) => {
   useKeepAwake(); // Keeps screen on during ticket inspection
+  usePreventScreenCapture(); // Prevents screenshots and screen recording
   const { tickets, setShowFooter } = useAppStore();
   
   // Support opening specific ticket from history OR showing latest active
@@ -21,6 +26,32 @@ export const TicketScreen = ({ navigation, route }: any) => {
   const isExpired = activeTicket ? isTicketExpired(activeTicket.timestamp) : false;
   const isInvalid = activeTicket?.status === 'INVALID' || isExpired;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // 1. Alert and Log on screenshot attempt
+    const subscription = ScreenCapture.addScreenshotListener(() => {
+      Alert.alert(
+        "Security Warning", 
+        "Screenshots of digital tickets are strictly prohibited for security reasons.",
+        [{ text: "I Understand", style: "cancel" }]
+      );
+      
+      // Log the attempt to Admin Dashboard
+      logAction({
+        userId: auth.currentUser?.uid || 'guest',
+        userName: useAppStore.getState().userProfile?.name || 'User',
+        userEmail: auth.currentUser?.email || '',
+        action: 'SCREENSHOT_ATTEMPT',
+        details: `User tried to take a screenshot of ticket: ${activeTicket.tid || activeTicket.id}`,
+        type: 'USER',
+        targetType: 'TICKET',
+        targetId: activeTicket.tid || activeTicket.id,
+        deviceId: useAppStore.getState().deviceId || undefined
+      }).catch(() => {});
+    });
+
+    return () => subscription.remove();
+  }, [activeTicket]);
 
   useEffect(() => {
     setShowFooter(false);

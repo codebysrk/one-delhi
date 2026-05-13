@@ -4,7 +4,7 @@ import { auth } from '../../services/firebase';
 import { signOut } from 'firebase/auth';
 import { useAppStore } from '../../store/useAppStore';
 import { RemixIcon } from '../../components/RemixIcon';
-import { logActivity } from '../../services/logService';
+import { logAction } from '../../services/logService';
 
 export const ProfileScreen = ({ navigation }: any) => {
   const { user, userProfile, deviceId, resetStore } = useAppStore();
@@ -21,12 +21,14 @@ export const ProfileScreen = ({ navigation }: any) => {
           onPress: async () => {
             try {
               // Log before signing out
-              await logActivity({
-                type: 'USER',
+              await logAction({
+                userId: user?.uid || '',
+                userName: userProfile?.name || user?.displayName || 'User',
+                userEmail: user?.email || '',
                 action: 'LOGOUT',
-                details: 'User manually logged out of the application.',
-                targetId: user?.uid,
-                targetType: 'AUTH'
+                details: 'User logged out',
+                type: 'USER',
+                deviceId: deviceId || undefined,
               });
             } catch {}
             await signOut(auth);
@@ -38,7 +40,7 @@ export const ProfileScreen = ({ navigation }: any) => {
   };
 
   const menuItems = [
-    { icon: 'user-3-line', label: "Account Details", color: '#666', action: undefined },
+    { icon: 'user-3-line', label: "Account Details", action: () => navigation.navigate('Settings'), color: '#666' },
     { icon: 'history-line', label: "My History", action: () => navigation.navigate('History'), color: '#666' },
     { icon: 'question-answer-line', label: "Help & Support", action: () => navigation.navigate('Help'), color: '#666' },
     { icon: 'information-line', label: "About One Delhi", color: '#666', action: undefined },

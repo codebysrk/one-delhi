@@ -28,7 +28,7 @@ import { RemixIcon } from '../components/RemixIcon';
 import { COLORS } from '../core/theme';
 import { Rocket } from 'lucide-react-native';
 import { registerDevice, listenToDeviceSecurity, clearForceLogout } from '../services/deviceService';
-import { logActivity } from '../services/logService';
+import { logAction } from '../services/logService';
 import { signOut } from 'firebase/auth';
 import { Alert } from 'react-native';
 
@@ -151,7 +151,7 @@ export const RootNavigator = () => {
       setTickets(userTickets);
     } catch (error) {
       console.error("Error fetching user tickets:", error);
-      setTickets([]); // Set empty array on error to prevent stale data
+      // Do NOT clear tickets here. Keep the cached ones for offline access.
     }
   }, [setTickets]);
 
@@ -224,12 +224,14 @@ export const RootNavigator = () => {
             });
 
             // 6. Log Login
-            await logActivity({
-              type: 'SYSTEM',
-              action: 'SESSION_START',
-              details: 'User session restored automatically.',
-              targetId: firebaseUser.uid,
-              targetType: 'AUTH'
+            await logAction({
+              userId: firebaseUser.uid,
+              userName: profile.name || 'User',
+              userEmail: profile.email,
+              action: 'LOGIN',
+              details: 'User logged in successfully',
+              type: 'USER',
+              deviceId
             });
           }
         }

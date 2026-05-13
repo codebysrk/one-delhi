@@ -15,8 +15,7 @@ import { RemixIcon } from "../../components/RemixIcon";
 import { collection, getDocs } from "firebase/firestore";
 import { db, auth } from "../../services/firebase";
 import { useAppStore } from "../../store/useAppStore";
-import { logActivity } from "../../services/logService";
-import dtcData from "../../data/dtc_data.json";
+import { logAction } from "../../services/logService";
 
 interface Route {
   route: string;
@@ -50,8 +49,7 @@ export const SearchScreen = ({ navigation }: any) => {
         setRoutes(fetchedRoutes);
       } catch (error) {
         console.error("Error fetching routes:", error);
-        // Fallback to local data
-        setRoutes(dtcData.routes as any);
+        setRoutes([]);
       } finally {
         setLoading(false);
       }
@@ -70,12 +68,16 @@ export const SearchScreen = ({ navigation }: any) => {
       activeOpacity={0.7}
       onPress={async () => {
         try {
-          await logActivity({
-            type: 'USER',
+          await logAction({
+            userId: auth.currentUser?.uid || 'guest',
+            userName: auth.currentUser?.displayName || 'Delhi Traveler',
+            userEmail: auth.currentUser?.email || '',
             action: 'SEARCH_ROUTE',
             details: `User viewed details for Route ${item.route}`,
+            type: 'USER',
+            targetType: 'ROUTE',
             targetId: item.route,
-            targetType: 'ROUTE'
+            deviceId: useAppStore.getState().deviceId || undefined
           });
         } catch {}
         navigation.navigate("RouteDetail", { routeId: item.route });

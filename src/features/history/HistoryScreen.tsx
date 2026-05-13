@@ -8,9 +8,8 @@ import { getRouteNumberOnly, formatTimeTo12hr, isTicketExpired } from '../../uti
 import { useAppStore } from '../../store/useAppStore';
 
 export const HistoryScreen = ({ navigation }: any) => {
-  const { user } = useAppStore();
-  const [tickets, setTickets] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { user, tickets: cachedTickets, setTickets } = useAppStore();
+  const [loading, setLoading] = useState(cachedTickets.length === 0);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
@@ -20,7 +19,7 @@ export const HistoryScreen = ({ navigation }: any) => {
       return;
     }
 
-    // Realtime listener — always fresh from Firestore
+    // Realtime listener — update store and local view
     const q = query(
       collection(db, 'tickets'),
       where('userId', '==', uid),
@@ -32,7 +31,7 @@ export const HistoryScreen = ({ navigation }: any) => {
         id: doc.id,
         ...doc.data()
       }));
-      setTickets(ticketList);
+      setTickets(ticketList as any);
       setLoading(false);
       setRefreshing(false);
     }, (error) => {
@@ -42,7 +41,7 @@ export const HistoryScreen = ({ navigation }: any) => {
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, setTickets]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -113,9 +112,9 @@ export const HistoryScreen = ({ navigation }: any) => {
         </SafeAreaView>
       </View>
 
-      {tickets.length > 0 ? (
+      {cachedTickets.length > 0 ? (
         <FlatList
-          data={tickets}
+          data={cachedTickets}
           renderItem={renderTicketItem}
           keyExtractor={(item) => item.id || item.tid}
           contentContainerStyle={styles.listContent}

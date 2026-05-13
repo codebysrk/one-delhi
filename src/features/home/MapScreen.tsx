@@ -49,7 +49,8 @@ import Animated, {
   withSequence,
 } from "react-native-reanimated";
 import { useAppStore } from "../../store/useAppStore";
-import dtcData from "../../data/dtc_data.json";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../../services/firebase";
 
 const SHEET_MIN_HEIGHT = 210;
 
@@ -202,8 +203,8 @@ export const MapScreen = ({ navigation }: any) => {
     return { bottom: bottomPos };
   });
 
-  const mapHtml = useMemo(
-    () => `
+  const mapHtml = useMemo(() => {
+    return `
     <!DOCTYPE html>
     <html>
     <head>
@@ -212,62 +213,102 @@ export const MapScreen = ({ navigation }: any) => {
       <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
       <style>
         body { margin: 0; padding: 0; }
-        #map { height: 100vh; width: 100vw; background: #eef2f3; }
-        .user-marker { width: 14px; height: 14px; background: #2196F3; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 15px rgba(33, 150, 243, 0.6); }
+        #map { height: 100vh; width: 100vw; background: #f8fafc; }
+        .stop-marker { 
+          width: 12px; height: 12px; background: #B91C1C; 
+          border: 2px solid white; border-radius: 50%; 
+          box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
+        .metro-marker { 
+          width: 14px; height: 14px; background: #0072BC; 
+          border: 2px solid white; border-radius: 2px; 
+          box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
+        .user-marker { 
+          width: 18px; height: 18px; background: #3B82F6; 
+          border: 3px solid white; border-radius: 50%; 
+          box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+        }
       </style>
     </head>
     <body>
       <div id="map"></div>
       <script>
-        var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([28.6273, 77.2183], 15);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          maxZoom: 19,
-          keepBuffer: 2 // Improve panning performance
+        var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([28.6139, 77.2090], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+        
+        var userMarker = L.marker([28.6139, 77.2090], {
+          icon: L.divIcon({ className: 'user-marker', iconSize: [18, 18] })
         }).addTo(map);
-        var userMarker = L.marker([28.6273, 77.2183], {
-          icon: L.divIcon({ className: 'user-marker', iconSize: [14, 14] })
-        }).addTo(map);
-        function updateLocation(lat, lng) { userMarker.setLatLng(new L.LatLng(lat, lng)); }
-        function centerMap(lat, lng) { map.setView([lat, lng], 17); }
+
+        var markersGroup = L.layerGroup().addTo(map);
+
+        window.updateStops = function(stops) {
+          markersGroup.clearLayers();
+          stops.forEach(function(s) {
+            var isMetro = s.tags.railway === 'station' || s.tags.station === 'subway';
+            L.marker([s.lat, s.lon], {
+              icon: L.divIcon({ 
+                className: isMetro ? 'metro-marker' : 'stop-marker', 
+                iconSize: isMetro ? [14, 14] : [12, 12] 
+              })
+            }).bindPopup('<b>' + (s.tags.name || 'Stop') + '</b>').addTo(markersGroup);
+          });
+        };
+
+        window.centerMap = function(lat, lng) {
+          map.setView([lat, lng], 16);
+          userMarker.setLatLng([lat, lng]);
+        };
       </script>
     </body>
     </html>
-  `,
-    [],
-  );
+    `;
+  }, []);
+
 
   const [stopsToShow, setStopsToShow] = useState<any[]>([]);
 
   // Fetch stops from Firestore (with local fallback)
   useEffect(() => {
     const fetchStops = async () => {
+      const { cachedStops, setCachedStops } = useAppStore.getState();
+      
+      // 1. Load from cache first for instant UI
+      if (cachedStops && cachedStops.length > 0) {
+        setStopsToShow(cachedStops);
+      }
+
       try {
-        const { getDocs, collection, query, limit } = require("firebase/firestore");
-        const { db } = require("../../services/firebase");
-        const routesRef = collection(db, "routes");
-        const q = query(routesRef, limit(1));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-          const r = querySnapshot.docs[0].data();
-          const stops = r.directions?.up?.stops || [];
-          setStopsToShow(stops.slice(0, 20).map((stopName: string, idx: number) => ({
-            id: idx.toString(),
-            name: stopName,
-            dir: idx % 2 === 0 ? "towards Terminal" : "towards Cambridge Sch...",
-          })));
+        // 2. Fetch fresh data from Firestore
+        const querySnapshot = await getDocs(collection(db, "routes"));
+        const allStops: any[] = [];
+        
+        querySnapshot.forEach((doc: any) => {
+          const data = doc.data();
+          const stops = data.directions?.up?.stops || data.stops;
+          if (stops && Array.isArray(stops)) {
+            stops.slice(0, 10).forEach((stopName: string, idx: number) => {
+              allStops.push({
+                id: `${doc.id}-${idx}`,
+                name: stopName,
+                dir: "towards Cambridge School",
+              });
+            });
+          }
+        });
+        
+        if (allStops.length > 0) {
+          const finalStops = allStops.slice(0, 50);
+          setStopsToShow(finalStops);
+          setCachedStops(finalStops); // Update persistent cache
         }
       } catch (error) {
-        // Fallback to local data
-        const stops = dtcData.routes[0]?.stops;
-        if (stops) {
-          setStopsToShow(stops.slice(0, 20).map((stopName, idx) => ({
-            id: idx.toString(),
-            name: stopName,
-            dir: idx % 2 === 0 ? "towards Terminal" : "towards Cambridge Sch...",
-          })));
-        }
+        console.error("Error fetching stops for MapScreen:", error);
+        // Fallback is already showing from cachedStops
       }
     };
+
     fetchStops();
   }, []);
 
@@ -326,7 +367,7 @@ export const MapScreen = ({ navigation }: any) => {
               </View>
 
               <View style={styles.searchContainer}>
-                <TouchableOpacity
+                <TouchableOpacity 
                   style={styles.searchPill}
                   activeOpacity={0.9}
                   onPress={() => navigation.navigate("Search")}
@@ -358,29 +399,31 @@ export const MapScreen = ({ navigation }: any) => {
       </View>
 
       <View style={styles.mapBody}>
-        {loading ? (
-          <View style={styles.loader}>
-            <ActivityIndicator size="large" color="#B91C1C" />
-          </View>
-        ) : (
-          <WebView
-            ref={webViewRef}
-            originWhitelist={["*"]}
-            source={{ html: mapHtml }}
-            style={styles.mapWeb}
-            scrollEnabled={false}
-            pointerEvents="auto"
-            cacheEnabled={true}
-            domStorageEnabled={true}
-            androidLayerType="hardware"
-            startInLoadingState={true}
-            renderLoading={() => (
-              <View style={styles.loader}>
-                <ActivityIndicator size="large" color="#B91C1C" />
-              </View>
-            )}
-          />
-        )}
+        <WebView
+          ref={webViewRef}
+          source={{ html: mapHtml }}
+          style={{ flex: 1 }}
+          onLoadEnd={async () => {
+            const loc = await Location.getCurrentPositionAsync({});
+            const { latitude, longitude } = loc.coords;
+            
+            // Center map on user
+            webViewRef.current?.injectJavaScript(`centerMap(${latitude}, ${longitude});`);
+            
+            // Fetch Nearby Stops from Overpass API (Free)
+            const query = `[out:json];(node["highway"="bus_stop"](around:1500,${latitude},${longitude});node["railway"="station"]["station"="subway"](around:2000,${latitude},${longitude}););out body;`;
+            try {
+              const response = await fetch('https://overpass-api.de/api/interpreter', {
+                method: 'POST',
+                body: query
+              });
+              const data = await response.json();
+              if (data.elements) {
+                webViewRef.current?.injectJavaScript(`updateStops(${JSON.stringify(data.elements)});`);
+              }
+            } catch (e) { console.log("Overpass Error", e); }
+          }}
+        />
 
         <Animated.View
           style={[styles.redArrowBtn, animatedControlStyle, { left: 20 }]}

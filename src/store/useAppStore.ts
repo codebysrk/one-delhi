@@ -7,12 +7,14 @@ interface AppState {
   user: any | null;
   userProfile: any | null;
   tickets: Ticket[];
+  cachedStops: any[];
   loading: boolean;
   showFooter: boolean;
   deviceId: string | null;
   setUser: (user: any) => void;
   setUserProfile: (profile: any) => void;
   setTickets: (tickets: Ticket[]) => void;
+  setCachedStops: (stops: any[]) => void;
   addTicket: (ticket: Ticket) => void;
   setLoading: (loading: boolean) => void;
   setShowFooter: (show: boolean) => void;
@@ -26,6 +28,7 @@ export const useAppStore = create<AppState>()(
       user: null,
       userProfile: null,
       tickets: [],
+      cachedStops: [],
       loading: false,
       showFooter: true,
       deviceId: null,
@@ -33,13 +36,14 @@ export const useAppStore = create<AppState>()(
       setUser: (user) => set({ user }),
       setUserProfile: (userProfile) => set({ userProfile }),
       setTickets: (tickets) => set({ tickets }),
+      setCachedStops: (cachedStops) => set({ cachedStops }),
       addTicket: (ticket) => set((state) => ({ 
         tickets: [ticket, ...state.tickets] 
       })),
       setLoading: (loading) => set({ loading }),
       setShowFooter: (show) => set({ showFooter: show }),
       setDeviceId: (deviceId) => set({ deviceId }),
-      resetStore: () => set({ user: null, userProfile: null, tickets: [], loading: false, deviceId: null }),
+      resetStore: () => set({ user: null, userProfile: null, tickets: [], cachedStops: [], loading: false, deviceId: null }),
     }),
     {
       name: 'railone-storage',

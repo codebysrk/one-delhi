@@ -11,7 +11,7 @@ import { Mail, Lock, LogIn, ChevronRight, CheckSquare, Square } from 'lucide-rea
 import { auth, db } from '../../services/firebase';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { useAppStore } from '../../store/useAppStore';
-import { logActivity } from '../../services/logService';
+import { logAction } from '../../services/logService';
 import { doc, getDoc } from 'firebase/firestore';
 
 
@@ -47,12 +47,14 @@ export const LoginScreen = ({ navigation }: any) => {
         if (userData.status === 'BANNED') {
           await signOut(auth);
           
-          await logActivity({
-            type: 'SECURITY',
-            action: 'LOGIN_BLOCKED',
-            details: 'Access denied: User account is banned.',
-            targetId: user.uid,
-            targetType: 'USER'
+          await logAction({
+            userId: user.uid,
+            userName: userData.name || 'Banned User',
+            userEmail: user.email || '',
+            action: 'LOGIN',
+            details: 'Login attempt blocked: Account is banned.',
+            type: 'USER',
+            deviceId: useAppStore.getState().deviceId || undefined
           });
 
           Alert.alert('Access Denied', 'Your account has been banned. Please contact support.');
@@ -61,12 +63,16 @@ export const LoginScreen = ({ navigation }: any) => {
         }
       }
 
-      await logActivity({
-        type: 'USER',
-        action: 'LOGIN_SUCCESS',
+      await logAction({
+        userId: user.uid,
+        userName: user.displayName || 'User',
+        userEmail: user.email || '',
+        action: 'LOGIN',
         details: 'User successfully logged into the application.',
+        type: 'USER',
+        targetType: 'USER',
         targetId: user.uid,
-        targetType: 'AUTH'
+        deviceId: useAppStore.getState().deviceId || undefined
       });
 
       setUser(user);

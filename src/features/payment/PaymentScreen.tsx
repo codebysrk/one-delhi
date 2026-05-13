@@ -6,10 +6,10 @@ import { COLORS } from '../../core/theme';
 import { useAppStore } from '../../store/useAppStore';
 import { generateTicketId, getRouteNumberOnly } from '../../utils/ticketHelper';
 import { db, auth } from '../../services/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, setDoc, doc } from 'firebase/firestore';
 import { PaytmIcon, PhonePeIcon, GPayIcon, AmazonPayIcon } from '../../components/PaymentIcons';
 import { sanitizePayload } from '../../utils/firebaseUtils';
-import { logActivity } from '../../services/logService';
+import { logAction } from '../../services/logService';
 
 export const PaymentScreen = ({ navigation, route }: any) => {
   const { ticketData = {} } = route.params || {};
@@ -51,34 +51,41 @@ export const PaymentScreen = ({ navigation, route }: any) => {
         baseFare: ticketData.baseFare || 10,
         date: dateStr,
         time: timeStr,
-        timestamp: now.getTime(),
+        timestamp: Timestamp.now(),
         userId: auth.currentUser?.uid,
         status: 'Active',
         tid: tid
       };
 
-      // Sanitize payload: remove all undefined values recursively
-      const cleanTicket = sanitizePayload(finalTicket);
-
-      await addDoc(collection(db, "tickets"), cleanTicket);
-      
-      await logActivity({
-        type: 'USER',
-        action: 'BUY_TICKET',
-        details: `Ticket purchased for route ${ticketData.route}: ₹${ticketData.total}`,
-        targetId: tid,
-        targetType: 'TICKET',
-        newValue: { route: ticketData.route, fare: ticketData.total, qty: ticketData.qty }
-      });
-
+      // OFFLINE-FIRST LOGIC:
+      // 1. Add to Local Store Immediately (User sees the ticket instantly)
       addTicket({ 
         ...finalTicket, 
+        timestamp: finalTicket.timestamp.toMillis(),
         fare: ticketData.total, 
         status: 'Active' as any,
         tid: tid
       });
-      setPaymentStatus('idle');
-      navigation.replace('Ticket');
+
+      // 2. Save to Firestore in background (Firestore handles the sync when online)
+      setDoc(doc(db, 'tickets', tid), finalTicket).catch((err: any) => {
+        console.warn('[OfflineSync] Ticket will sync when online:', err);
+      });
+
+      // 3. Log Action (Background)
+      logAction({
+        userId: auth.currentUser?.uid || 'anonymous',
+        userName: useAppStore.getState().userProfile?.name || 'User',
+        userEmail: auth.currentUser?.email || '',
+        action: 'BUY_TICKET',
+        details: `Ticket purchased for route ${ticketData.route}: ₹${ticketData.total}`,
+        type: 'USER',
+        targetType: 'TICKET',
+        targetId: tid,
+        deviceId: useAppStore.getState().deviceId || undefined
+      }).catch(() => {});
+
+      navigation.navigate('Ticket', { ticket: { ...finalTicket, timestamp: finalTicket.timestamp.toMillis(), fare: ticketData.total, tid } });
     } catch (error) {
       console.error(error);
       setPaymentStatus('idle');
