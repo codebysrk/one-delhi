@@ -33,6 +33,7 @@
     "expo-status-bar": "~1.12.1",
     "fast-text-encoding": "^1.0.6",
     "firebase": "^10.7.1",
+    "firebase-admin": "^13.9.0",
     "lucide-react-native": "^0.475.0",
     "moti": "^0.30.0",
     "nativewind": "^2.0.11",
