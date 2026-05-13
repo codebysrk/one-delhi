@@ -45,13 +45,18 @@ export const PaymentScreen = ({ navigation, route }: any) => {
       const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
       const tid = generateTicketId();
       
+      const uid = auth.currentUser?.uid;
+      if (!uid) {
+        throw new Error("User authentication expired. Please login again.");
+      }
+
       const finalTicket = {
         ...ticketData,
         baseFare: ticketData.baseFare || 10,
         date: dateStr,
         time: timeStr,
         timestamp: now.getTime(),
-        userId: auth.currentUser?.uid,
+        userId: uid,
         status: 'Active',
         tid: tid
       };
@@ -68,9 +73,10 @@ export const PaymentScreen = ({ navigation, route }: any) => {
       });
       setPaymentStatus('idle');
       navigation.replace('Ticket');
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      console.error("[PaymentScreen] Booking error:", error);
       setPaymentStatus('idle');
+      Alert.alert('Booking Failed', error.message || 'An unexpected error occurred while booking your ticket.');
     }
   };
 

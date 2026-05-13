@@ -1,0 +1,215 @@
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  deleteUser,
+  signOut,
+  updateProfile,
+} from "firebase/auth";
+
+import {
+  doc,
+  setDoc,
+  deleteDoc,
+  getDoc,
+} from "firebase/firestore";
+
+import { auth, db } from "./firebase";
+
+/**
+ * Interface for User Profile stored in Firestore
+ */
+export interface UserProfile {
+  uid: string;
+  email: string;
+  name: string;
+  phone: string;
+  gender: 'male' | 'female' | 'other';
+  role: 'user' | 'admin';
+  status: 'ACTIVE' | 'BANNED' | 'DISABLED';
+  createdAt: any;
+}
+
+// ========================
+// SIGN UP
+// ========================
+
+export const signUpUser = async ({
+  name,
+  email,
+  phone,
+  gender,
+  password,
+}: any) => {
+  console.log("[AuthService] Starting signup for:", email);
+  try {
+    // 1. Create Firebase Auth account
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      email.trim(),
+      password
+    );
+
+    const user = userCredential.user;
+    console.log("[AuthService] Auth account created:", user.uid);
+
+    // 2. Update Auth Profile (Display Name)
+    await updateProfile(user, { displayName: name.trim() });
+
+    // 3. Prepare User Profile for Firestore
+    const userProfile: UserProfile = {
+      uid: user.uid,
+      email: email.trim().toLowerCase(),
+      name: name.trim(),
+      phone: phone.trim(),
+      gender: gender.toLowerCase(),
+      role: "user",
+      status: "ACTIVE",
+      createdAt: Math.floor(Date.now() / 1000),
+    };
+
+    // 4. Create Firestore Document using UID as ID
+    await setDoc(doc(db, "users", user.uid), userProfile);
+    console.log("[AuthService] Firestore profile created successfully.");
+
+    return {
+      success: true,
+      user,
+      userData: userProfile
+    };
+
+  } catch (error: any) {
+    console.error("[AuthService] Sign up error:", error.code, error.message);
+    return {
+      success: false,
+      error: error.message,
+      code: error.code
+    };
+  }
+};
+
+// ========================
+// LOGIN
+// ========================
+
+export const loginUser = async ({
+  email,
+  password,
+}: any) => {
+  console.log("[AuthService] Attempting login for:", email);
+  try {
+    // 1. Authenticate with Firebase Auth
+    const userCredential = await signInWithEmailAndPassword(
+      auth,
+      email.trim(),
+      password
+    );
+
+    const user = userCredential.user;
+    console.log("[AuthService] Auth successful, fetching profile...");
+
+    // 2. Fetch User Profile from Firestore
+    let userDoc = await getDoc(doc(db, "users", user.uid));
+    let userData: UserProfile;
+
+    if (!userDoc.exists()) {
+      console.warn("[AuthService] Firestore document missing. Repairing for UID:", user.uid);
+      
+      // AUTO-REPAIR: Create a default document if it's missing
+      userData = {
+        uid: user.uid,
+        email: user.email || email.trim().toLowerCase(),
+        name: user.displayName || "User",
+        phone: "",
+        gender: "other",
+        role: "user",
+        status: "ACTIVE",
+        createdAt: Math.floor(Date.now() / 1000),
+      };
+      
+      await setDoc(doc(db, "users", user.uid), userData);
+      console.log("[AuthService] Missing profile repaired successfully.");
+    } else {
+      userData = userDoc.data() as UserProfile;
+    }
+
+    // 3. Verify Account Status
+    if (userData.status !== "ACTIVE") {
+      console.warn("[AuthService] Login blocked: Status is", userData.status);
+      await signOut(auth);
+      return {
+        success: false,
+        error: `Your account is ${userData.status}. Please contact admin.`,
+      };
+    }
+
+    console.log("[AuthService] Login complete and verified.");
+    return {
+      success: true,
+      user,
+      userData,
+    };
+
+  } catch (error: any) {
+    console.error("[AuthService] Login error:", error.code, error.message);
+    return {
+      success: false,
+      error: error.message,
+      code: error.code
+    };
+  }
+};
+
+// ========================
+// DELETE ACCOUNT
+// ========================
+
+export const deleteAccount = async () => {
+  console.log("[AuthService] Attempting account deletion...");
+  try {
+    const user = auth.currentUser;
+
+    if (!user) {
+      return { success: false, error: "No user logged in" };
+    }
+
+    // 1. Delete Firestore data
+    await deleteDoc(doc(db, "users", user.uid));
+    console.log("[AuthService] Firestore document deleted.");
+
+    // 2. Delete Auth account
+    await deleteUser(user);
+    console.log("[AuthService] Auth account deleted successfully.");
+
+    return { success: true };
+
+  } catch (error: any) {
+    console.error("[AuthService] Delete error:", error.code, error.message);
+    if (error.code === 'auth/requires-recent-login') {
+      return {
+        success: false,
+        error: "Security: Please re-login before deleting your account.",
+        code: error.code
+      };
+    }
+    return {
+      success: false,
+      error: error.message,
+      code: error.code
+    };
+  }
+};
+
+// ========================
+// LOGOUT
+// ========================
+
+export const logoutUser = async () => {
+  try {
+    await signOut(auth);
+    console.log("[AuthService] Logout successful.");
+    return { success: true };
+  } catch (error: any) {
+    console.error("[AuthService] Logout error:", error.message);
+    return { success: false, error: error.message };
+  }
+};

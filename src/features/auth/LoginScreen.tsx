@@ -1,18 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert, Image, useWindowDimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert, StatusBar } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Screen } from '../../components/Screen';
 import { AuthInput } from '../../components/auth/AuthInput';
 import { Button } from '../../components/Button';
-import { COLORS, SPACING, SHADOWS, RADII } from '../../core/theme';
-import { Mail, Lock, LogIn, ChevronRight, CheckSquare, Square } from 'lucide-react-native';
-import { auth } from '../../services/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { WavyHeader } from '../../components/auth/WavyHeader';
+import { Checkbox } from '../../components/auth/Checkbox';
+import { COLORS, SPACING, SHADOWS } from '../../core/theme';
+import { Mail, Lock, ArrowRight } from 'lucide-react-native';
 import { useAppStore } from '../../store/useAppStore';
-
-
+import { loginUser } from '../../services/authService';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address').trim().toLowerCase(),
@@ -22,272 +20,243 @@ const loginSchema = z.object({
 type LoginForm = z.infer<typeof loginSchema>;
 
 export const LoginScreen = ({ navigation }: any) => {
-  const { width } = useWindowDimensions();
   const [loading, setLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const setUser = useAppStore((state) => state.setUser);
 
-  const { control, handleSubmit, formState: { errors, isValid } } = useForm<LoginForm>({
+  const { control, handleSubmit, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     mode: 'onChange',
+    defaultValues: {
+      email: '',
+      password: '',
+    }
   });
 
   const onLogin = async (data: LoginForm) => {
     setLoading(true);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
-      setUser(userCredential.user);
-    } catch (error: any) {
-      let msg = error.message;
-      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-        msg = 'Invalid email or password. Please try again.';
-      } else if (error.code === 'auth/too-many-requests') {
-        msg = 'Too many failed attempts. Please try again later.';
+      const result = await loginUser({
+        email: data.email,
+        password: data.password
+      });
+
+      if (result.success) {
+        setUser(result.user);
       } else {
-        msg = error.message.replace('Firebase: ', '');
+        let msg = result.error;
+        if (msg.includes('invalid-credential') || msg.includes('user-not-found') || msg.includes('wrong-password')) {
+          msg = 'Invalid email or password. Please try again.';
+        } else if (msg.includes('too-many-requests')) {
+          msg = 'Too many failed attempts. Please try again later.';
+        }
+        Alert.alert('Login Failed', msg);
       }
-      Alert.alert('Login Failed', msg);
+    } catch (err: any) {
+      console.error("[LoginScreen] Unhandled error:", err);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.topSection}>
-        <View style={styles.redCircle} />
-        <View style={styles.redCircle2} />
-      </View>
+    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
+        
+        <WavyHeader height={280}>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Welcome Back!</Text>
+            <Text style={styles.headerSubtitle}>Login to continue your journey</Text>
+          </View>
+        </WavyHeader>
 
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.flex}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-      >
-        <ScrollView 
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.header}>
-            <View style={styles.logoWrapper}>
-              <Image 
-                source={require('../../../assets/images/icon.png')} 
-                style={styles.logo}
-                resizeMode="contain"
+        <View style={styles.formContainer}>
+          <Controller
+            control={control}
+            name="email"
+            render={({ field: { onChange, value } }) => (
+              <AuthInput
+                label="Email"
+                placeholder="demo@email.com"
+                value={value || ''}
+                onChangeText={onChange}
+                error={errors.email?.message}
+                icon={<Mail size={20} />}
+                keyboardType="email-address"
+                autoCapitalize="none"
               />
-            </View>
-            <Text style={styles.title}>One Delhi</Text>
-            <Text style={styles.subtitle}>Sign in to your account to continue</Text>
-          </View>
-
-          <View style={styles.card}>
-            <Controller
-              control={control}
-              name="email"
-              render={({ field: { onChange, value } }) => (
-                <AuthInput
-                  label="Email Address"
-                  placeholder="name@example.com"
-                  value={value}
-                  onChangeText={onChange}
-                  error={errors.email?.message}
-                  icon={<Mail size={20} color={COLORS.textMuted} />}
-                  keyboardType="email-address"
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="password"
-              render={({ field: { onChange, value } }) => (
-                <AuthInput
-                  label="Password"
-                  placeholder="Enter your password"
-                  value={value}
-                  onChangeText={onChange}
-                  error={errors.password?.message}
-                  secureTextEntry
-                  icon={<Lock size={20} color={COLORS.textMuted} />}
-                />
-              )}
-            />
-
-            <View style={styles.row}>
-              <TouchableOpacity 
-                style={styles.rememberRow} 
-                onPress={() => setRememberMe(!rememberMe)}
-                activeOpacity={0.7}
-              >
-                {rememberMe ? (
-                  <CheckSquare size={18} color={COLORS.primary} />
-                ) : (
-                  <Square size={18} color={COLORS.textMuted} />
-                )}
-                <Text style={styles.rememberText}>Remember Me</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity onPress={() => {}} activeOpacity={0.7}>
-                <Text style={styles.forgotText}>Forgot Password?</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.submitBtn}>
-              <Button
-                label="LOGIN"
-                onPress={handleSubmit(onLogin)}
-                loading={loading}
-                disabled={!isValid || loading}
-                icon={<LogIn size={20} color={COLORS.white} />}
+            )}
+          />
+          <View style={{ height: 8 }} />
+          <Controller
+            control={control}
+            name="password"
+            render={({ field: { onChange, value } }) => (
+              <AuthInput
+                label="Password"
+                placeholder="Enter your password"
+                value={value || ''}
+                onChangeText={onChange}
+                error={errors.password?.message}
+                secureTextEntry
+                icon={<Lock size={20} />}
               />
-            </View>
+            )}
+          />
 
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>Don't have an account? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Signup')} activeOpacity={0.7}>
-                <Text style={styles.signupText}>Create Account</Text>
-              </TouchableOpacity>
+          <View style={styles.rowBetween}>
+            <Checkbox 
+              isChecked={rememberMe} 
+              onToggle={() => setRememberMe(!rememberMe)} 
+              label="Remember Me" 
+            />
+            <TouchableOpacity onPress={() => Alert.alert('Forgot Password', 'Please contact support to reset your password.')}>
+              <Text style={styles.forgotPassword}>Forgot Password?</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={{ marginTop: 16 }}>
+            <Button
+              label="Login"
+              onPress={handleSubmit(onLogin)}
+              loading={loading}
+              disabled={loading}
+              style={styles.primaryButton}
+            />
+          </View>
+
+          <View style={styles.dividerContainer}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <TouchableOpacity style={styles.socialButton} activeOpacity={0.8} onPress={() => Alert.alert('Coming Soon', 'Google sign-in will be available soon.')}>
+            <View style={styles.googleIconPlaceholder}>
+               <Text style={styles.googleG}>G</Text>
             </View>
+            <Text style={styles.socialButtonText}>Continue with Google</Text>
+          </TouchableOpacity>
+
+          <View style={styles.footerRow}>
+            <Text style={styles.footerText}>Don't have an account? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
+              <Text style={styles.footerLink}>Sign up</Text>
+            </TouchableOpacity>
           </View>
-          
-          <View style={styles.bottomBranding}>
-             <Text style={styles.brandingText}>Transport Department, GNCTD</Text>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
+        </View>
+
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#F8F9FA' 
+  screen: {
+    flex: 1,
+    backgroundColor: '#FFFFFF', // COLORS.background
   },
-  topSection: {
-    position: 'absolute',
-    top: -100,
-    right: -100,
-    width: 300,
-    height: 300,
-    zIndex: 0,
-  },
-  redCircle: {
-    position: 'absolute',
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: 'rgba(211, 47, 47, 0.08)',
-  },
-  redCircle2: {
-    position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: 'rgba(211, 47, 47, 0.05)',
-    top: 50,
-    right: 50,
-  },
-  flex: { flex: 1 },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.xl,
-    paddingTop: 60,
+    paddingBottom: 24, // Reduced from 48
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: 40,
+  headerTextContainer: {
+    marginTop: 20,
+    paddingHorizontal: 24,
+    alignItems: 'flex-start',
   },
-  logoWrapper: {
-    width: 100,
-    height: 100,
-    backgroundColor: 'white',
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-    ...SHADOWS.medium,
-  },
-  logo: {
-    width: 70,
-    height: 70,
-  },
-  title: {
+  headerTitle: {
+    color: '#FFFFFF', // COLORS.background
     fontSize: 32,
-    fontWeight: 'bold',
-    color: '#1A1A1A',
-    marginBottom: 8,
-    letterSpacing: -0.5,
+    fontWeight: '700',
+    marginBottom: 4, // SPACING.xs
   },
-  subtitle: {
+  headerSubtitle: {
+    color: '#FFFFFF', // COLORS.background
     fontSize: 16,
-    color: COLORS.textMuted,
-    textAlign: 'center',
-    paddingHorizontal: 20,
+    opacity: 0.9,
   },
-  card: {
-    backgroundColor: 'white',
-    borderRadius: 24,
-    padding: 24,
-    width: '100%',
-    ...SHADOWS.premium,
-    shadowColor: 'rgba(211, 47, 47, 0.15)',
+  formContainer: {
+    paddingHorizontal: 24,
+    paddingTop: 12, // Reduced
+    marginTop: -30, // Pull up more over the wave
   },
-  row: {
+  rowBetween: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 25,
-    marginTop: 5,
+    marginTop: 12, // Reduced
   },
-  rememberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  rememberText: {
-    marginLeft: 8,
-    color: COLORS.textMuted,
+  forgotPassword: {
     fontSize: 14,
+    color: COLORS.primary,
     fontWeight: '500',
   },
-  forgotText: {
-    color: COLORS.primary,
-    fontWeight: '700',
+  primaryButton: {
+    height: 54,
+    borderRadius: 12, // RADII.button
+    backgroundColor: COLORS.primary,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 16, // Reduced from 24
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E5E7EB', // COLORS.border
+  },
+  dividerText: {
+    marginHorizontal: 16, // SPACING.md
+    color: '#6B7280', // COLORS.textMuted
     fontSize: 14,
   },
-  submitBtn: {
-    marginTop: 5,
-    height: 58,
-    borderRadius: 16,
-    backgroundColor: COLORS.primary,
+  socialButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 54,
+    borderRadius: 12, // RADII.button
+    borderWidth: 1,
+    borderColor: '#E5E7EB', // COLORS.border
+    backgroundColor: '#FFFFFF', // COLORS.background
   },
-  footer: {
+  googleIconPlaceholder: {
+    marginRight: 8, // SPACING.sm
+  },
+  googleG: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#DB4437', // Google Red
+  },
+  socialButtonText: {
+    fontSize: 15,
+    color: '#111827', // COLORS.text
+    fontWeight: '500',
+  },
+  footerRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 25,
+    alignItems: 'center',
+    marginTop: 16, // Reduced from 24
   },
   footerText: {
-    color: COLORS.textMuted,
-    fontSize: 15,
+    fontSize: 14,
+    color: '#6B7280', // COLORS.textMuted
   },
-  signupText: {
+  footerLink: {
+    fontSize: 14,
     color: COLORS.primary,
-    fontWeight: '700',
-    fontSize: 15,
+    fontWeight: '600',
   },
-  bottomBranding: {
-    marginTop: 40,
-    alignItems: 'center',
-  },
-  brandingText: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    fontWeight: '500',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  }
 });
 
 

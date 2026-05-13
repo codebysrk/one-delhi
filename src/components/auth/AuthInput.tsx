@@ -13,6 +13,7 @@ interface AuthInputProps {
   icon?: React.ReactNode;
   keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  maxLength?: number;
 }
 
 export const AuthInput: React.FC<AuthInputProps> = ({
@@ -25,13 +26,14 @@ export const AuthInput: React.FC<AuthInputProps> = ({
   icon,
   keyboardType = 'default',
   autoCapitalize = 'none',
+  maxLength,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.label, isFocused && { color: COLORS.primary }]}>{label}</Text>
+      <Text style={styles.label}>{label}</Text>
       <View 
         style={[
           styles.inputWrapper,
@@ -42,7 +44,7 @@ export const AuthInput: React.FC<AuthInputProps> = ({
         {icon && (
           <View style={styles.iconContainer}>
             {React.cloneElement(icon as React.ReactElement, { 
-              color: isFocused ? COLORS.primary : COLORS.textMuted,
+              color: COLORS.textMuted,
               size: 20 
             })}
           </View>
@@ -50,7 +52,7 @@ export const AuthInput: React.FC<AuthInputProps> = ({
         <TextInput
           style={styles.input}
           placeholder={placeholder}
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={COLORS.textMuted}
           value={value}
           onChangeText={onChangeText}
           onFocus={() => setIsFocused(true)}
@@ -59,6 +61,7 @@ export const AuthInput: React.FC<AuthInputProps> = ({
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
           selectionColor={COLORS.primary}
+          maxLength={maxLength}
         />
         {secureTextEntry && (
           <TouchableOpacity 
@@ -67,9 +70,9 @@ export const AuthInput: React.FC<AuthInputProps> = ({
             activeOpacity={0.7}
           >
             {showPassword ? (
-              <EyeOff size={20} color={isFocused ? COLORS.primary : COLORS.textMuted} />
+              <EyeOff size={20} color={COLORS.textMuted} />
             ) : (
-              <Eye size={20} color={isFocused ? COLORS.primary : COLORS.textMuted} />
+              <Eye size={20} color={COLORS.textMuted} />
             )}
           </TouchableOpacity>
         )}
@@ -81,55 +84,51 @@ export const AuthInput: React.FC<AuthInputProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 20,
+    marginBottom: 0,
     width: '100%',
   },
   label: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#4B5563',
-    marginBottom: 8,
-    marginLeft: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827', // COLORS.text
+    marginBottom: SPACING.sm,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    height: 56,
-    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB', // COLORS.border
+    borderRadius: 12, // RADII.input
+    backgroundColor: '#FFFFFF', // COLORS.inputBg
+    height: 44,
+    paddingHorizontal: SPACING.md,
   },
   inputFocused: {
     borderColor: COLORS.primary,
-    backgroundColor: 'white',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2,
+    backgroundColor: '#FFF1F2', // Very faint red tint on focus
   },
   inputError: {
-    borderColor: COLORS.error,
+    borderColor: '#EF4444', // COLORS.error
+    backgroundColor: '#FFF1F2',
   },
   iconContainer: {
-    marginRight: 12,
+    marginRight: SPACING.sm,
   },
   input: {
     flex: 1,
-    fontSize: 16,
-    color: '#111827',
-    fontWeight: '500',
     height: '100%',
+    fontSize: 15,
+    color: '#111827', // COLORS.text
+    textAlign: 'left',
+    minWidth: 0,
+    padding: 0,
   },
   eyeBtn: {
-    padding: 4,
+    marginLeft: SPACING.sm,
+    padding: SPACING.xs,
   },
   errorText: {
-    color: COLORS.error,
+    color: '#EF4444', // COLORS.error
     fontSize: 12,
     marginTop: 6,
     marginLeft: 4,
