@@ -14,6 +14,7 @@ import {
 import { WebView } from 'react-native-webview';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
 import * as Location from 'expo-location';
 
 const SNAP_MID = 300;
@@ -116,8 +117,12 @@ export const EVScreen = ({ navigation }: any) => {
                    <MaterialCommunityIcons name="arrow-left" size={26} color="white" />
                 </TouchableOpacity>
                 <View style={styles.logoBox}>
-                  <Text style={styles.logoText}>ONE</Text>
-                  <Text style={styles.logoSub}>DELHI. ONE RIDE.</Text>
+                  <Image 
+                    source={require('../../../assets/images/map-header-logo.webp')}
+                    style={{ width: 100, height: 35 }}
+                    contentFit="contain"
+                    transition={400}
+                  />
                 </View>
                 <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
                   <MaterialCommunityIcons name="cog" size={24} color="white" />
