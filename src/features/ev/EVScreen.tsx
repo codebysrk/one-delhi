@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 35,
     borderTopRightRadius: 35,
     paddingTop: 20,
-    paddingBottom: 15,
+    paddingBottom: 5,
     elevation: 20,
   },
   tabBar: {
@@ -349,8 +349,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    height: 55,
-    borderRadius: 28,
+    height: 42,
+    borderRadius: 24,
     elevation: 2,
   },
   activeEv: { backgroundColor: "#C0392B" },
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     borderColor: "#ddd",
   },
   inactiveTab: { backgroundColor: "#f0f0f0" },
-  tabLabel: { color: "white", marginLeft: 8, fontSize: 15, fontWeight: "700" },
+  tabLabel: { color: "white", marginLeft: 8, fontSize: 13, fontWeight: "700" },
   cardScroll: { paddingLeft: 20, paddingRight: 10 },
   stationCard: {
     width: 320,
