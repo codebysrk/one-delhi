@@ -19,6 +19,7 @@ import { SearchScreen } from '../features/home/SearchScreen';
 import { RouteDetailScreen } from '../features/home/RouteDetailScreen';
 import { NotificationScreen } from '../features/notifications/NotificationScreen';
 import { HelpScreen } from '../features/profile/HelpScreen';
+import { TripPlanScreen } from '../features/trips/TripPlanScreen';
 import { useAppStore } from '../store/useAppStore';
 import { db, auth } from '../services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -143,7 +144,7 @@ const MainTabs = () => {
         />
         <Tab.Screen 
           name="TripPlanTab" 
-          component={ComingSoon}
+          component={TripPlanScreen}
           options={{
             tabBarIcon: ({ color }) => <TripPlanIcon color={color} size={28} />,
             tabBarLabel: 'Trip Plan',

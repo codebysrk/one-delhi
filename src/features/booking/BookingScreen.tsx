@@ -1289,7 +1289,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#D32F2F",
     paddingVertical: 14,
     alignItems: "center",
-    borderRadius: 4,
   },
   buyBtnDisabled: {
     backgroundColor: "#9CA3AF",
