@@ -4,9 +4,11 @@ import { db } from '../services/firebase';
 import { useAppStore } from '../store/useAppStore';
 
 export const NotificationListener = () => {
-  const { setLatestNotificationTimestamp } = useAppStore();
+  const { setLatestNotificationTimestamp, user } = useAppStore();
 
   useEffect(() => {
+    if (!user) return;
+
     const q = query(
       collection(db, 'notifications'),
       orderBy('timestamp', 'desc'),
@@ -21,11 +23,11 @@ export const NotificationListener = () => {
         }
       }
     }, (error) => {
-      console.error('[NotificationListener] Firestore error:', error);
+      if (__DEV__) console.error('[NotificationListener] Firestore error:', error);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [user]);
 
   return null; // This component doesn't render anything
 };

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image, useWindowDimensions } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { LoginScreen } from '../features/auth/LoginScreen';
@@ -29,7 +29,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { registerDevice, listenToDeviceSecurity, clearForceLogout } from '../services/deviceService';
 import { logAction } from '../services/logService';
 import { signOut } from 'firebase/auth';
-import { Alert } from 'react-native';
+import { Alert, BackHandler, ToastAndroid } from 'react-native';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -135,6 +135,7 @@ const MainTabs = () => {
 
 export const RootNavigator = () => {
   const { width } = useWindowDimensions();
+  const navigationRef = useNavigationContainerRef();
   const { user, setUser, userProfile, setUserProfile, setTickets, resetStore, showFooter } = useAppStore();
   const [initializing, setInitializing] = useState(true);
 
@@ -262,6 +263,33 @@ export const RootNavigator = () => {
     };
   }, [fetchUserTickets, resetStore, setUser, setUserProfile, handleSecurityAction]);
 
+  useEffect(() => {
+    let lastBackPressed = 0;
+
+    const backAction = () => {
+      if (navigationRef.canGoBack()) {
+        return false; // Let navigation handle it
+      }
+
+      const now = Date.now();
+      if (lastBackPressed && now - lastBackPressed < 2000) {
+        BackHandler.exitApp();
+        return true;
+      }
+
+      lastBackPressed = now;
+      ToastAndroid.show('Press back again to exit', ToastAndroid.SHORT);
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction,
+    );
+
+    return () => backHandler.remove();
+  }, []);
+
   if (initializing) {
     return (
       <View style={styles.initializingContainer}>
@@ -276,7 +304,7 @@ export const RootNavigator = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#FFF' }}>
-      <NavigationContainer>
+      <NavigationContainer ref={navigationRef}>
         <Stack.Navigator 
           screenOptions={{ 
             headerShown: false,
