@@ -28,6 +28,7 @@ import { collection, query, where, getDocs, orderBy, doc, getDoc } from 'firebas
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { registerDevice, listenToDeviceSecurity, clearForceLogout } from '../services/deviceService';
 import { logAction } from '../services/logService';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { signOut } from 'firebase/auth';
 import { Alert, BackHandler, ToastAndroid } from 'react-native';
 
@@ -45,6 +46,38 @@ export const ComingSoon = ({ navigation }: any) => (
     </Text>
   </View>
 );
+
+const TabButton = (props: any) => {
+  const { item, onPress, accessibilityState } = props;
+  const focused = accessibilityState.selected;
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.9, { damping: 10, stiffness: 200 });
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { damping: 10, stiffness: 200 });
+  };
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      activeOpacity={1}
+      style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
+    >
+      <Animated.View style={[animatedStyle, { alignItems: 'center', justifyContent: 'center' }]}>
+        {props.children}
+      </Animated.View>
+    </TouchableOpacity>
+  );
+};
 
 const BusStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -84,7 +117,8 @@ const MainTabs = () => {
           component={BusStack} 
           options={{
             tabBarIcon: ({ color }) => <MaterialCommunityIcons name="bus" size={28} color={color} />,
-            tabBarLabel: 'Bus'
+            tabBarLabel: 'Bus',
+            tabBarButton: (props) => <TabButton {...props} />
           }}
         />
         <Tab.Screen 
@@ -92,7 +126,8 @@ const MainTabs = () => {
           component={HomeScreen} 
           options={{
             tabBarIcon: ({ color }) => <MaterialCommunityIcons name="ticket-confirmation" size={28} color={color} />,
-            tabBarLabel: 'Tickets'
+            tabBarLabel: 'Tickets',
+            tabBarButton: (props) => <TabButton {...props} />
           }}
         />
         <Tab.Screen 
@@ -100,7 +135,8 @@ const MainTabs = () => {
           component={EVScreen}
           options={{
             tabBarIcon: ({ color }) => <MaterialCommunityIcons name="ev-station" size={28} color={color} />,
-            tabBarLabel: 'Hub'
+            tabBarLabel: 'Hub',
+            tabBarButton: (props) => <TabButton {...props} />
           }}
         />
         <Tab.Screen 
@@ -108,7 +144,8 @@ const MainTabs = () => {
           component={ComingSoon}
           options={{
             tabBarIcon: ({ color }) => <TripPlanIcon color={color} size={28} />,
-            tabBarLabel: 'Trip Plan'
+            tabBarLabel: 'Trip Plan',
+            tabBarButton: (props) => <TabButton {...props} />
           }}
         />
         <Tab.Screen 
@@ -116,7 +153,8 @@ const MainTabs = () => {
           component={HelpScreen}
           options={{
             tabBarIcon: ({ color }) => <MaterialCommunityIcons name="help-circle" size={28} color={color} />,
-            tabBarLabel: 'Help'
+            tabBarLabel: 'Help',
+            tabBarButton: (props) => <TabButton {...props} />
           }}
         />
       </Tab.Navigator>
