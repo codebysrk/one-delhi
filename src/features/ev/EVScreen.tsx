@@ -93,13 +93,22 @@ export const EVScreen = ({ navigation }: any) => {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
       
-      {/* Header exactly as image */}
-      <View style={styles.headerArea}>
+      {/* Full Screen Map as Base Layer */}
+      <View style={styles.fullScreenMap}>
+        <WebView 
+          ref={webViewRef}
+          source={{ html: mapHtml }}
+          style={{ flex: 1 }}
+        />
+      </View>
+
+      {/* Header as Overlay */}
+      <View style={styles.headerOverlayContainer}>
         <ImageBackground 
           source={require('../../../assets/images/map-header.webp')}
           style={styles.headerBg}
         >
-          <View style={styles.headerOverlay}>
+          <View style={styles.headerOverlayColor}>
             <SafeAreaView style={{ flex: 1 }} edges={['top']}>
               <View style={styles.topBar}>
                 <View style={{ width: 40 }} />
@@ -126,15 +135,9 @@ export const EVScreen = ({ navigation }: any) => {
         </ImageBackground>
       </View>
 
-      {/* Map & Controls */}
-      <View style={styles.mainArea}>
-        <WebView 
-          ref={webViewRef}
-          source={{ html: mapHtml }}
-          style={{ flex: 1 }}
-        />
-
-        {/* Floating buttons as in image */}
+      {/* Controls & Bottom Content as Overlays */}
+      <View style={styles.contentOverlay} pointerEvents="box-none">
+        {/* Floating buttons */}
         <View style={styles.floatingBox}>
           <TouchableOpacity style={styles.fab}>
              <MaterialCommunityIcons name="filter-variant" size={28} color="#333" />
@@ -147,7 +150,7 @@ export const EVScreen = ({ navigation }: any) => {
           </TouchableOpacity>
         </View>
 
-        {/* The White Sheet overlapping bottom */}
+        {/* The White Sheet at bottom */}
         <View style={styles.bottomSheet}>
           <View style={styles.tabBar}>
              <TouchableOpacity 
@@ -199,9 +202,24 @@ export const EVScreen = ({ navigation }: any) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
-  headerArea: { height: 170 },
+  fullScreenMap: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1,
+  },
+  headerOverlayContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 170,
+    zIndex: 10,
+  },
   headerBg: { flex: 1 },
-  headerOverlay: { flex: 1, backgroundColor: 'rgba(168, 28, 20, 0.9)' },
+  headerOverlayColor: { flex: 1, backgroundColor: 'rgba(168, 28, 20, 0.9)' },
+  contentOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 5,
+  },
   topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', height: 60, paddingHorizontal: 15 },
   headerLogo: { width: 100, height: 40 },
   searchBox: { 
@@ -214,7 +232,6 @@ const styles = StyleSheet.create({
     marginTop: 5
   },
   searchInput: { flex: 1, color: 'white', fontSize: 17, marginLeft: 12 },
-  mainArea: { flex: 1, marginTop: -25, borderTopLeftRadius: 30, borderTopRightRadius: 30, overflow: 'hidden' },
   floatingBox: { position: 'absolute', right: 20, top: '40%', zIndex: 10 },
   fab: { 
     width: 60, height: 60, backgroundColor: 'white', borderRadius: 30, 
