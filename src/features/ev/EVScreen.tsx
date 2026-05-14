@@ -178,11 +178,13 @@ export const EVScreen = ({ navigation }: any) => {
               <View key={item.id} style={styles.stationCard}>
                  <View style={styles.cardTop}>
                     <Text style={styles.cardTitle}>{item.name}</Text>
-                    <View style={styles.availBadge}>
-                      <Text style={styles.availText}>{item.status}</Text>
-                    </View>
-                    <View style={styles.distBadge}>
-                      <Text style={styles.distText}>{item.distance}</Text>
+                    <View style={styles.badgeContainer}>
+                      <View style={styles.availBadge}>
+                        <Text style={styles.availText}>{item.status}</Text>
+                      </View>
+                      <View style={styles.distBadge}>
+                        <Text style={styles.distText}>{item.distance}</Text>
+                      </View>
                     </View>
                     <TouchableOpacity style={styles.navBtn}>
                        <MaterialCommunityIcons name="directions" size={18} color="white" />
@@ -257,18 +259,19 @@ const styles = StyleSheet.create({
   tabLabel: { color: 'white', marginLeft: 8, fontSize: 15, fontWeight: '700' },
   cardScroll: { paddingLeft: 20, paddingRight: 10 },
   stationCard: { 
-    width: 320, backgroundColor: 'white', borderRadius: 15, padding: 18, marginRight: 15,
+    width: 320, backgroundColor: 'white', borderRadius: 15, padding: 12, marginRight: 15,
     borderWidth: 1, borderColor: '#eee', elevation: 3, shadowColor: '#000', 
     shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 5
   },
-  cardTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  cardTitle: { fontSize: 19, fontWeight: '800', color: '#333', flex: 1 },
-  availBadge: { backgroundColor: '#e6f9ed', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 15, marginRight: 8 },
-  availText: { color: '#27ae60', fontSize: 11, fontWeight: '700' },
-  distBadge: { backgroundColor: '#fceaea', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 15, marginRight: 8 },
-  distText: { color: '#c0392b', fontSize: 11, fontWeight: '700' },
-  navBtn: { backgroundColor: '#c0392b', width: 34, height: 34, borderRadius: 10, justifyContent: 'center', alignItems: 'center', transform: [{rotate: '45deg'}] },
-  cardAddress: { color: '#7f8c8d', fontSize: 14, marginBottom: 15 },
-  line: { height: 1, backgroundColor: '#eee', marginBottom: 15 },
-  supportsText: { color: '#333', fontSize: 14, fontWeight: '600' }
+  cardTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  cardTitle: { fontSize: 17, fontWeight: '800', color: '#333', marginRight: 10 },
+  badgeContainer: { flexDirection: 'row', flex: 1, gap: 5 },
+  availBadge: { backgroundColor: '#e6f9ed', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+  availText: { color: '#27ae60', fontSize: 10, fontWeight: '700' },
+  distBadge: { backgroundColor: '#fceaea', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+  distText: { color: '#c0392b', fontSize: 10, fontWeight: '700' },
+  navBtn: { backgroundColor: '#c0392b', width: 30, height: 30, borderRadius: 8, justifyContent: 'center', alignItems: 'center', transform: [{rotate: '45deg'}] },
+  cardAddress: { color: '#7f8c8d', fontSize: 13, marginBottom: 10 },
+  line: { height: 1, backgroundColor: '#eee', marginBottom: 10 },
+  supportsText: { color: '#888', fontSize: 12, fontWeight: '600' }
 });
