@@ -177,19 +177,6 @@ export const EVScreen = ({ navigation }: any) => {
                     Search 0+ charge points
                   </Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.bellBtn}
-                  onPress={() => navigation.navigate("Notifications")}
-                >
-                  <MaterialCommunityIcons
-                    name="bell-outline"
-                    size={28}
-                    color="white"
-                  />
-                  {latestNotificationTimestamp > lastSeenNotification && (
-                    <View style={styles.yellowDot} />
-                  )}
-                </TouchableOpacity>
               </View>
             </SafeAreaView>
           </View>
@@ -293,7 +280,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: "row",
     paddingLeft: 16,
-    paddingRight: 8,
+    paddingRight: 16,
     alignItems: "center",
     marginTop: 0,
     gap: 12,
