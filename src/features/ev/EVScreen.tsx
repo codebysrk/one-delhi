@@ -173,7 +173,7 @@ export const EVScreen = ({ navigation }: any) => {
         <View style={styles.floatingBox}>
           <TouchableOpacity style={styles.fab}>
             <MaterialCommunityIcons
-              name="filter-variant"
+              name="filter"
               size={28}
               color="#333"
             />
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 170,
+    height: 160,
     zIndex: 10,
     borderBottomLeftRadius: 40,
     borderBottomRightRadius: 40,
@@ -362,21 +362,12 @@ const styles = StyleSheet.create({
   inactiveTab: { backgroundColor: "#f0f0f0" },
   tabLabel: { color: "white", marginLeft: 8, fontSize: 13, fontWeight: "700" },
   cardScroll: { paddingLeft: 20, paddingRight: 10 },
-  stationCard: {
-    width: 320,
-    backgroundColor: "white",
-    borderRadius: 15,
-    padding: 10,
-    marginRight: 15,
-    borderWidth: 1,
-    borderColor: "#eee",
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
+  stationCard: { 
+    width: width - 40, backgroundColor: 'white', borderRadius: 15, padding: 10, marginRight: 20,
+    borderWidth: 1, borderColor: '#eee', elevation: 3, shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 5
   },
-  cardTop: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
+  cardTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   cardTitle: {
     fontSize: 17,
     fontWeight: "800",
