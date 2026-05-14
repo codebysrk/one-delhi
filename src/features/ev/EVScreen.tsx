@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ImageBackground,
   useWindowDimensions,
+  Dimensions,
   StatusBar,
   ScrollView,
   TextInput,
@@ -363,7 +364,7 @@ const styles = StyleSheet.create({
   tabLabel: { color: "white", marginLeft: 8, fontSize: 13, fontWeight: "700" },
   cardScroll: { paddingLeft: 20, paddingRight: 10 },
   stationCard: { 
-    width: width - 40, backgroundColor: 'white', borderRadius: 15, padding: 10, marginRight: 20,
+    width: Dimensions.get('window').width - 40, backgroundColor: 'white', borderRadius: 15, padding: 10, marginRight: 20,
     borderWidth: 1, borderColor: '#eee', elevation: 3, shadowColor: '#000', 
     shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 5
   },
