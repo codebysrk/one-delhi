@@ -229,11 +229,15 @@ export const EVScreen = ({ navigation }: any) => {
             </TouchableOpacity>
           </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.cardScroll}
-          >
+          <ScrollView 
+           horizontal 
+           showsHorizontalScrollIndicator={false}
+           contentContainerStyle={styles.cardScroll}
+           snapToInterval={Dimensions.get('window').width - 10}
+           decelerationRate="fast"
+           snapToAlignment="start"
+           disableIntervalMomentum={true}
+         >
             {EV_STATIONS.map((item) => (
               <View key={item.id} style={styles.stationCard}>
                 <View style={styles.cardTop}>
@@ -335,7 +339,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingHorizontal: 20,
     gap: 15,
-    marginBottom: 25,
+    marginBottom: 10,
   },
   tabBtn: {
     flex: 1,
