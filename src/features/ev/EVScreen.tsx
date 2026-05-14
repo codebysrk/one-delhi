@@ -361,9 +361,10 @@ const styles = StyleSheet.create({
   cardScroll: { paddingLeft: 10, paddingRight: 10 },
   stationCard: {
     width: Dimensions.get("window").width - 20,
+    minHeight: 140,
     backgroundColor: "white",
     borderRadius: 5,
-    padding: 10,
+    padding: 15,
     marginRight: 10,
     borderWidth: 1,
     elevation: 1,
@@ -373,7 +374,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 2,
   },
-  cardTop: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
+  cardTop: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   cardTitle: {
     fontSize: 17,
     fontWeight: "800",
