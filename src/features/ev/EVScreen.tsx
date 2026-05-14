@@ -173,11 +173,7 @@ export const EVScreen = ({ navigation }: any) => {
         {/* Floating buttons */}
         <View style={styles.floatingBox}>
           <TouchableOpacity style={styles.fab}>
-            <MaterialCommunityIcons
-              name="filter"
-              size={28}
-              color="#333"
-            />
+            <MaterialCommunityIcons name="filter" size={28} color="#333" />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.fab, { marginTop: 15 }]}
@@ -290,7 +286,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   headerBg: { flex: 1 },
-  headerOverlayColor: { flex: 1, backgroundColor: "rgba(168, 28, 20, 0.7)" },
+  headerOverlayColor: { flex: 1, backgroundColor: "rgba(190, 31, 31, 0.22)" },
   contentOverlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 5,
@@ -313,19 +309,15 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   searchInput: { flex: 1, color: "white", fontSize: 17, marginLeft: 12 },
-  floatingBox: { position: "absolute", right: 20, bottom: 230, zIndex: 10 },
+  floatingBox: { position: "absolute", right: 20, bottom: 220, zIndex: 10 },
   fab: {
-    width: 54,
-    height: 54,
+    width: 50,
+    height: 50,
     backgroundColor: "white",
     borderRadius: 27,
     justifyContent: "center",
     alignItems: "center",
     elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
   },
   bottomSheet: {
     position: "absolute",
@@ -362,13 +354,22 @@ const styles = StyleSheet.create({
   },
   inactiveTab: { backgroundColor: "#f0f0f0" },
   tabLabel: { color: "white", marginLeft: 8, fontSize: 13, fontWeight: "700" },
-  cardScroll: { paddingLeft: 20, paddingRight: 10 },
-  stationCard: { 
-    width: Dimensions.get('window').width - 40, backgroundColor: 'white', borderRadius: 15, padding: 10, marginRight: 20,
-    borderWidth: 1, borderColor: '#eee', elevation: 3, shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 5
+  cardScroll: { paddingLeft: 10, paddingRight: 10 },
+  stationCard: {
+    width: Dimensions.get("window").width - 20,
+    backgroundColor: "white",
+    borderRadius: 5,
+    padding: 10,
+    marginRight: 10,
+    borderWidth: 1,
+    elevation: 1,
+    borderColor: "#eee",
+    shadowColor: "#000000ff",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.5,
+    shadowRadius: 2,
   },
-  cardTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  cardTop: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
   cardTitle: {
     fontSize: 17,
     fontWeight: "800",
