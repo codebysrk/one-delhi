@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, ScrollView, Platform, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppStore } from '../../store/useAppStore';
-import { updateProfile } from 'firebase/auth';
+import { updateProfile, signOut } from 'firebase/auth';
 import { auth } from '../../services/firebase';
 
 export const SettingsScreen = ({ navigation }: any) => {
@@ -35,6 +35,28 @@ export const SettingsScreen = ({ navigation }: any) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      "Logout",
+      "Are you sure you want to logout?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Logout", 
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await signOut(auth);
+              // resetStore() is handled by RootNavigator's onAuthStateChanged
+            } catch (error: any) {
+              Alert.alert("Error", error.message);
+            }
+          }
+        }
+      ]
+    );
   };
 
   const basicInfo = [
@@ -125,6 +147,16 @@ export const SettingsScreen = ({ navigation }: any) => {
             ))}
           </View>
         </View>
+
+        <TouchableOpacity 
+          style={[styles.otherRow, { marginTop: 25, paddingVertical: 10 }]}
+          onPress={handleLogout}
+        >
+          <View style={styles.iconBox}>
+             <MaterialCommunityIcons name="logout" size={22} color="#C0392B" />
+          </View>
+          <Text style={[styles.otherLabel, { color: '#C0392B', fontWeight: '700' }]}>Logout</Text>
+        </TouchableOpacity>
 
         <View style={styles.footer}>
            <Text style={styles.footerLabel}>App Version</Text>
