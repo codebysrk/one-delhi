@@ -330,7 +330,7 @@ export const MapScreen = ({ navigation }: any) => {
                 <View style={styles.logoBox}>
                   <Animated.Image
                     source={require("../../../assets/images/map-header-logo.webp")}
-                    style={{ width: 110, height: 35 }}
+                    style={{ width: 100, height: 35, marginTop: 0 }}
                     resizeMode="contain"
                   />
                 </View>
@@ -395,7 +395,7 @@ export const MapScreen = ({ navigation }: any) => {
           style={[styles.redArrowBtn, animatedControlStyle, { left: 20 }]}
         >
           <TouchableOpacity onPress={showSheet} style={styles.fabInner}>
-            <MaterialCommunityIcons name="arrow-up-circle" size={40} color="#D32F2F" />
+            <MaterialCommunityIcons name="arrow-up-circle" size={40} color="#b92121ff" />
           </TouchableOpacity>
         </Animated.View>
 
@@ -451,9 +451,9 @@ export const MapScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF" },
   headerArea: {
-    height: 165,
-    borderBottomLeftRadius: 50,
-    borderBottomRightRadius: 50,
+    height: 150,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
     overflow: "hidden",
   },
   headerBg: { flex: 1, backgroundColor: "#C0282C" },
@@ -463,7 +463,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 16,
+    paddingLeft: 16,
+    paddingRight: 8,
     height: 60,
     marginTop: 0,
   },
@@ -471,7 +472,8 @@ const styles = StyleSheet.create({
   settingsIcon: { padding: 8 },
   searchContainer: {
     flexDirection: "row",
-    paddingHorizontal: 16,
+    paddingLeft: 16,
+    paddingRight: 8,
     alignItems: "center",
     marginTop: 0,
     gap: 12,
@@ -479,7 +481,7 @@ const styles = StyleSheet.create({
   searchPill: {
     flex: 1,
     height: 45,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: "rgba(27, 27, 27, 0.19)",
     borderRadius: 25,
     flexDirection: "row",
     alignItems: "center",
@@ -503,6 +505,7 @@ const styles = StyleSheet.create({
     height: 44,
     justifyContent: "center",
     alignItems: "center",
+    marginRight: 6,
   },
   yellowDot: {
     position: "absolute",
