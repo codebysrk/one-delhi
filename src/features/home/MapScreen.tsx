@@ -280,21 +280,29 @@ export const MapScreen = ({ navigation }: any) => {
       <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
       <style>
         body { margin: 0; padding: 0; }
-        #map { height: 100vh; width: 100vw; background: #f8fafc; }
+        #map { height: 100vh; width: 100vw; background: #f1f5f9; }
         .stop-marker { 
-          width: 12px; height: 12px; background: #B91C1C; 
+          width: 10px; height: 10px; background: #ef4444; 
           border: 2px solid white; border-radius: 50%; 
-          box-shadow: 0 0 5px rgba(0,0,0,0.3);
+          box-shadow: 0 0 5px rgba(0,0,0,0.2);
         }
-        .metro-marker { 
-          width: 14px; height: 14px; background: #0072BC; 
-          border: 2px solid white; border-radius: 2px; 
-          box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        .user-marker-container {
+          display: flex; justify-content: center; alignItems: center;
         }
         .user-marker { 
-          width: 18px; height: 18px; background: #3B82F6; 
+          width: 14px; height: 14px; background: #3b82f6; 
           border: 3px solid white; border-radius: 50%; 
-          box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+          box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+          position: relative; z-index: 2;
+        }
+        .user-pulse {
+          position: absolute; width: 30px; height: 30px;
+          background: rgba(59, 130, 246, 0.3); border-radius: 50%;
+          animation: pulse 2s infinite; z-index: 1;
+        }
+        @keyframes pulse {
+          0% { scale: 0.5; opacity: 1; }
+          100% { scale: 2.5; opacity: 0; }
         }
       </style>
     </head>
@@ -302,14 +310,24 @@ export const MapScreen = ({ navigation }: any) => {
       <div id="map"></div>
       <script>
         var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([28.6139, 77.2090], 14);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+          maxZoom: 20
+        }).addTo(map);
         
         var userMarker = L.marker([28.6139, 77.2090], {
-          icon: L.divIcon({ className: 'user-marker', iconSize: [18, 18] })
+          icon: L.divIcon({ 
+            className: 'user-marker-container', 
+            html: '<div class="user-pulse"></div><div class="user-marker"></div>',
+            iconSize: [30, 30] 
+          })
         }).addTo(map);
 
         window.centerMap = function(lat, lng) {
-          map.setView([lat, lng], 16);
+          map.flyTo([lat, lng], 16, { duration: 1.5 });
+          userMarker.setLatLng([lat, lng]);
+        };
+
+        window.updateLocation = function(lat, lng) {
           userMarker.setLatLng([lat, lng]);
         };
       </script>
