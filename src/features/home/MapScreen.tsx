@@ -330,6 +330,25 @@ export const MapScreen = ({ navigation }: any) => {
         window.updateLocation = function(lat, lng) {
           userMarker.setLatLng([lat, lng]);
         };
+
+        var stopMarkers = L.layerGroup().addTo(map);
+        var stopIcon = L.divIcon({ 
+          className: 'stop-marker-container', 
+          html: '<div class="stop-marker"></div>',
+          iconSize: [12, 12] 
+        });
+
+        window.updateStops = function(stopsJson) {
+          stopMarkers.clearLayers();
+          var stops = JSON.parse(stopsJson);
+          stops.forEach(function(stop) {
+            if (stop.lat && stop.lng) {
+              L.marker([stop.lat, stop.lng], { icon: stopIcon })
+                .bindPopup('<b>' + stop.name + '</b>')
+                .addTo(stopMarkers);
+            }
+          });
+        };
       </script>
     </body>
     </html>
@@ -356,12 +375,20 @@ export const MapScreen = ({ navigation }: any) => {
         querySnapshot.forEach((doc: any) => {
           const data = doc.data();
           const stops = data.directions?.up?.stops || data.stops;
+          const coords = data.directions?.up?.stop_coordinates || data.stop_coordinates || [];
+          
           if (stops && Array.isArray(stops)) {
-            stops.slice(0, 10).forEach((stopName: string, idx: number) => {
+            stops.slice(0, 15).forEach((stopName: string, idx: number) => {
+              // Try to get real coords, otherwise generate dummy around Delhi center
+              const lat = coords[idx]?.latitude || coords[idx]?.lat || (28.6139 + (Math.random() - 0.5) * 0.1);
+              const lng = coords[idx]?.longitude || coords[idx]?.lng || (77.2090 + (Math.random() - 0.5) * 0.1);
+
               allStops.push({
                 id: `${doc.id}-${idx}`,
                 name: stopName,
                 dir: "towards Cambridge School",
+                lat,
+                lng,
               });
             });
           }
@@ -371,6 +398,11 @@ export const MapScreen = ({ navigation }: any) => {
           const finalStops = allStops.slice(0, 50);
           setStopsToShow(finalStops);
           setCachedStops(finalStops); // Update persistent cache
+          
+          // Inject markers immediately if webView is ready
+          webViewRef.current?.injectJavaScript(
+            `updateStops('${JSON.stringify(finalStops)}');`
+          );
         }
       } catch (error) {
         if (__DEV__)
@@ -381,6 +413,18 @@ export const MapScreen = ({ navigation }: any) => {
 
     fetchStops();
   }, []);
+
+  // Sync markers with map when stopsToShow changes or WebView loads
+  useEffect(() => {
+    if (stopsToShow.length > 0) {
+      const timer = setTimeout(() => {
+        webViewRef.current?.injectJavaScript(
+          `updateStops('${JSON.stringify(stopsToShow)}');`
+        );
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [stopsToShow, mapLoaded]);
 
   const renderStopItem = useCallback(
     ({ item, index }: { item: any; index: number }) => (
