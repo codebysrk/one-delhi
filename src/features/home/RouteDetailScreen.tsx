@@ -117,7 +117,7 @@ const StopTimelineItem = memo(({
       {!isLast && <View style={styles.connector} />}
     </View>
     <View style={styles.textColumn}>
-      <Text style={styles.stopName} numberOfLines={2}>
+      <Text style={styles.stopName} numberOfLines={1} ellipsizeMode="tail">
         {item}
       </Text>
     </View>

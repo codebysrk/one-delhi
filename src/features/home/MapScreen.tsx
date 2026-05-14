@@ -44,6 +44,7 @@ import { useAppStore } from "../../store/useAppStore";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../services/firebase";
 import { EliteBottomSheet } from "../../components/EliteBottomSheet";
+import { transform } from "zod";
 
 const SHEET_MIN_HEIGHT = 210;
 const SNAP_VELOCITY = 1000;
@@ -368,8 +369,8 @@ export const MapScreen = ({ navigation }: any) => {
       >
         <View style={styles.stopCard}>
           <View style={styles.stopDetails}>
-            <Text style={styles.stopMain}>{item.name}</Text>
-            <Text style={styles.stopDir}>{item.dir}</Text>
+            <Text style={styles.stopMain} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
+            <Text style={styles.stopDir} numberOfLines={1} ellipsizeMode="tail">{item.dir}</Text>
           </View>
           <TouchableOpacity style={styles.greenBtn}>
             <Text style={styles.greenBtnText}>View Buses</Text>
@@ -393,7 +394,7 @@ export const MapScreen = ({ navigation }: any) => {
         <ImageBackground
           source={require("../../../assets/images/map-header.webp")}
           style={styles.headerBg}
-          imageStyle={{ opacity: 0.8 }}
+          imageStyle={{ opacity: 1 }}
         >
           <View style={styles.darkOverlay}>
             <SafeAreaView
