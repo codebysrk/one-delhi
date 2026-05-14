@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 35,
     borderTopRightRadius: 35,
     paddingTop: 20,
-    paddingBottom: 25,
+    paddingBottom: 15,
     elevation: 20,
   },
   tabBar: {
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
     width: 320,
     backgroundColor: "white",
     borderRadius: 15,
-    padding: 12,
+    padding: 10,
     marginRight: 15,
     borderWidth: 1,
     borderColor: "#eee",
