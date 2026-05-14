@@ -8,13 +8,32 @@ interface PremiumSocialButtonProps {
   onPress: () => void;
 }
 
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+
 export const PremiumSocialButton = ({ provider, label, onPress }: PremiumSocialButtonProps) => {
   const isGoogle = provider === 'google';
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const onPressIn = () => {
+    scale.value = withSpring(0.97, { damping: 10, stiffness: 300 });
+  };
+
+  const onPressOut = () => {
+    scale.value = withSpring(1, { damping: 10, stiffness: 300 });
+  };
   
   return (
-    <TouchableOpacity
-      style={styles.button}
+    <AnimatedTouchable
+      style={[styles.button, animatedStyle]}
       onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
       activeOpacity={0.7}
     >
       <View style={styles.iconWrapper}>
@@ -25,7 +44,7 @@ export const PremiumSocialButton = ({ provider, label, onPress }: PremiumSocialB
         )}
       </View>
       <Text style={styles.text}>{label}</Text>
-    </TouchableOpacity>
+    </AnimatedTouchable>
   );
 };
 

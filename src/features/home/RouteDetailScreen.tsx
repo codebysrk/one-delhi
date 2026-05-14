@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from "react";
+import { useAnimatedReaction, runOnJS } from "react-native-reanimated";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -8,12 +10,23 @@ import {
   StatusBar,
   ActivityIndicator,
   Platform,
+  useWindowDimensions,
+  Dimensions,
 } from "react-native";
 import { WebView } from "react-native-webview";
-import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../services/firebase";
+import { EliteBottomSheet } from "../../components/EliteBottomSheet";
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  interpolate, 
+  Extrapolate,
+  withSpring,
+  FadeInDown,
+} from "react-native-reanimated";
+import { FlashList } from "@shopify/flash-list";
 
 // --- Interfaces ---
 interface RouteData {
@@ -33,6 +46,16 @@ const DEFAULT_REGION = {
   latitudeDelta: 0.15,
   longitudeDelta: 0.15,
 };
+
+const SHEET_MIN_HEIGHT = 210;
+const { height: SCREEN_HEIGHT_DIM } = Dimensions.get("window");
+const SHEET_FULL_HEIGHT = SCREEN_HEIGHT_DIM * 0.85;
+const SHEET_HALF_HEIGHT = SHEET_FULL_HEIGHT * 0.65;
+
+// Snap points in translateY values (MapScreen logic)
+const SNAP_TOP = 0;
+const SNAP_MID = SHEET_FULL_HEIGHT - SHEET_HALF_HEIGHT + 300;
+const SNAP_BOTTOM = SHEET_FULL_HEIGHT - SHEET_MIN_HEIGHT + 350;
 
 // --- Modular Components ---
 
@@ -81,7 +104,10 @@ const StopTimelineItem = memo(({
   index: number; 
   isLast: boolean;
 }) => (
-  <View style={styles.stopRow}>
+  <Animated.View 
+    entering={FadeInDown.delay(index * 30).duration(400)}
+    style={styles.stopRow}
+  >
     <View style={styles.visualColumn}>
       {index === 0 ? (
         <View style={styles.solidNode} />
@@ -95,7 +121,7 @@ const StopTimelineItem = memo(({
         {item}
       </Text>
     </View>
-  </View>
+  </Animated.View>
 ));
 
 // --- Main Screen ---
@@ -108,8 +134,50 @@ export const RouteDetailScreen = ({ route, navigation }: any) => {
   const [error, setError] = useState<string | null>(null);
 
   const webViewRef = useRef<WebView>(null);
-  const bottomSheetRef = useRef<BottomSheet>(null);
-  const snapPoints = useMemo(() => ["35%", "70%", "95%"], []);
+  const { height: SCREEN_HEIGHT } = useWindowDimensions();
+  
+  // --- BOTTOM SHEET CONFIGURATION (बॉटम शीट की सेटिंग्स - MapScreen के समान) ---
+  const snapPoints = useMemo(() => [SNAP_TOP, SNAP_MID, SNAP_BOTTOM], []);
+
+  // translateY: यह वैल्यू तय करती है कि शीट ऊपर-नीचे कहाँ रहेगी।
+  // इसकी शुरुआती वैल्यू SNAP_MID है ताकि स्क्रीन खुलते ही शीट आधी खुली दिखे।
+  const translateY = useSharedValue(SNAP_MID);
+  const [canScroll, setCanScroll] = useState(false);
+
+  // जब शीट पूरी तरह ऊपर (SNAP_TOP) हो, सिर्फ तभी अंदर का कंटेंट स्क्रॉल होना चाहिए
+  useAnimatedReaction(
+    () => translateY.value,
+    (val) => {
+      if (val <= SNAP_TOP + 5) { // 5px का मार्जिन
+        if (!canScroll) runOnJS(setCanScroll)(true);
+      } else {
+        if (canScroll) runOnJS(setCanScroll)(false);
+      }
+    },
+    [canScroll, SNAP_TOP]
+  );
+
+  const scrollY = useSharedValue(0);
+
+  // FlashList के स्क्रॉल इवेंट को ट्रैक करना
+  const onScroll = useCallback((event: any) => {
+    scrollY.value = event.nativeEvent.contentOffset.y;
+  }, []);
+
+  const showSheet = () => {
+    // लाल तीर वाला बटन दबाने पर शीट को वापस बीच वाली (Mid) पोजीशन पर ले जाना
+    translateY.value = withSpring(SNAP_MID, { damping: 25, stiffness: 180 });
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      // जब भी यूज़र इस स्क्रीन पर आएगा, शीट अपने आप बीच वाली (Mid) पोजीशन पर सेट हो जाएगी
+      translateY.value = withSpring(SNAP_MID, {
+        damping: 25,
+        stiffness: 180,
+      });
+    }, [SNAP_MID]),
+  );
 
   useEffect(() => {
     setLoading(true);
@@ -286,10 +354,51 @@ export const RouteDetailScreen = ({ route, navigation }: any) => {
     `;
   }, [routeData]);
 
+  const animatedControlStyle = useAnimatedStyle(() => {
+    // शीट के बिल्कुल ऊपरी किनारे को ट्रैक करने के लिए सटीक फॉर्मूला
+    const visibleHeight = Math.max(0, SCREEN_HEIGHT - translateY.value);
+    return {
+      bottom: visibleHeight + 20, // मैप कंट्रोल्स (GPS बटन) को शीट से 20px ऊपर रखना
+    };
+  });
+
+  // लाल तीर (Red Arrow) के लिए खास एनिमेटेड स्टाइल
+  const animatedRedArrowStyle = useAnimatedStyle(() => {
+    const visibleHeight = Math.max(0, SCREEN_HEIGHT - translateY.value);
+    
+    // विज़िबिलिटी: बटन तभी धीरे से प्रकट होगा जब शीट नीचे (SNAP_BOTTOM) की तरफ होगी
+    const opacity = interpolate(
+      translateY.value,
+      [SNAP_MID, SNAP_BOTTOM],
+      [0, 1],
+      Extrapolate.CLAMP
+    );
+
+    return {
+      bottom: visibleHeight + 10,
+      opacity: opacity,
+      transform: [{ scale: opacity }] // छोटा होकर गायब या प्रकट होने का इफेक्ट
+    };
+  });
+
   if (loading) {
     return (
-      <View style={styles.centerBox}>
-        <ActivityIndicator size="large" color="#D32F2F" />
+      <View style={[styles.centerBox, { backgroundColor: '#F8F9FA' }]}>
+        <StatusBar barStyle="dark-content" />
+        {/* Skeleton Header */}
+        <View style={styles.skeletonHeader}>
+          <View style={styles.skeletonCircle} />
+          <View style={styles.skeletonBarShort} />
+        </View>
+        {/* Skeleton Stops */}
+        <View style={{ padding: 20 }}>
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <View key={i} style={styles.skeletonRow}>
+              <View style={styles.skeletonNode} />
+              <View style={styles.skeletonBarLong} />
+            </View>
+          ))}
+        </View>
       </View>
     );
   }
@@ -328,34 +437,49 @@ export const RouteDetailScreen = ({ route, navigation }: any) => {
           showsVerticalScrollIndicator={false}
           showsHorizontalScrollIndicator={false}
         />
-        <FloatingButtons onLocate={centerMap} />
+        
+        <Animated.View style={[styles.floatingDirectionBtn, animatedRedArrowStyle, { left: 20 }]}>
+          <TouchableOpacity onPress={showSheet} activeOpacity={0.8} style={styles.fabInner}>
+            <MaterialCommunityIcons name="arrow-up-circle" size={40} color="#b92121ff" />
+          </TouchableOpacity>
+        </Animated.View>
+
+        <Animated.View style={[styles.floatingLocateBtn, animatedControlStyle, { right: 20 }]}>
+          <TouchableOpacity onPress={centerMap} activeOpacity={0.8} style={styles.fabInner}>
+            <MaterialCommunityIcons name="crosshairs-gps" size={22} color="#111" />
+          </TouchableOpacity>
+        </Animated.View>
       </View>
 
-      <BottomSheet
-        ref={bottomSheetRef}
-        index={0}
+      <EliteBottomSheet
+        translateY={translateY}
         snapPoints={snapPoints}
-        handleIndicatorStyle={styles.handleIndicator}
-        backgroundStyle={styles.bottomSheetBackground}
+        sheetHeight={SHEET_FULL_HEIGHT + 140}
+        scrollOffset={scrollY}
+        headerContent={
+          <View style={styles.sheetHeader}>
+            <Text style={styles.totalStopsText}>{routeData.totalStops} stops</Text>
+          </View>
+        }
       >
-        <View style={styles.sheetHeader}>
-           <Text style={styles.totalStopsText}>{routeData.totalStops} stops</Text>
-        </View>
-        
-        <BottomSheetScrollView 
-          contentContainerStyle={styles.stopsListContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {routeData.stops.map((item, index) => (
+        <FlashList
+          data={routeData.stops}
+          renderItem={({ item, index }) => (
             <StopTimelineItem 
-              key={`${index}-${item}`}
               item={item} 
               index={index} 
               isLast={index === routeData.stops.length - 1} 
             />
-          ))}
-        </BottomSheetScrollView>
-      </BottomSheet>
+          )}
+          keyExtractor={(item, index) => `${index}-${item}`}
+          estimatedItemSize={60}
+          contentContainerStyle={styles.stopsListContent}
+          showsVerticalScrollIndicator={false}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          scrollEnabled={canScroll}
+        />
+      </EliteBottomSheet>
     </SafeAreaView>
   );
 };
@@ -369,9 +493,51 @@ const styles = StyleSheet.create({
   },
   centerBox: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    justifyContent: "flex-start",
+    alignItems: "stretch",
+    backgroundColor: "#FFF",
+  },
+  // Skeleton Loader Styles
+  skeletonHeader: {
+    height: 100,
+    backgroundColor: '#FFF',
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEE',
+    marginTop: 40,
+  },
+  skeletonCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E5E7EB',
+  },
+  skeletonBarShort: {
+    width: 120,
+    height: 20,
+    backgroundColor: '#E5E7EB',
+    marginLeft: 15,
+    borderRadius: 4,
+  },
+  skeletonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  skeletonNode: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#E5E7EB',
+  },
+  skeletonBarLong: {
+    flex: 1,
+    height: 16,
+    backgroundColor: '#E5E7EB',
+    marginLeft: 15,
+    borderRadius: 4,
   },
   errorText: {
     fontSize: 16,
@@ -466,38 +632,26 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   
-  // Floating Buttons
   floatingDirectionBtn: {
     position: "absolute",
-    bottom: "38%", // Kept above the 35% bottom sheet
-    left: 20,
+    zIndex: 110,
+  },
+  floatingLocateBtn: {
+    position: "absolute",
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: "#D32F2F",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: "#FFFFFF",
     elevation: 5,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
-  floatingLocateBtn: {
-    position: "absolute",
-    bottom: "38%", // Kept above the 35% bottom sheet
-    right: 20,
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: "#FFFFFF",
+  fabInner: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
   },
 
   // Bottom Sheet
@@ -519,24 +673,24 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   sheetHeader: {
-    paddingHorizontal: 20,
-    paddingBottom: 15,
-    paddingTop: 10,
+    paddingHorizontal: 0,
+    paddingBottom: 8,
+    paddingTop: 4,
   },
   totalStopsText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "bold",
     color: "#111",
   },
   stopsListContent: {
     paddingHorizontal: 20,
-    paddingBottom: 80, // Increased to prevent last items from hiding
+    paddingBottom: 20,
   },
 
   // Stop Item
   stopRow: {
     flexDirection: "row",
-    minHeight: 56,
+    minHeight: 40,
   },
   visualColumn: {
     width: 30,
@@ -573,12 +727,12 @@ const styles = StyleSheet.create({
     marginLeft: 16,
     justifyContent: "flex-start",
     paddingTop: 1,
-    paddingBottom: 16,
+    paddingBottom: 8,
   },
   stopName: {
-    fontSize: 18,
+    fontSize: 16,
     color: "#333",
     fontWeight: "400",
-    lineHeight: 24,
+    lineHeight: 20,
   },
 });

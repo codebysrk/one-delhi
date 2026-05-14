@@ -10,6 +10,10 @@ interface PremiumButtonProps {
   textStyle?: TextStyle;
 }
 
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+
 export const PremiumButton = ({
   label,
   onPress,
@@ -18,14 +22,31 @@ export const PremiumButton = ({
   style,
   textStyle,
 }: PremiumButtonProps) => {
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const onPressIn = () => {
+    scale.value = withSpring(0.95, { damping: 10, stiffness: 200 });
+  };
+
+  const onPressOut = () => {
+    scale.value = withSpring(1, { damping: 10, stiffness: 200 });
+  };
+
   return (
-    <TouchableOpacity
+    <AnimatedTouchable
       style={[
         styles.button,
         style,
-        (disabled || loading) && styles.disabled
+        (disabled || loading) && styles.disabled,
+        animatedStyle
       ]}
       onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
       disabled={disabled || loading}
       activeOpacity={0.8}
     >
@@ -34,7 +55,7 @@ export const PremiumButton = ({
       ) : (
         <Text style={[styles.text, textStyle]}>{label}</Text>
       )}
-    </TouchableOpacity>
+    </AnimatedTouchable>
   );
 };
 

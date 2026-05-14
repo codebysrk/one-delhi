@@ -63,7 +63,7 @@ export default function App() {
         <StatusBar style="light" />
         <Image 
           source={require('./assets/images/splash.png')} 
-          style={[styles.splashImage, { width: width * 0.8, height: width * 0.8, marginTop: height * 0.25 }]}
+          style={{ width: '100%', height: '100%' }}
           resizeMode="contain"
         />
       </View>

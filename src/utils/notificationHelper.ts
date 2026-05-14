@@ -22,14 +22,14 @@ export async function registerForPushNotificationsAsync() {
       finalStatus = status;
     }
     if (finalStatus !== 'granted') {
-      console.log('Failed to get push token for push notification!');
+      if (__DEV__) console.log('Failed to get push token for push notification!');
       return;
     }
     token = (await Notifications.getExpoPushTokenAsync({
       projectId: '7d2eba88-167c-48b1-b1bf-c0bee946e409', // EAS Project ID from app.json
     })).data;
   } else {
-    console.log('Must use physical device for Push Notifications');
+    if (__DEV__) console.log('Must use physical device for Push Notifications');
   }
 
   if (Platform.OS === 'android') {

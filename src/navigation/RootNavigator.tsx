@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image, useWindowDimensions } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -26,7 +26,6 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { TripPlanIcon } from '../components/TripPlanIcon';
 import { collection, query, where, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS } from '../core/theme';
 import { registerDevice, listenToDeviceSecurity, clearForceLogout } from '../services/deviceService';
 import { logAction } from '../services/logService';
 import { signOut } from 'firebase/auth';
@@ -113,11 +112,11 @@ const MainTabs = () => {
           }}
         />
         <Tab.Screen 
-          name="ProfileTab" 
-          component={ProfileScreen}
+          name="HelpTab" 
+          component={HelpScreen}
           options={{
-            tabBarIcon: ({ color }) => <MaterialCommunityIcons name="account" size={28} color={color} />,
-            tabBarLabel: 'Profile'
+            tabBarIcon: ({ color }) => <MaterialCommunityIcons name="help-circle" size={28} color={color} />,
+            tabBarLabel: 'Help'
           }}
         />
       </Tab.Navigator>
@@ -135,6 +134,7 @@ const MainTabs = () => {
 };
 
 export const RootNavigator = () => {
+  const { width } = useWindowDimensions();
   const { user, setUser, userProfile, setUserProfile, setTickets, resetStore, showFooter } = useAppStore();
   const [initializing, setInitializing] = useState(true);
 
@@ -262,7 +262,17 @@ export const RootNavigator = () => {
     };
   }, [fetchUserTickets, resetStore, setUser, setUserProfile, handleSecurityAction]);
 
-  if (initializing) return null;
+  if (initializing) {
+    return (
+      <View style={styles.initializingContainer}>
+        <Image 
+          source={require('../../assets/images/splash.png')} 
+          style={{ width: '100%', height: '100%' }}
+          resizeMode="contain"
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: '#FFF' }}>
@@ -327,4 +337,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0,0,0,0.25)', // Inner shadow simulation
   },
   footerText: { color: 'white', fontSize: 10, fontWeight: '500' },
+  initializingContainer: {
+    flex: 1,
+    backgroundColor: '#D32F2F',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });

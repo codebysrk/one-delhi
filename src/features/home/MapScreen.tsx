@@ -15,7 +15,6 @@ import {
   useWindowDimensions,
   ImageBackground,
   StatusBar,
-  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
@@ -26,7 +25,6 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   GestureDetector,
   Gesture,
-  GestureHandlerRootView,
 } from "react-native-gesture-handler";
 import Animated, {
   useSharedValue,
@@ -38,26 +36,68 @@ import Animated, {
   withRepeat,
   withTiming,
   withSequence,
+  useAnimatedReaction,
+  runOnJS,
+  FadeInRight,
 } from "react-native-reanimated";
 import { useAppStore } from "../../store/useAppStore";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../services/firebase";
+import { EliteBottomSheet } from "../../components/EliteBottomSheet";
 
 const SHEET_MIN_HEIGHT = 210;
+const SNAP_VELOCITY = 1000;
 
 export const MapScreen = ({ navigation }: any) => {
   const { width, height: SCREEN_HEIGHT } = useWindowDimensions();
-  const SHEET_FULL_HEIGHT = SCREEN_HEIGHT * 0.78;
+
+  // --- BOTTOM SHEET CALCULATIONS (बॉटम शीट की गणना) ---
+
+  // पूरी शीट की ऊँचाई (स्क्रीन का 78%)
+  const SHEET_FULL_HEIGHT = SCREEN_HEIGHT * 0.85;
+
+  // आधी शीट की ऊँचाई (फुल हाइट का 50%)
+  const SHEET_HALF_HEIGHT = SHEET_FULL_HEIGHT * 0.65;
+
+  // Snap points: ये 'translateY' की वैल्यूज़ हैं (ऊपर से दूरी)
+
+  // 1. पूरी तरह खुला (Top): translateY = 0
+  const SNAP_TOP = 0;
+
+  // 2. आधा खुला (Middle): पूरी हाइट में से आधी हाइट घटा दी (बीच में रुकने के लिए)
+  const SNAP_MID = SHEET_FULL_HEIGHT - SHEET_HALF_HEIGHT + 250;
+
+  // 3. सिमटा हुआ (Collapsed/Bottom): पूरी हाइट में से न्यूनतम ऊँचाई (210) घटा दी
+  const SNAP_BOTTOM = SHEET_FULL_HEIGHT - SHEET_MIN_HEIGHT + 250;
+
+  // 4. पूरी तरह बंद (Closed): शीट को स्क्रीन के नीचे धक्का दे दिया (+50px सुरक्षित मार्जिन)
+  const SNAP_CLOSED = SHEET_FULL_HEIGHT + 50;
+
   const webViewRef = useRef<WebView>(null);
   const [location, setLocation] = useState<Location.LocationObject | null>(
     null,
   );
   const [loading, setLoading] = useState(true);
 
-  const translateY = useSharedValue(SCREEN_HEIGHT * 0.78 - SHEET_MIN_HEIGHT);
+  const translateY = useSharedValue(SNAP_MID);
+  const [canScroll, setCanScroll] = useState(false);
+
+  // जब शीट पूरी तरह ऊपर (SNAP_TOP) हो, सिर्फ तभी अंदर का कंटेंट स्क्रॉल होना चाहिए
+  useAnimatedReaction(
+    () => translateY.value,
+    (val) => {
+      if (val <= SNAP_TOP + 5) {
+        if (!canScroll) runOnJS(setCanScroll)(true);
+      } else {
+        if (canScroll) runOnJS(setCanScroll)(false);
+      }
+    },
+    [canScroll]
+  );
   const context = useSharedValue({ y: 0 });
   const cursorOpacity = useSharedValue(0);
-  const { setShowFooter, lastSeenNotification, latestNotificationTimestamp } = useAppStore();
+  const { setShowFooter, lastSeenNotification, latestNotificationTimestamp } =
+    useAppStore();
 
   useEffect(() => {
     setShowFooter(true);
@@ -78,11 +118,18 @@ export const MapScreen = ({ navigation }: any) => {
     opacity: cursorOpacity.value,
   }));
 
+  const updateMapRegion = useCallback((loc: Location.LocationObject) => {
+    webViewRef.current?.injectJavaScript(
+      `centerMap(${loc.coords.latitude}, ${loc.coords.longitude});`
+    );
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
-      translateY.value = withSpring(SHEET_FULL_HEIGHT - SHEET_MIN_HEIGHT, {
-        damping: 20,
-        stiffness: 150,
+      // स्क्रीन फोकस होने पर अब शीट मिडिल (आधी) पोजीशन पर स्नैप होगी
+      translateY.value = withSpring(SNAP_MID, {
+        damping: 25,
+        stiffness: 180,
       });
     }, []),
   );
@@ -98,44 +145,60 @@ export const MapScreen = ({ navigation }: any) => {
           return;
         }
 
-        // 1. Get last known position for instant load (most reliable)
+        // 1. Get last known position first (fastest load)
         try {
           let lastLocation = await Location.getLastKnownPositionAsync({});
           if (lastLocation) {
             setLocation(lastLocation);
             setLoading(false);
-            webViewRef.current?.injectJavaScript(`centerMap(${lastLocation.coords.latitude}, ${lastLocation.coords.longitude});`);
+            updateMapRegion(lastLocation);
           }
         } catch (e) {
-          if (__DEV__) console.warn("Last known position unavailable");
+          if (__DEV__) console.log("Last known unavailable");
         }
 
-        // 2. Try to get current position with a timeout and lower accuracy fallback
+        // 2. Try High Accuracy with timeout
         try {
-          let initialLocation = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced,
+          let location = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.High,
+            timeout: 5000,
           });
-          setLocation(initialLocation);
-          setLoading(false);
-          webViewRef.current?.injectJavaScript(`centerMap(${initialLocation.coords.latitude}, ${initialLocation.coords.longitude});`);
-        } catch (e) {
-          if (__DEV__) console.warn("Current position request failed, using last known if available");
+          setLocation(location);
+          updateMapRegion(location);
+        } catch (err) {
+          // 3. Fallback to Balanced Accuracy
+          try {
+            let location = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.Balanced,
+            });
+            setLocation(location);
+            updateMapRegion(location);
+          } catch (innerErr) {
+            // Last known again if everything fails
+            let finalLoc = await Location.getLastKnownPositionAsync({});
+            if (finalLoc) {
+              setLocation(finalLoc);
+              updateMapRegion(finalLoc);
+            }
+          }
         }
 
-        // 3. Start watching position with safety
+        // 4. Watch position
         try {
           locationWatcher = await Location.watchPositionAsync(
             { accuracy: Location.Accuracy.Balanced, distanceInterval: 10 },
             (newLocation) => {
               setLocation(newLocation);
-              webViewRef.current?.injectJavaScript(`updateLocation(${newLocation.coords.latitude}, ${newLocation.coords.longitude});`);
-            },
+              webViewRef.current?.injectJavaScript(
+                `updateLocation(${newLocation.coords.latitude}, ${newLocation.coords.longitude});`
+              );
+            }
           );
         } catch (e) {
-          if (__DEV__) console.error("Position watcher failed:", e);
+          if (__DEV__) console.log("Watcher failed");
         }
       } catch (error) {
-        if (__DEV__) console.error("Fatal location initialization error:", error);
+        console.error("Fatal location error:", error);
       } finally {
         setLoading(false);
       }
@@ -158,50 +221,49 @@ export const MapScreen = ({ navigation }: any) => {
   };
 
   const showSheet = () => {
-    translateY.value = withSpring(0, { damping: 20, stiffness: 150 });
+    // लाल तीर दबाने पर अब शीट मिडिल (आधी) पोजीशन पर खुलेगी
+    translateY.value = withSpring(SNAP_MID, { damping: 25, stiffness: 180 });
   };
 
-  const gesture = Gesture.Pan()
-    .onStart(() => {
-      context.value = { y: translateY.value };
-    })
-    .onUpdate((event) => {
-      translateY.value = event.translationY + context.value.y;
-      translateY.value = Math.max(translateY.value, 0);
-      translateY.value = Math.min(translateY.value, SHEET_FULL_HEIGHT + 100);
-    })
-    .onEnd((event) => {
-      const collapsedPos = SHEET_FULL_HEIGHT - SHEET_MIN_HEIGHT;
-      const springConfig = { damping: 20, stiffness: 150 };
 
-      // If swipe down from fully expanded or near expanded
-      if (translateY.value < collapsedPos * 0.7) {
-        if (event.velocityY > 300) {
-          translateY.value = withSpring(collapsedPos, springConfig);
-        } else {
-          translateY.value = withSpring(0, springConfig);
-        }
-      }
-      // If already collapsed or swiping down from collapsed
-      else if (translateY.value > collapsedPos + 30 || event.velocityY > 500) {
-        translateY.value = withSpring(SHEET_FULL_HEIGHT + 100, springConfig);
-      } else {
-        translateY.value = withSpring(collapsedPos, springConfig);
-      }
-    });
+  // --- ANIMATED POSITIONS FOR BUTTONS (बटन्स की एनिमेटेड पोजीशन) ---
 
-  const animatedSheetStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-  }));
+  // --- ANIMATED POSITIONS FOR BUTTONS (बटन्स की एनिमेटेड पोजीशन) ---
 
-  const animatedControlStyle = useAnimatedStyle(() => {
-    const bottomPos = interpolate(
-      translateY.value,
-      [0, SHEET_FULL_HEIGHT - SHEET_MIN_HEIGHT, SHEET_FULL_HEIGHT + 100],
-      [SHEET_FULL_HEIGHT + 40, SHEET_MIN_HEIGHT + 40, 10],
-      Extrapolate.CLAMP,
+  // 1. Red Arrow Button Style (लाल तीर की स्टाइल)
+  const animatedRedArrowStyle = useAnimatedStyle(() => {
+    // शीट के बिल्कुल ऊपरी किनारे को ट्रैक करने के लिए सटीक फॉर्मूला
+    const visibleHeight = Math.max(
+      0,
+      SHEET_FULL_HEIGHT + 35 - translateY.value,
     );
-    return { bottom: bottomPos };
+    
+    // विज़िबिलिटी: सिर्फ तब दिखे जब शीट नीचे सिमटी (SNAP_BOTTOM) हो
+    const opacity = interpolate(
+      translateY.value,
+      [SNAP_MID, SNAP_BOTTOM],
+      [0, 1],
+      Extrapolate.CLAMP
+    );
+
+    return {
+      bottom: visibleHeight + 8, // शीट से 8px ऊपर
+      zIndex: 110,
+      opacity: opacity,
+      transform: [{ scale: opacity }] // छोटा होकर गायब/प्रकट होगा
+    };
+  });
+
+  // 2. Map Controls Style (मैप कंट्रोल्स - बस और GPS बटन्स)
+  const animatedMapControlsStyle = useAnimatedStyle(() => {
+    const visibleHeight = Math.max(
+      0,
+      SHEET_FULL_HEIGHT + 35 - translateY.value,
+    );
+    return {
+      bottom: visibleHeight + 10, // लाल तीर से थोड़ा और ऊपर (90px)
+      zIndex: 110,
+    };
   });
 
   const mapHtml = useMemo(() => {
@@ -252,14 +314,13 @@ export const MapScreen = ({ navigation }: any) => {
     `;
   }, []);
 
-
   const [stopsToShow, setStopsToShow] = useState<any[]>([]);
 
   // Fetch stops from Firestore (with local fallback)
   useEffect(() => {
     const fetchStops = async () => {
       const { cachedStops, setCachedStops } = useAppStore.getState();
-      
+
       // 1. Load from cache first for instant UI
       if (cachedStops && cachedStops.length > 0) {
         setStopsToShow(cachedStops);
@@ -269,7 +330,7 @@ export const MapScreen = ({ navigation }: any) => {
         // 2. Fetch fresh data from Firestore
         const querySnapshot = await getDocs(collection(db, "routes"));
         const allStops: any[] = [];
-        
+
         querySnapshot.forEach((doc: any) => {
           const data = doc.data();
           const stops = data.directions?.up?.stops || data.stops;
@@ -283,14 +344,15 @@ export const MapScreen = ({ navigation }: any) => {
             });
           }
         });
-        
+
         if (allStops.length > 0) {
           const finalStops = allStops.slice(0, 50);
           setStopsToShow(finalStops);
           setCachedStops(finalStops); // Update persistent cache
         }
       } catch (error) {
-        if (__DEV__) console.error("Error fetching stops for MapScreen:", error);
+        if (__DEV__)
+          console.error("Error fetching stops for MapScreen:", error);
         // Fallback is already showing from cachedStops
       }
     };
@@ -300,7 +362,10 @@ export const MapScreen = ({ navigation }: any) => {
 
   const renderStopItem = useCallback(
     ({ item, index }: { item: any; index: number }) => (
-      <View key={item.id}>
+      <Animated.View 
+        key={item.id}
+        entering={FadeInRight.delay(index * 50).duration(400)}
+      >
         <View style={styles.stopCard}>
           <View style={styles.stopDetails}>
             <Text style={styles.stopMain}>{item.name}</Text>
@@ -311,7 +376,7 @@ export const MapScreen = ({ navigation }: any) => {
           </TouchableOpacity>
         </View>
         {index < stopsToShow.length - 1 && <View style={styles.divider} />}
-      </View>
+      </Animated.View>
     ),
     [stopsToShow.length],
   );
@@ -353,7 +418,7 @@ export const MapScreen = ({ navigation }: any) => {
               </View>
 
               <View style={styles.searchContainer}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.searchPill}
                   activeOpacity={0.9}
                   onPress={() => navigation.navigate("Search")}
@@ -375,8 +440,15 @@ export const MapScreen = ({ navigation }: any) => {
                     Search 500+ Route
                   </Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.bellBtn} onPress={() => navigation.navigate('Notifications')}>
-                  <MaterialCommunityIcons name="bell-outline" size={28} color="white" />
+                <TouchableOpacity
+                  style={styles.bellBtn}
+                  onPress={() => navigation.navigate("Notifications")}
+                >
+                  <MaterialCommunityIcons
+                    name="bell-outline"
+                    size={28}
+                    color="white"
+                  />
                   {latestNotificationTimestamp > lastSeenNotification && (
                     <View style={styles.yellowDot} />
                   )}
@@ -396,21 +468,27 @@ export const MapScreen = ({ navigation }: any) => {
             const loc = await Location.getCurrentPositionAsync({});
             if (loc) {
               const { latitude, longitude } = loc.coords;
-              webViewRef.current?.injectJavaScript(`centerMap(${latitude}, ${longitude});`);
+              webViewRef.current?.injectJavaScript(
+                `centerMap(${latitude}, ${longitude});`,
+              );
             }
           }}
         />
 
         <Animated.View
-          style={[styles.redArrowBtn, animatedControlStyle, { left: 20 }]}
+          style={[styles.redArrowBtn, animatedRedArrowStyle, { left: 20 }]}
         >
           <TouchableOpacity onPress={showSheet} style={styles.fabInner}>
-            <MaterialCommunityIcons name="arrow-up-circle" size={40} color="#b92121ff" />
+            <MaterialCommunityIcons
+              name="arrow-up-circle"
+              size={40}
+              color="#b92121ff"
+            />
           </TouchableOpacity>
         </Animated.View>
 
         <Animated.View
-          style={[styles.mapControls, animatedControlStyle, { right: 20 }]}
+          style={[styles.mapControls, animatedMapControlsStyle, { right: 20 }]}
         >
           <TouchableOpacity style={styles.controlFab}>
             <MaterialCommunityIcons name="bus" size={24} color="#000" />
@@ -419,32 +497,30 @@ export const MapScreen = ({ navigation }: any) => {
             style={[styles.controlFab, { marginTop: 12 }]}
             onPress={centerOnUser}
           >
-            <MaterialCommunityIcons name="crosshairs-gps" size={24} color="#000" />
+            <MaterialCommunityIcons
+              name="crosshairs-gps"
+              size={24}
+              color="#000"
+            />
           </TouchableOpacity>
         </Animated.View>
       </View>
 
-      <Animated.View
-        style={[
-          styles.eliteSheet,
-          animatedSheetStyle,
-          { height: SHEET_FULL_HEIGHT + 50 },
-        ]}
-      >
-        <GestureDetector gesture={gesture}>
-          <View style={styles.dragArea}>
-            <View style={styles.handleBar} />
-            <View style={styles.tabBar}>
-              <TouchableOpacity style={[styles.tabBtn, styles.activeTabBtn]}>
-                <Text style={styles.activeTabText}>Bus Stop</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.tabBtn, styles.inactiveTabBtn]}>
-                <Text style={styles.inactiveTabText}>Metro Stop</Text>
-              </TouchableOpacity>
-            </View>
+      <EliteBottomSheet
+        translateY={translateY}
+        snapPoints={[SNAP_TOP, SNAP_MID, SNAP_BOTTOM]}
+        sheetHeight={SHEET_FULL_HEIGHT + 50}
+        headerContent={
+          <View style={styles.tabBar}>
+            <TouchableOpacity style={[styles.tabBtn, styles.activeTabBtn]}>
+              <Text style={styles.activeTabText}>Bus Stop</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.tabBtn, styles.inactiveTabBtn]}>
+              <Text style={styles.inactiveTabText}>Metro Stop</Text>
+            </TouchableOpacity>
           </View>
-        </GestureDetector>
-
+        }
+      >
         <FlashList
           data={stopsToShow}
           renderItem={renderStopItem}
@@ -452,8 +528,9 @@ export const MapScreen = ({ navigation }: any) => {
           estimatedItemSize={70}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
+          scrollEnabled={canScroll}
         />
-      </Animated.View>
+      </EliteBottomSheet>
     </View>
   );
 };
@@ -467,7 +544,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   headerBg: { flex: 1, backgroundColor: "#C0282C" },
-  darkOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.25)" },
+  darkOverlay: { flex: 1, backgroundColor: "rgba(132, 132, 132, 0.13)" },
   safeHeader: { flex: 1 },
   topBar: {
     flexDirection: "row",
@@ -530,10 +607,10 @@ const styles = StyleSheet.create({
   },
   mapBody: { flex: 1, marginTop: -28, zIndex: -1 },
   mapWeb: { flex: 1 },
-  loader: { flex: 1, justifyContent: "center", alignItems: "center" },
+  loader: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#D32F2F" },
   redArrowBtn: {
     position: "absolute",
-    zIndex: 10,
+    zIndex: 110,
   },
   fabInner: {
     width: "100%",
@@ -541,7 +618,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  mapControls: { position: "absolute", zIndex: 10 },
+  mapControls: { position: "absolute", zIndex: 110 },
   controlFab: {
     width: 40,
     height: 40,
@@ -551,20 +628,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     elevation: 6,
   },
-  eliteSheet: {
-    position: "absolute",
-    bottom: -15,
-    left: 0,
-    right: 0,
-    // height moved to inline style for dynamic calculation
-    backgroundColor: "white",
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    elevation: 30,
-    zIndex: 100,
-  },
-  dragArea: { paddingHorizontal: 20, paddingTop: 12 },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 60, paddingTop: 5 },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 20, paddingTop: 5 },
   handleBar: {
     width: 40,
     height: 4,
@@ -583,7 +647,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 10,
+    paddingVertical: 6,
   },
   stopDetails: { flex: 1 },
   stopMain: { fontSize: 17, fontWeight: "700", color: "#000" },
