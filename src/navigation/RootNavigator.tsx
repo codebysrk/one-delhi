@@ -15,7 +15,6 @@ import { ProfileScreen } from '../features/profile/ProfileScreen';
 import { SettingsScreen } from '../features/profile/SettingsScreen';
 import { EVScreen } from '../features/ev/EVScreen';
 import { PassScreen } from '../features/pass/PassScreen';
-import { AdminScreen } from '../features/admin/AdminScreen';
 import { SearchScreen } from '../features/home/SearchScreen';
 import { RouteDetailScreen } from '../features/home/RouteDetailScreen';
 import { NotificationScreen } from '../features/notifications/NotificationScreen';
@@ -371,7 +370,6 @@ export const RootNavigator = () => {
               <Stack.Screen name="Pass" component={PassScreen} />
               <Stack.Screen name="Ticket" component={TicketScreen} options={{ presentation: 'modal' }} />
               <Stack.Screen name="History" component={HistoryScreen} />
-              <Stack.Screen name="Admin" component={AdminScreen} />
               <Stack.Screen name="Profile" component={ProfileScreen} />
               <Stack.Screen name="Help" component={HelpScreen} />
               <Stack.Screen name="Settings" component={SettingsScreen} />

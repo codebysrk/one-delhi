@@ -44,9 +44,6 @@ export const ProfileScreen = ({ navigation }: any) => {
     { icon: 'history', label: "My History", action: () => navigation.navigate('History'), color: '#666' },
     { icon: 'help-circle-outline', label: "Help & Support", action: () => navigation.navigate('Help'), color: '#666' },
     { icon: 'information-outline', label: "About One Delhi", color: '#666', action: undefined },
-    ...(userProfile?.role === 'admin' ? [
-      { icon: 'shield-account-outline', label: "Admin Panel", action: () => navigation.navigate('Admin'), color: '#D32F2F' }
-    ] : []),
   ];
 
   return (
