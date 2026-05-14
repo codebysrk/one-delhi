@@ -356,6 +356,7 @@ export const MapScreen = ({ navigation }: any) => {
   }, []);
 
   const [stopsToShow, setStopsToShow] = useState<any[]>([]);
+  const [mapLoaded, setMapLoaded] = useState(false);
 
   // Fetch stops from Firestore (with local fallback)
   useEffect(() => {
@@ -530,16 +531,8 @@ export const MapScreen = ({ navigation }: any) => {
         <WebView
           ref={webViewRef}
           source={{ html: mapHtml }}
-          style={{ flex: 1 }}
-          onLoadEnd={async () => {
-            const loc = await Location.getCurrentPositionAsync({});
-            if (loc) {
-              const { latitude, longitude } = loc.coords;
-              webViewRef.current?.injectJavaScript(
-                `centerMap(${latitude}, ${longitude});`,
-              );
-            }
-          }}
+          style={styles.mapWeb}
+          onLoadEnd={() => setMapLoaded(true)}
         />
 
         <Animated.View
