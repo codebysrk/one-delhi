@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 15,
     paddingHorizontal: 30,
-    borderRadius: 12,
+    borderRadius: 0,
     gap: 10,
   },
   contactBtnText: {

@@ -224,6 +224,6 @@ const styles = StyleSheet.create({
   noComplaintsText: { fontSize: 16, color: '#111827', textAlign: 'center', lineHeight: 24, fontWeight: '500' },
   stickyActionArea: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#FFFFFF', paddingHorizontal: 20, paddingTop: 15, paddingBottom: Platform.OS === 'ios' ? 35 : 20, borderTopWidth: 1, borderTopColor: '#F3F4F6', shadowColor: "#000", shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.05, shadowRadius: 5, elevation: 8 },
   actionHint: { fontSize: 14, fontWeight: '700', color: '#000000', marginBottom: 12, textAlign: 'center' },
-  actionBtn: { width: '100%', backgroundColor: '#C0282C', height: 52, borderRadius: 4, justifyContent: 'center', alignItems: 'center' },
+  actionBtn: { width: '100%', backgroundColor: '#C0282C', height: 52, borderRadius: 0, justifyContent: 'center', alignItems: 'center' },
   actionBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
 });

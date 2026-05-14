@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
   deniedContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40, backgroundColor: 'white' },
   deniedTitle: { fontSize: 24, fontWeight: 'bold', color: '#111', marginTop: 20 },
   deniedText: { fontSize: 16, color: '#666', textAlign: 'center', marginTop: 10, marginBottom: 30 },
-  deniedBtn: { backgroundColor: '#D32F2F', paddingHorizontal: 30, paddingVertical: 12, borderRadius: 25 },
+  deniedBtn: { backgroundColor: '#D32F2F', paddingHorizontal: 30, paddingVertical: 12, borderRadius: 0 },
   deniedBtnText: { color: 'white', fontWeight: 'bold' }
 });
 

@@ -187,6 +187,6 @@ const styles = StyleSheet.create({
   tidText: { fontSize: 13, color: '#666', textAlign: 'center', marginTop: 5, letterSpacing: 0.3 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   emptyTitle: { fontSize: 22, fontWeight: '700', color: '#333', marginTop: 20, marginBottom: 30 },
-  bookNowBtn: { backgroundColor: '#D32F2F', paddingHorizontal: 30, paddingVertical: 14, borderRadius: 8 },
+  bookNowBtn: { backgroundColor: '#D32F2F', paddingHorizontal: 30, paddingVertical: 14, borderRadius: 0 },
   bookNowText: { color: 'white', fontSize: 16, fontWeight: '700' },
 });
