@@ -347,7 +347,9 @@ export const RootNavigator = () => {
           screenOptions={{ 
             headerShown: false,
             animation: 'slide_from_right',
-            animationDuration: 200,
+            animationDuration: 350,
+            gestureEnabled: true,
+            gestureDirection: 'horizontal',
           }} 
         >
           {!user ? (
