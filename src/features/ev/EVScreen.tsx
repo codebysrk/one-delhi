@@ -113,9 +113,7 @@ export const EVScreen = ({ navigation }: any) => {
           <View style={styles.darkOverlay}>
             <SafeAreaView style={styles.safeHeader} edges={['top']}>
               <View style={styles.topBar}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
-                   <MaterialCommunityIcons name="arrow-left" size={26} color="white" />
-                </TouchableOpacity>
+                <View style={{ width: 40 }} />
                 <View style={styles.logoBox}>
                   <Image 
                     source={require('../../../assets/images/map-header-logo.webp')}
