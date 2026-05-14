@@ -17,7 +17,9 @@ export type LogAction =
   | 'PROFILE_UPDATE'
   | 'ADMIN_ACTION'
   | 'SEARCH_ROUTE'
-  | 'NOTIFICATION_SENT';
+  | 'NOTIFICATION_SENT'
+  | 'SCREENSHOT_ATTEMPT'
+  | 'SECURITY_ALERT';
 
 export interface LogData {
   userId: string;

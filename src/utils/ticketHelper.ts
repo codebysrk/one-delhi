@@ -69,19 +69,30 @@ export interface Ticket {
 /**
  * Utility to check if a ticket is expired (2 hours validity)
  */
-export const isTicketExpired = (timestamp: number): boolean => {
+export const isTicketExpired = (timestamp: any): boolean => {
+  if (!timestamp) return false;
+  const ts = typeof timestamp === 'number' 
+    ? timestamp 
+    : (timestamp?.toMillis?.() || (timestamp?.seconds ? timestamp.seconds * 1000 : 0));
+  
+  if (!ts) return false;
   const now = Date.now();
   const twoHoursInMs = 2 * 60 * 60 * 1000;
-  return (now - timestamp) > twoHoursInMs;
+  return (now - ts) > twoHoursInMs;
 };
 
 /**
  * Get remaining validity time in "01h 12m" format
  */
-export const getRemainingValidity = (timestamp: number): string => {
+export const getRemainingValidity = (timestamp: any): string => {
+  const ts = typeof timestamp === 'number' 
+    ? timestamp 
+    : (timestamp?.toMillis?.() || (timestamp?.seconds ? timestamp.seconds * 1000 : 0));
+    
+  if (!ts) return "Expired";
   const now = Date.now();
   const twoHoursInMs = 2 * 60 * 60 * 1000;
-  const remainingMs = (timestamp + twoHoursInMs) - now;
+  const remainingMs = (ts + twoHoursInMs) - now;
   
   if (remainingMs <= 0) return "Expired";
   

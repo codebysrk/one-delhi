@@ -18,7 +18,13 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onPress, showTim
   const stampColor = '#D32F2F';
 
   const getFormattedActiveDateTime = () => {
-    const d = new Date(ticket.timestamp);
+    // Handle raw number, Firestore Timestamp class, or plain {seconds, nanoseconds} objects
+    const ts = typeof ticket.timestamp === 'number' 
+      ? ticket.timestamp 
+      : (ticket.timestamp as any)?.toMillis?.() 
+        || ((ticket.timestamp as any)?.seconds ? (ticket.timestamp as any).seconds * 1000 : ticket.timestamp);
+      
+    const d = new Date(ts);
     const day = String(d.getDate()).padStart(2, '0');
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const year = d.getFullYear();

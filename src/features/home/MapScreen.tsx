@@ -135,7 +135,7 @@ export const MapScreen = ({ navigation }: any) => {
           },
         );
       } catch (error) {
-        console.error("Location initialization error:", error);
+        if (__DEV__) console.error("Location initialization error:", error);
         setLoading(false);
       }
     };
@@ -241,21 +241,6 @@ export const MapScreen = ({ navigation }: any) => {
           icon: L.divIcon({ className: 'user-marker', iconSize: [18, 18] })
         }).addTo(map);
 
-        var markersGroup = L.layerGroup().addTo(map);
-
-        window.updateStops = function(stops) {
-          markersGroup.clearLayers();
-          stops.forEach(function(s) {
-            var isMetro = s.tags.railway === 'station' || s.tags.station === 'subway';
-            L.marker([s.lat, s.lon], {
-              icon: L.divIcon({ 
-                className: isMetro ? 'metro-marker' : 'stop-marker', 
-                iconSize: isMetro ? [14, 14] : [12, 12] 
-              })
-            }).bindPopup('<b>' + (s.tags.name || 'Stop') + '</b>').addTo(markersGroup);
-          });
-        };
-
         window.centerMap = function(lat, lng) {
           map.setView([lat, lng], 16);
           userMarker.setLatLng([lat, lng]);
@@ -304,7 +289,7 @@ export const MapScreen = ({ navigation }: any) => {
           setCachedStops(finalStops); // Update persistent cache
         }
       } catch (error) {
-        console.error("Error fetching stops for MapScreen:", error);
+        if (__DEV__) console.error("Error fetching stops for MapScreen:", error);
         // Fallback is already showing from cachedStops
       }
     };
@@ -405,23 +390,10 @@ export const MapScreen = ({ navigation }: any) => {
           style={{ flex: 1 }}
           onLoadEnd={async () => {
             const loc = await Location.getCurrentPositionAsync({});
-            const { latitude, longitude } = loc.coords;
-            
-            // Center map on user
-            webViewRef.current?.injectJavaScript(`centerMap(${latitude}, ${longitude});`);
-            
-            // Fetch Nearby Stops from Overpass API (Free)
-            const query = `[out:json];(node["highway"="bus_stop"](around:1500,${latitude},${longitude});node["railway"="station"]["station"="subway"](around:2000,${latitude},${longitude}););out body;`;
-            try {
-              const response = await fetch('https://overpass-api.de/api/interpreter', {
-                method: 'POST',
-                body: query
-              });
-              const data = await response.json();
-              if (data.elements) {
-                webViewRef.current?.injectJavaScript(`updateStops(${JSON.stringify(data.elements)});`);
-              }
-            } catch (e) { console.log("Overpass Error", e); }
+            if (loc) {
+              const { latitude, longitude } = loc.coords;
+              webViewRef.current?.injectJavaScript(`centerMap(${latitude}, ${longitude});`);
+            }
           }}
         />
 

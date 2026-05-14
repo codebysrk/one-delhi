@@ -29,6 +29,9 @@ import Animated, {
   FadeIn,
   FadeOut,
 } from "react-native-reanimated";
+import { getDocs, collection } from "firebase/firestore";
+import { db } from "../../services/firebase";
+import { AppState, AppStateStatus } from "react-native";
 
 interface Route {
   id: string;
@@ -45,9 +48,10 @@ interface FareSlab {
 }
 
 const FARE_SLABS: FareSlab[] = [
-  { minStops: 1, maxStops: 5, nonACFare: 5, acFare: 10 },
-  { minStops: 6, maxStops: 15, nonACFare: 10, acFare: 15 },
-  { minStops: 16, maxStops: Infinity, nonACFare: 15, acFare: 25 },
+  { minStops: 1, maxStops: 4, nonACFare: 5, acFare: 10 },    // Tier 1: Small distance
+  { minStops: 5, maxStops: 9, nonACFare: 10, acFare: 15 },   // Tier 2: Medium distance
+  { minStops: 10, maxStops: 14, nonACFare: 15, acFare: 20 }, // Tier 3: Long distance
+  { minStops: 15, maxStops: Infinity, nonACFare: 15, acFare: 25 }, // Tier 4: Very long distance
 ];
 
 // Fare calculation utilities
@@ -203,7 +207,7 @@ const FareDisplay = React.memo(
     <View style={styles.fareRow}>
       <View>
         <Text style={styles.bottomLabel}>Amount Payable</Text>
-        <View style={styles.priceRow}>
+        <View style={[styles.priceRow, { opacity: showDiscount ? 1 : 0 }]}>
           <Text style={styles.oldPrice}>₹{finalFare.originalTotal}</Text>
           <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
             {isEditing ? (
@@ -226,11 +230,9 @@ const FareDisplay = React.memo(
           </TouchableOpacity>
         </View>
       </View>
-      {showDiscount && (
-        <View style={styles.discountBadge}>
-          <Text style={styles.discountText}>10.0% off</Text>
-        </View>
-      )}
+      <View style={[styles.discountBadge, { opacity: showDiscount ? 1 : 0 }]}>
+        <Text style={styles.discountText}>10.0% off</Text>
+      </View>
     </View>
   ),
 );
@@ -331,15 +333,12 @@ export const BookingScreen = ({ navigation }: any) => {
   useEffect(() => {
     const fetchRoutes = async () => {
       try {
-        const { getDocs, collection } = require("firebase/firestore");
-        const { db } = require("../../services/firebase");
-        
         setIsDbLoading(true);
         const querySnapshot = await getDocs(collection(db, "routes"));
         const fetchedRoutes: Route[] = [];
         
-        querySnapshot.forEach((doc: any) => {
-          const r = doc.data();
+        querySnapshot.forEach((docSnap) => {
+          const r = docSnap.data();
           if (r.directions?.up) {
             fetchedRoutes.push({
               id: `${r.route}UP`,
@@ -369,29 +368,32 @@ export const BookingScreen = ({ navigation }: any) => {
 
 
 
-  // Real-Time Sync Timer Logic
+  // Real-Time Sync Timer Logic with AppState resilience
   useEffect(() => {
-    startTimeRef.current = Date.now();
-    initialTimeRef.current = timeLeft; // Current state value as starting point
+    const startTime = Date.now();
+    const duration = 180; // 3 minutes
 
-    if (timerRef.current) clearInterval(timerRef.current);
-
-    timerRef.current = setInterval(() => {
-      const elapsedSeconds = Math.floor((Date.now() - startTimeRef.current) / 1000);
-      const newTime = Math.max(0, initialTimeRef.current - elapsedSeconds);
+    const updateTimer = () => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const remaining = Math.max(0, duration - elapsed);
+      setTimeLeft(remaining);
       
-      setTimeLeft(newTime);
-
-      if (newTime <= 0 && timerRef.current) {
+      if (remaining <= 0 && timerRef.current) {
         clearInterval(timerRef.current);
       }
-    }, 1000);
+    };
+
+    timerRef.current = setInterval(updateTimer, 1000);
+
+    const subscription = AppState.addEventListener("change", (nextAppState: AppStateStatus) => {
+      if (nextAppState === "active") {
+        updateTimer();
+      }
+    });
 
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
+      if (timerRef.current) clearInterval(timerRef.current);
+      subscription.remove();
     };
   }, []);
 
@@ -520,14 +522,17 @@ export const BookingScreen = ({ navigation }: any) => {
 
   const getFinalFare = useCallback(() => {
     const currentFare = getCurrentFare();
-    const finalFare = currentFare.fare * qty;
-    const discountedFare = finalFare * 0.9;
+    const subTotal = currentFare.fare * qty;
+    
+    // Apply 10% discount for mobile booking (standard One Delhi rule)
+    const discountAmount = subTotal * 0.1;
+    const discountedTotal = subTotal - discountAmount;
 
     return {
       ...currentFare,
-      originalTotal: finalFare.toFixed(1),
-      finalFare: discountedFare.toFixed(1),
-      total: discountedFare.toFixed(1),
+      originalTotal: subTotal.toFixed(0), // Show integer for original
+      finalFare: discountedTotal.toFixed(1), // Show one decimal for discount
+      total: discountedTotal.toFixed(1),
     };
   }, [getCurrentFare, qty]);
 
@@ -1102,9 +1107,9 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: "100%",
-    fontSize: 16,
+    fontSize: 18,
     color: "#000",
-    fontWeight: "500",
+    fontWeight: "400",
     paddingLeft: 4,
     paddingVertical: 0,
     textAlign: "left",
@@ -1199,7 +1204,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   oldPrice: {
-    fontSize: 20,
+    fontSize: 24,
     color: "#9CA3AF",
     textDecorationLine: "line-through",
   },

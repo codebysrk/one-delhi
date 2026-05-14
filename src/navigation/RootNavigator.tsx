@@ -155,13 +155,7 @@ export const RootNavigator = () => {
     }
   }, [setTickets]);
 
-  useEffect(() => {
-    let isMounted = true;
-    let securityUnsubscribe: (() => void) | null = null;
-
-    const handleSecurityAction = async (action: 'BANNED' | 'LOGOUT', type: 'USER' | 'DEVICE') => {
-      if (securityUnsubscribe) securityUnsubscribe();
-      
+    const handleSecurityAction = useCallback(async (action: 'BANNED' | 'LOGOUT', type: 'USER' | 'DEVICE') => {
       const currentState = useAppStore.getState();
       
       // Clear forceLogout flag before signing out
@@ -177,7 +171,12 @@ export const RootNavigator = () => {
         : 'You have been remotely logged out by the administrator.';
 
       Alert.alert('Security Alert', message);
-    };
+    }, [resetStore]);
+
+    useEffect(() => {
+    let isMounted = true;
+    let securityUnsubscribe: (() => void) | null = null;
+
 
     const subscriber = onAuthStateChanged(auth, async (firebaseUser) => {
       if (!isMounted) return;
@@ -245,10 +244,10 @@ export const RootNavigator = () => {
     
     return () => {
       isMounted = false;
-      subscriber?.();
+      subscriber();
       if (securityUnsubscribe) securityUnsubscribe();
     };
-  }, [fetchUserTickets, resetStore, setUser, initializing, setUserProfile]);
+  }, [fetchUserTickets, resetStore, setUser, setUserProfile, handleSecurityAction]);
 
   if (initializing) return null;
 

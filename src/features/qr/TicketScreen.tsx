@@ -42,12 +42,14 @@ export const TicketScreen = ({ navigation, route }: any) => {
         userName: useAppStore.getState().userProfile?.name || 'User',
         userEmail: auth.currentUser?.email || '',
         action: 'SCREENSHOT_ATTEMPT',
-        details: `User tried to take a screenshot of ticket: ${activeTicket.tid || activeTicket.id}`,
+        details: `SCREENSHOT ATTEMPT: User tried to capture ticket ${activeTicket.tid || activeTicket.id}`,
         type: 'USER',
         targetType: 'TICKET',
         targetId: activeTicket.tid || activeTicket.id,
         deviceId: useAppStore.getState().deviceId || undefined
-      }).catch(() => {});
+      }).catch((err) => {
+        if (__DEV__) console.error('[TicketScreen] Logging failed:', err);
+      });
     });
 
     return () => subscription.remove();

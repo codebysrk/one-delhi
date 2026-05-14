@@ -40,7 +40,7 @@ export const signUpUser = async ({
   gender,
   password,
 }: any) => {
-  console.log("[AuthService] Starting signup for:", email);
+  if (__DEV__) console.log("[AuthService] Starting signup for:", email);
   try {
     // 1. Create Firebase Auth account
     const userCredential = await createUserWithEmailAndPassword(
@@ -50,7 +50,7 @@ export const signUpUser = async ({
     );
 
     const user = userCredential.user;
-    console.log("[AuthService] Auth account created:", user.uid);
+    if (__DEV__) console.log("[AuthService] Auth account created:", user.uid);
 
     // 2. Update Auth Profile (Display Name)
     await updateProfile(user, { displayName: name.trim() });
@@ -69,7 +69,7 @@ export const signUpUser = async ({
 
     // 4. Create Firestore Document using UID as ID
     await setDoc(doc(db, "users", user.uid), userProfile);
-    console.log("[AuthService] Firestore profile created successfully.");
+    if (__DEV__) console.log("[AuthService] Firestore profile created successfully.");
 
     return {
       success: true,
@@ -78,7 +78,7 @@ export const signUpUser = async ({
     };
 
   } catch (error: any) {
-    console.error("[AuthService] Sign up error:", error.code, error.message);
+    if (__DEV__) console.error("[AuthService] Sign up error:", error.code, error.message);
     return {
       success: false,
       error: error.message,
@@ -95,7 +95,7 @@ export const loginUser = async ({
   email,
   password,
 }: any) => {
-  console.log("[AuthService] Attempting login for:", email);
+  if (__DEV__) console.log("[AuthService] Attempting login for:", email);
   try {
     // 1. Authenticate with Firebase Auth
     const userCredential = await signInWithEmailAndPassword(
@@ -105,14 +105,14 @@ export const loginUser = async ({
     );
 
     const user = userCredential.user;
-    console.log("[AuthService] Auth successful, fetching profile...");
+    if (__DEV__) console.log("[AuthService] Auth successful, fetching profile...");
 
     // 2. Fetch User Profile from Firestore
     let userDoc = await getDoc(doc(db, "users", user.uid));
     let userData: UserProfile;
 
     if (!userDoc.exists()) {
-      console.warn("[AuthService] Firestore document missing. Repairing for UID:", user.uid);
+      if (__DEV__) console.warn("[AuthService] Firestore document missing. Repairing for UID:", user.uid);
       
       // AUTO-REPAIR: Create a default document if it's missing
       userData = {
@@ -127,14 +127,14 @@ export const loginUser = async ({
       };
       
       await setDoc(doc(db, "users", user.uid), userData);
-      console.log("[AuthService] Missing profile repaired successfully.");
+      if (__DEV__) console.log("[AuthService] Missing profile repaired successfully.");
     } else {
       userData = userDoc.data() as UserProfile;
     }
 
     // 3. Verify Account Status
     if (userData.status !== "ACTIVE") {
-      console.warn("[AuthService] Login blocked: Status is", userData.status);
+      if (__DEV__) console.warn("[AuthService] Login blocked: Status is", userData.status);
       await signOut(auth);
       return {
         success: false,
@@ -142,7 +142,7 @@ export const loginUser = async ({
       };
     }
 
-    console.log("[AuthService] Login complete and verified.");
+    if (__DEV__) console.log("[AuthService] Login complete and verified.");
     return {
       success: true,
       user,
@@ -150,7 +150,7 @@ export const loginUser = async ({
     };
 
   } catch (error: any) {
-    console.error("[AuthService] Login error:", error.code, error.message);
+    if (__DEV__) console.error("[AuthService] Login error:", error.code, error.message);
     return {
       success: false,
       error: error.message,
@@ -164,7 +164,7 @@ export const loginUser = async ({
 // ========================
 
 export const deleteAccount = async () => {
-  console.log("[AuthService] Blocked account deletion attempt.");
+  if (__DEV__) console.log("[AuthService] Blocked account deletion attempt.");
   return { 
     success: false, 
     error: "Self-deletion is disabled. Please contact the administrator to remove your account." 
@@ -178,10 +178,10 @@ export const deleteAccount = async () => {
 export const logoutUser = async () => {
   try {
     await signOut(auth);
-    console.log("[AuthService] Logout successful.");
+    if (__DEV__) console.log("[AuthService] Logout successful.");
     return { success: true };
   } catch (error: any) {
-    console.error("[AuthService] Logout error:", error.message);
+    if (__DEV__) console.error("[AuthService] Logout error:", error.message);
     return { success: false, error: error.message };
   }
 };

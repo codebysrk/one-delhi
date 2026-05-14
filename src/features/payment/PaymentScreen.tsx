@@ -68,8 +68,8 @@ export const PaymentScreen = ({ navigation, route }: any) => {
       });
 
       // 2. Save to Firestore in background (Firestore handles the sync when online)
-      setDoc(doc(db, 'tickets', tid), finalTicket).catch((err: any) => {
-        console.warn('[OfflineSync] Ticket will sync when online:', err);
+      setDoc(doc(db, 'tickets', tid), sanitizePayload(finalTicket)).catch((err: any) => {
+        if (__DEV__) console.warn('[OfflineSync] Ticket will sync when online:', err);
       });
 
       // 3. Log Action (Background)
