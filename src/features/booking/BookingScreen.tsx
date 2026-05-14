@@ -20,8 +20,8 @@ import {
   useWindowDimensions,
   BackHandler,
   Platform,
+  FlatList,
 } from "react-native";
-import { FlashList } from "@shopify/flash-list";
 import { useAppStore } from "../../store/useAppStore";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
@@ -32,6 +32,60 @@ import Animated, {
 import { getDocs, collection } from "firebase/firestore";
 import { db } from "../../services/firebase";
 import { AppState, AppStateStatus } from "react-native";
+
+// --- 1. Separate Memoized Item Components for Peak Performance ---
+
+const RouteItem = React.memo(({ item, index, onSelect }: { item: any; index: number; onSelect: (item: any) => void }) => {
+  const _onPress = useCallback(() => onSelect(item), [item, onSelect]);
+  return (
+    <TouchableOpacity
+      activeOpacity={0.7}
+      style={[styles.routeItem, index === 0 && { borderTopWidth: 0 }]}
+      onPress={_onPress}
+    >
+      <View style={styles.routeItemContent}>
+        <View style={styles.routeIconHeader}>
+          <MaterialCommunityIcons name="bus" size={22} color="#000000ff" style={{ marginLeft: -5 }} />
+          <Text style={styles.routeNumberText}>
+            {item.id?.replace(/UP$|DOWN$/, "")}
+          </Text>
+        </View>
+        <View style={styles.routeVisualPath}>
+          <View style={styles.routePathVisualizer}>
+            <View style={[styles.routeCircle, styles.routeCircleTop]} />
+            <View style={styles.routeLine} />
+            <View style={[styles.routeCircle, styles.routeCircleBottom]} />
+          </View>
+          <View style={styles.routeLabels}>
+            <Text style={styles.routeTerminalLabel} numberOfLines={1}>
+              {item.stops?.[0]}
+            </Text>
+            <Text style={styles.routeTerminalLabel} numberOfLines={1}>
+              {item.stops?.[item.stops.length - 1]}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+});
+
+const StopItem = React.memo(({ item, index, onSelect, activeInput }: { item: any; index: number; onSelect: (type: any, item: any) => void; activeInput: any }) => {
+  const _onPress = useCallback(() => onSelect(activeInput, item), [activeInput, item, onSelect]);
+  return (
+    <TouchableOpacity
+      activeOpacity={0.6}
+      style={[styles.stopItem, index === 0 && { borderTopWidth: 0 }]}
+      onPress={_onPress}
+    >
+      <View style={styles.stopItemRow}>
+        <Text style={styles.stopItemText} numberOfLines={1}>
+          {item}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+});
 
 interface Route {
   id: string;
@@ -288,6 +342,7 @@ export const BookingScreen = ({ navigation }: any) => {
   const sourceInputRef = useRef<TextInput>(null);
   const destInputRef = useRef<TextInput>(null);
   const isSelecting = useRef(false);
+  const autoFocusTrack = useRef({ route: false, source: false });
   const [measuredPos, setMeasuredPos] = useState({
     x: 0,
     y: 0,
@@ -705,8 +760,11 @@ export const BookingScreen = ({ navigation }: any) => {
         setDestSearch("");
       }
 
-      // Double check: don't open source/dest if no route is selected or matched
-      if ((type === "source" || type === "dest") && currentRouteStops.length === 0) {
+      // Double check: don't open source/dest if prerequisites aren't met
+      if ((type === "source" || type === "dest") && !selectedFullRouteId) {
+        return;
+      }
+      if (type === "dest" && !sourceSearch) {
         return;
       }
 
@@ -727,7 +785,7 @@ export const BookingScreen = ({ navigation }: any) => {
         setActiveInput(type);
       });
     },
-    [currentRouteStops],
+    [currentRouteStops, selectedFullRouteId, sourceSearch],
   );
 
   const handleSelect = useCallback(
@@ -754,70 +812,49 @@ export const BookingScreen = ({ navigation }: any) => {
         setTimeout(() => setDestSelection(undefined), 300);
       }
 
-      // 2. Hide keyboard and blur inputs
-      Keyboard.dismiss();
+      // 2. Clear focus and prepare next step
       routeInputRef.current?.blur();
       sourceInputRef.current?.blur();
       destInputRef.current?.blur();
 
-      // 3. Close dropdown after a short delay to ensure UI stability
+      // 3. Close dropdown and focus next field
+      // 3. Close dropdown
       setTimeout(() => {
         setActiveInput(null);
         isSelecting.current = false;
       }, 100);
     },
-    [],
+    [handleFocus],
   );
+  
+  // Auto-focus logic using useEffect to handle async state updates properly
+  useEffect(() => {
+    if (selectedFullRouteId && !sourceSearch && !activeInput && !autoFocusTrack.current.route) {
+      autoFocusTrack.current.route = true;
+      handleFocus("source");
+    } else if (selectedFullRouteId && sourceSearch && !destSearch && !activeInput && !autoFocusTrack.current.source) {
+      autoFocusTrack.current.source = true;
+      handleFocus("dest");
+    }
+    
+    // Reset tracking if fields are cleared
+    if (!selectedFullRouteId) autoFocusTrack.current.route = false;
+    if (!sourceSearch) autoFocusTrack.current.source = false;
+  }, [selectedFullRouteId, sourceSearch, destSearch, handleFocus, activeInput]);
 
-  // 1. DEDICATED ROUTE SUGGESTION SYSTEM
+  // Use the memoized components in renderItem
+  const onRouteSelect = useCallback((item: any) => handleSelect("route", item), [handleSelect]);
+
   const renderRouteItem = useCallback(
     ({ item, index }: { item: any; index: number }) => (
-      <TouchableOpacity
-        activeOpacity={0.7}
-        style={[styles.routeItem, index === 0 && { borderTopWidth: 0 }]}
-        onPress={() => handleSelect("route", item)}
-      >
-        <View style={styles.routeItemContent}>
-          <View style={styles.routeIconHeader}>
-            <MaterialCommunityIcons name="bus" size={22} color="#000000ff" style={{ marginLeft: -5 }} />
-            <Text style={styles.routeNumberText}>
-              {item.id?.replace(/UP$|DOWN$/, "")}
-            </Text>
-          </View>
-          <View style={styles.routeVisualPath}>
-            <View style={styles.routePathVisualizer}>
-              <View style={[styles.routeCircle, styles.routeCircleTop]} />
-              <View style={styles.routeLine} />
-              <View style={[styles.routeCircle, styles.routeCircleBottom]} />
-            </View>
-            <View style={styles.routeLabels}>
-              <Text style={styles.routeTerminalLabel} numberOfLines={1}>
-                {item.stops?.[0]}
-              </Text>
-              <Text style={styles.routeTerminalLabel} numberOfLines={1}>
-                {item.stops?.[item.stops.length - 1]}
-              </Text>
-            </View>
-          </View>
-        </View>
-      </TouchableOpacity>
+      <RouteItem item={item} index={index} onSelect={onRouteSelect} />
     ),
-    [handleSelect],
+    [onRouteSelect],
   );
 
   const renderSourceDestItem = useCallback(
     ({ item, index }: { item: any; index: number }) => (
-      <TouchableOpacity
-        activeOpacity={0.6}
-        style={[styles.stopItem, index === 0 && { borderTopWidth: 0 }]}
-        onPress={() => handleSelect(activeInput as any, item)}
-      >
-        <View style={styles.stopItemRow}>
-          <Text style={styles.stopItemText} numberOfLines={1}>
-            {item}
-          </Text>
-        </View>
-      </TouchableOpacity>
+      <StopItem item={item} index={index} onSelect={handleSelect} activeInput={activeInput} />
     ),
     [activeInput, handleSelect],
   );
@@ -871,7 +908,11 @@ export const BookingScreen = ({ navigation }: any) => {
           {/* Source/Destination */}
           <View style={styles.inputSection}>
             <Text style={styles.inputLabel}>From - To</Text>
-            <View style={[styles.inputBox, activeInput === "source" && styles.inputBoxFocused]}>
+            <View style={[
+              styles.inputBox, 
+              activeInput === "source" && styles.inputBoxFocused,
+              !selectedFullRouteId && styles.inputBoxDisabled
+            ]}>
               <View style={styles.inputIcon}>
                 <View style={styles.stopDot} />
               </View>
@@ -883,7 +924,7 @@ export const BookingScreen = ({ navigation }: any) => {
                 value={sourceSearch}
                 onChangeText={setSourceSearch}
                 onFocus={() => handleFocus("source")}
-                editable={currentRouteStops.length > 0}
+                editable={!!selectedFullRouteId}
                 multiline={false}
                 scrollEnabled
                 selection={sourceSelection}
@@ -891,7 +932,11 @@ export const BookingScreen = ({ navigation }: any) => {
 
             </View>
 
-            <View style={[styles.inputBox, activeInput === "dest" && styles.inputBoxFocused]}>
+            <View style={[
+              styles.inputBox, 
+              activeInput === "dest" && styles.inputBoxFocused,
+              (!selectedFullRouteId || !sourceSearch) && styles.inputBoxDisabled
+            ]}>
               <View style={styles.inputIcon}>
                 <MaterialCommunityIcons name="map-marker" size={20} color="#000" />
               </View>
@@ -903,7 +948,7 @@ export const BookingScreen = ({ navigation }: any) => {
                 value={destSearch}
                 onChangeText={setDestSearch}
                 onFocus={() => handleFocus("dest")}
-                editable={currentRouteStops.length > 0}
+                editable={!!selectedFullRouteId && !!sourceSearch}
                 multiline={false}
                 scrollEnabled
                 selection={destSelection}
@@ -968,22 +1013,34 @@ export const BookingScreen = ({ navigation }: any) => {
             },
           ]}
         >
-          <FlashList
-            estimatedItemSize={activeInput === "route" ? 85 : 48}
+          <FlatList
             showsVerticalScrollIndicator={false}
             data={
               activeInput === "route"
                 ? filteredRoutes
                 : activeInput === "source"
-                ? filteredSources
-                : filteredDests
+                  ? filteredSources
+                  : filteredDests
             }
-            keyExtractor={(item, index) => `${activeInput}-${index}`}
+            keyExtractor={(item, index) =>
+              activeInput === "route"
+                ? item?.id != null
+                  ? `route-${item.id}`
+                  : `route-${index}`
+                : `${activeInput}-${selectedFullRouteId ?? "noroute"}-${index}-${String(item)}`
+            }
             keyboardShouldPersistTaps="always"
-            nestedScrollEnabled={true}
-            initialNumToRender={20}
-            maxToRenderPerBatch={20}
-
+            nestedScrollEnabled
+            removeClippedSubviews={true}
+            getItemLayout={(data, index) => ({
+              length: activeInput === "route" ? 85 : 48,
+              offset: (activeInput === "route" ? 85 : 48) * index,
+              index,
+            })}
+            initialNumToRender={8}
+            maxToRenderPerBatch={5}
+            windowSize={3}
+            updateCellsBatchingPeriod={50}
             ListEmptyComponent={
               <View style={styles.emptyItem}>
                 <Text style={styles.emptyItemText}>
@@ -1098,6 +1155,10 @@ const styles = StyleSheet.create({
   inputBoxFocused: {
     borderColor: "#D32F2F",
     backgroundColor: "#FFF",
+  },
+  inputBoxDisabled: {
+    opacity: 0.5,
+    backgroundColor: "#E5E7EB",
   },
   inputIcon: {
     width: 30, // Increased slightly for larger icon

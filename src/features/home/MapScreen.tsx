@@ -98,35 +98,45 @@ export const MapScreen = ({ navigation }: any) => {
           return;
         }
 
-        // 1. Get last known position for instant load
-        let lastLocation = await Location.getLastKnownPositionAsync({});
-        if (lastLocation) {
-          setLocation(lastLocation);
-          setLoading(false);
-          const centerJs = `centerMap(${lastLocation.coords.latitude}, ${lastLocation.coords.longitude});`;
-          webViewRef.current?.injectJavaScript(centerJs);
+        // 1. Get last known position for instant load (most reliable)
+        try {
+          let lastLocation = await Location.getLastKnownPositionAsync({});
+          if (lastLocation) {
+            setLocation(lastLocation);
+            setLoading(false);
+            webViewRef.current?.injectJavaScript(`centerMap(${lastLocation.coords.latitude}, ${lastLocation.coords.longitude});`);
+          }
+        } catch (e) {
+          if (__DEV__) console.warn("Last known position unavailable");
         }
 
-        // 2. Get high accuracy position in background
-        let initialLocation = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
-        setLocation(initialLocation);
-        setLoading(false);
+        // 2. Try to get current position with a timeout and lower accuracy fallback
+        try {
+          let initialLocation = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          setLocation(initialLocation);
+          setLoading(false);
+          webViewRef.current?.injectJavaScript(`centerMap(${initialLocation.coords.latitude}, ${initialLocation.coords.longitude});`);
+        } catch (e) {
+          if (__DEV__) console.warn("Current position request failed, using last known if available");
+        }
 
-        const centerJs = `centerMap(${initialLocation.coords.latitude}, ${initialLocation.coords.longitude});`;
-        webViewRef.current?.injectJavaScript(centerJs);
-
-        locationWatcher = await Location.watchPositionAsync(
-          { accuracy: Location.Accuracy.High, distanceInterval: 5 },
-          (newLocation) => {
-            setLocation(newLocation);
-            const js = `updateLocation(${newLocation.coords.latitude}, ${newLocation.coords.longitude});`;
-            webViewRef.current?.injectJavaScript(js);
-          },
-        );
+        // 3. Start watching position with safety
+        try {
+          locationWatcher = await Location.watchPositionAsync(
+            { accuracy: Location.Accuracy.Balanced, distanceInterval: 10 },
+            (newLocation) => {
+              setLocation(newLocation);
+              webViewRef.current?.injectJavaScript(`updateLocation(${newLocation.coords.latitude}, ${newLocation.coords.longitude});`);
+            },
+          );
+        } catch (e) {
+          if (__DEV__) console.error("Position watcher failed:", e);
+        }
       } catch (error) {
-        if (__DEV__) console.error("Location initialization error:", error);
+        if (__DEV__) console.error("Fatal location initialization error:", error);
+      } finally {
         setLoading(false);
       }
     };
