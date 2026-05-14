@@ -16,6 +16,7 @@ import {
   ImageBackground,
   StatusBar,
 } from "react-native";
+import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import { FlashList } from "@shopify/flash-list";
@@ -44,6 +45,8 @@ import { useAppStore } from "../../store/useAppStore";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../services/firebase";
 import { EliteBottomSheet } from "../../components/EliteBottomSheet";
+
+const AnimatedImage = Animated.createAnimatedComponent(Image);
 import { transform } from "zod";
 
 const SHEET_MIN_HEIGHT = 210;
@@ -404,10 +407,11 @@ export const MapScreen = ({ navigation }: any) => {
               <View style={styles.topBar}>
                 <View style={{ width: 40 }} />
                 <View style={styles.logoBox}>
-                  <Animated.Image
+                  <AnimatedImage
                     source={require("../../../assets/images/map-header-logo.webp")}
                     style={{ width: 100, height: 35, marginTop: 0 }}
-                    resizeMode="contain"
+                    contentFit="contain"
+                    transition={400}
                   />
                 </View>
                 <TouchableOpacity

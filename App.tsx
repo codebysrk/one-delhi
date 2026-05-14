@@ -3,7 +3,8 @@ import 'fast-text-encoding';
 import React, { useState, useEffect } from 'react';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { StatusBar } from 'expo-status-bar';
-import { View, Image, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, useWindowDimensions } from 'react-native';
+import { Image } from 'expo-image';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -64,7 +65,8 @@ export default function App() {
         <Image 
           source={require('./assets/images/splash.png')} 
           style={{ width: '100%', height: '100%' }}
-          resizeMode="contain"
+          contentFit="contain"
+          transition={300}
         />
       </View>
     );

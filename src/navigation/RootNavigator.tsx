@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -31,6 +31,8 @@ import { logAction } from '../services/logService';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { signOut } from 'firebase/auth';
 import { Alert, BackHandler, ToastAndroid } from 'react-native';
+import { Image } from 'expo-image';
+import * as Haptics from 'expo-haptics';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -57,6 +59,7 @@ const TabButton = (props: any) => {
   }));
 
   const handlePressIn = () => {
+    Haptics.selectionAsync();
     scale.value = withSpring(0.9, { damping: 10, stiffness: 200 });
   };
 
@@ -334,7 +337,8 @@ export const RootNavigator = () => {
         <Image 
           source={require('../../assets/images/splash.png')} 
           style={{ width: '100%', height: '100%' }}
-          resizeMode="contain"
+          contentFit="contain"
+          transition={500}
         />
       </View>
     );
