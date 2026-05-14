@@ -1,6 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
-import { Check } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, SPACING } from '../../core/theme';
 
 interface CheckboxProps {
@@ -13,7 +13,7 @@ interface CheckboxProps {
 export const Checkbox = ({ isChecked, onToggle, label, labelComponent }: CheckboxProps) => (
   <TouchableOpacity style={styles.checkboxContainer} onPress={onToggle} activeOpacity={0.8}>
     <View style={[styles.checkbox, isChecked && styles.checkboxChecked]}>
-      {isChecked && <Check color="#FFFFFF" size={14} strokeWidth={3} />}
+      {isChecked && <MaterialCommunityIcons name="check" color="#FFFFFF" size={14} />}
     </View>
     {labelComponent ? labelComponent : <Text style={styles.checkboxLabel}>{label}</Text>}
   </TouchableOpacity>

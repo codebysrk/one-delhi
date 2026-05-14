@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, SafeAreaView, StatusBar, Platform, RefreshControl, ActivityIndicator } from 'react-native';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../../services/firebase';
-import { RemixIcon } from '../../components/RemixIcon';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { InvalidStamp } from '../../components/InvalidStamp';
 import { getRouteNumberOnly, formatTimeTo12hr, isTicketExpired } from '../../utils/ticketHelper';
 import { useAppStore } from '../../store/useAppStore';
@@ -105,7 +105,7 @@ export const HistoryScreen = ({ navigation }: any) => {
         <SafeAreaView>
           <View style={styles.headerContent}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-              <RemixIcon name="arrow-left-line" size={28} color="#333" />
+              <MaterialCommunityIcons name="arrow-left" size={28} color="#333" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Ticket History</Text>
           </View>
@@ -125,7 +125,7 @@ export const HistoryScreen = ({ navigation }: any) => {
         />
       ) : (
         <View style={styles.emptyContainer}>
-          <RemixIcon name="ticket-2-line" size={100} color="#E5E7EB" />
+          <MaterialCommunityIcons name="ticket-outline" size={100} color="#E5E7EB" />
           <Text style={styles.emptyTitle}>No History Found</Text>
           <TouchableOpacity
             style={styles.bookNowBtn}

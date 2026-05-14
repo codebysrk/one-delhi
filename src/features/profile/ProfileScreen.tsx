@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Scro
 import { auth } from '../../services/firebase';
 import { signOut } from 'firebase/auth';
 import { useAppStore } from '../../store/useAppStore';
-import { RemixIcon } from '../../components/RemixIcon';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { logAction } from '../../services/logService';
 
 export const ProfileScreen = ({ navigation }: any) => {
@@ -40,12 +40,12 @@ export const ProfileScreen = ({ navigation }: any) => {
   };
 
   const menuItems = [
-    { icon: 'user-3-line', label: "Account Details", action: () => navigation.navigate('Settings'), color: '#666' },
-    { icon: 'history-line', label: "My History", action: () => navigation.navigate('History'), color: '#666' },
-    { icon: 'question-answer-line', label: "Help & Support", action: () => navigation.navigate('Help'), color: '#666' },
-    { icon: 'information-line', label: "About One Delhi", color: '#666', action: undefined },
+    { icon: 'account-details-outline', label: "Account Details", action: () => navigation.navigate('Settings'), color: '#666' },
+    { icon: 'history', label: "My History", action: () => navigation.navigate('History'), color: '#666' },
+    { icon: 'help-circle-outline', label: "Help & Support", action: () => navigation.navigate('Help'), color: '#666' },
+    { icon: 'information-outline', label: "About One Delhi", color: '#666', action: undefined },
     ...(userProfile?.role === 'admin' ? [
-      { icon: 'shield-user-line', label: "Admin Panel", action: () => navigation.navigate('Admin'), color: '#D32F2F' }
+      { icon: 'shield-account-outline', label: "Admin Panel", action: () => navigation.navigate('Admin'), color: '#D32F2F' }
     ] : []),
   ];
 
@@ -60,7 +60,7 @@ export const ProfileScreen = ({ navigation }: any) => {
         {/* Header Bar */}
         <View style={styles.headerBar}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <RemixIcon name="arrow-left-line" size={26} color="white" />
+            <MaterialCommunityIcons name="arrow-left" size={26} color="white" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Profile</Text>
           <View style={{ width: 40 }} />
@@ -70,7 +70,7 @@ export const ProfileScreen = ({ navigation }: any) => {
           {/* User Card */}
           <View style={styles.userCard}>
             <View style={styles.avatarBox}>
-               <RemixIcon name="user-fill" size={32} color="#999" />
+               <MaterialCommunityIcons name="account" size={32} color="#999" />
             </View>
             <View style={styles.userInfo}>
                <Text style={styles.userName}>{userProfile?.name || user?.displayName || 'Delhi Traveler'}</Text>
@@ -88,10 +88,10 @@ export const ProfileScreen = ({ navigation }: any) => {
                 onPress={item.action}
               >
                 <View style={styles.menuLeft}>
-                  <RemixIcon name={item.icon as any} size={22} color={item.color} />
+                  <MaterialCommunityIcons name={item.icon as any} size={22} color={item.color} />
                   <Text style={[styles.menuLabel, item.label === 'Admin Panel' && { color: '#D32F2F' }]}>{item.label}</Text>
                 </View>
-                <RemixIcon name="arrow-right-s-line" size={24} color="#CCC" />
+                <MaterialCommunityIcons name="chevron-right" size={24} color="#CCC" />
               </TouchableOpacity>
             ))}
             
@@ -101,10 +101,10 @@ export const ProfileScreen = ({ navigation }: any) => {
               onPress={handleLogout}
             >
               <View style={styles.menuLeft}>
-                <RemixIcon name="logout-box-r-line" size={22} color="#D32F2F" />
+                <MaterialCommunityIcons name="logout" size={22} color="#D32F2F" />
                 <Text style={[styles.menuLabel, { color: '#D32F2F', fontWeight: '600' }]}>Log Out</Text>
               </View>
-              <RemixIcon name="arrow-right-s-line" size={24} color="#CCC" />
+              <MaterialCommunityIcons name="chevron-right" size={24} color="#CCC" />
             </TouchableOpacity>
           </View>
 

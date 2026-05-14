@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platfor
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Mail, Lock } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { auth, db } from '../../services/firebase';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { useAppStore } from '../../store/useAppStore';
@@ -113,7 +113,7 @@ export const LoginScreen = ({ navigation }: any) => {
                   value={value}
                   onChangeText={onChange}
                   error={errors.email?.message}
-                  icon={<Mail size={20} color="#666" />}
+                  icon={<MaterialCommunityIcons name="email-outline" size={20} color="#666" />}
                   keyboardType="email-address"
                 />
               )}
@@ -131,7 +131,7 @@ export const LoginScreen = ({ navigation }: any) => {
                     onChangeText={onChange}
                     error={errors.password?.message}
                     secureTextEntry
-                    icon={<Lock size={20} color="#666" />}
+                    icon={<MaterialCommunityIcons name="lock-outline" size={20} color="#666" />}
                   />
                 )}
               />

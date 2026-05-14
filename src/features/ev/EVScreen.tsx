@@ -1,18 +1,18 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, useWindowDimensions } from 'react-native';
 import { Screen } from '../../components/Screen';
-import { RemixIcon } from '../../components/RemixIcon';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { MetroLogo } from '../../components/MetroLogo';
 
 
 
 const HUB_SERVICES = [
-  { id: '1', name: 'Bus', icon: 'bus-fill', color: '#FFB74D' },
+  { id: '1', name: 'Bus', icon: 'bus', color: '#FFB74D' },
   { id: '2', name: 'Metro', icon: 'metro', color: '#D32F2F' },
-  { id: '3', name: 'EV', icon: 'charging-pile-fill', color: '#4CAF50' },
-  { id: '4', name: 'Auto', icon: 'taxi-fill', color: '#FBC02D' },
-  { id: '5', name: 'Cab', icon: 'car-fill', color: '#111' },
-  { id: '6', name: 'Cycle', icon: 'riding-fill', color: '#03A9F4' },
+  { id: '3', name: 'EV', icon: 'ev-station', color: '#4CAF50' },
+  { id: '4', name: 'Auto', icon: 'taxi', color: '#FBC02D' },
+  { id: '5', name: 'Cab', icon: 'car', color: '#111' },
+  { id: '6', name: 'Cycle', icon: 'bicycle', color: '#03A9F4' },
 ];
 
 export const EVScreen = () => {
@@ -37,7 +37,7 @@ export const EVScreen = () => {
               {item.icon === 'metro' ? (
                 <MetroLogo size={32} />
               ) : (
-                <RemixIcon name={item.icon as any} size={32} color={item.color} />
+                <MaterialCommunityIcons name={item.icon as any} size={32} color={item.color} />
               )}
             </View>
             <Text style={styles.serviceName}>{item.name}</Text>

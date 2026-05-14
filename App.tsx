@@ -11,6 +11,7 @@ import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 
 import { Asset } from 'expo-asset';
+import { NotificationListener } from './src/components/NotificationListener';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -73,6 +74,7 @@ export default function App() {
     <SafeAreaProvider>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <StatusBar style="auto" />
+        <NotificationListener />
         <RootNavigator />
       </GestureHandlerRootView>
     </SafeAreaProvider>

@@ -23,7 +23,7 @@ import {
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { useAppStore } from "../../store/useAppStore";
-import { RemixIcon } from "../../components/RemixIcon";
+import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import Animated, {
   FadeIn,
@@ -779,7 +779,7 @@ export const BookingScreen = ({ navigation }: any) => {
       >
         <View style={styles.routeItemContent}>
           <View style={styles.routeIconHeader}>
-            <RemixIcon name="bus-2-fill" size={22} color="#000000ff" />
+            <MaterialCommunityIcons name="bus" size={22} color="#000000ff" style={{ marginLeft: -5 }} />
             <Text style={styles.routeNumberText}>
               {item.id?.replace(/UP$|DOWN$/, "")}
             </Text>
@@ -831,7 +831,7 @@ export const BookingScreen = ({ navigation }: any) => {
         <SafeAreaView>
           <View style={styles.headerRow}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-              <RemixIcon name="arrow-left-line" size={26} color="#FFF" />
+              <MaterialCommunityIcons name="arrow-left" size={26} color="#FFF" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Buy tickets</Text>
             <View style={styles.backBtn} />
@@ -848,7 +848,7 @@ export const BookingScreen = ({ navigation }: any) => {
             <Text style={styles.inputLabel}>Route Info</Text>
             <View style={[styles.inputBox, activeInput === "route" && styles.inputBoxFocused]}>
               <View style={styles.inputIcon}>
-                <RemixIcon name="route-fill" size={24} color="#000" />
+                <MaterialIcons name="route" size={24} color="#000" />
               </View>
               <TextInput
                 ref={routeInputRef}
@@ -864,7 +864,7 @@ export const BookingScreen = ({ navigation }: any) => {
                 scrollEnabled
                 selection={routeSelection}
               />
-              <RemixIcon name="arrow-down-s-line" size={20} color="#9CA3AF" />
+
             </View>
           </View>
 
@@ -888,12 +888,12 @@ export const BookingScreen = ({ navigation }: any) => {
                 scrollEnabled
                 selection={sourceSelection}
               />
-              <RemixIcon name="arrow-down-s-line" size={20} color="#9CA3AF" />
+
             </View>
 
             <View style={[styles.inputBox, activeInput === "dest" && styles.inputBoxFocused]}>
               <View style={styles.inputIcon}>
-                <RemixIcon name="map-pin-fill" size={20} color="#000" />
+                <MaterialCommunityIcons name="map-marker" size={20} color="#000" />
               </View>
               <TextInput
                 ref={destInputRef}
@@ -908,7 +908,7 @@ export const BookingScreen = ({ navigation }: any) => {
                 scrollEnabled
                 selection={destSelection}
               />
-              <RemixIcon name="arrow-down-s-line" size={20} color="#9CA3AF" />
+
             </View>
           </View>
 

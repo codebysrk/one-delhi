@@ -1,6 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
-import { RemixIcon } from '../RemixIcon';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface PremiumSocialButtonProps {
   provider: 'google' | 'apple';
@@ -19,9 +19,9 @@ export const PremiumSocialButton = ({ provider, label, onPress }: PremiumSocialB
     >
       <View style={styles.iconWrapper}>
         {isGoogle ? (
-          <RemixIcon name="google-fill" size={22} color="#EA4335" />
+          <MaterialCommunityIcons name="google" size={22} color="#EA4335" />
         ) : (
-          <RemixIcon name="apple-fill" size={24} color="#000" />
+          <MaterialCommunityIcons name="apple" size={24} color="#000" />
         )}
       </View>
       <Text style={styles.text}>{label}</Text>

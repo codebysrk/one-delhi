@@ -1,12 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native';
-import { ShieldAlert, PhoneCall } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export const DeviceBlockedScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.iconContainer}>
-        <ShieldAlert size={80} color="#D32F2F" />
+        <MaterialCommunityIcons name="shield-alert-outline" size={80} color="#D32F2F" />
       </View>
       
       <Text style={styles.title}>Unauthorized Device</Text>
@@ -18,7 +18,7 @@ export const DeviceBlockedScreen = () => {
         style={styles.contactBtn}
         onPress={() => Linking.openURL('tel:+911123456789')}
       >
-        <PhoneCall size={20} color="white" />
+        <MaterialCommunityIcons name="phone" size={20} color="white" />
         <Text style={styles.contactBtnText}>Contact Support</Text>
       </TouchableOpacity>
 

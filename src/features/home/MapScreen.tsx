@@ -22,16 +22,7 @@ import { WebView } from "react-native-webview";
 import { FlashList } from "@shopify/flash-list";
 import * as Location from "expo-location";
 import { useFocusEffect } from "@react-navigation/native";
-import {
-  Search,
-  Settings,
-  Bell,
-  LocateFixed,
-  Bus,
-  MapPin,
-  Navigation,
-  ArrowUp,
-} from "lucide-react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   GestureDetector,
   Gesture,
@@ -66,7 +57,7 @@ export const MapScreen = ({ navigation }: any) => {
   const translateY = useSharedValue(SCREEN_HEIGHT * 0.78 - SHEET_MIN_HEIGHT);
   const context = useSharedValue({ y: 0 });
   const cursorOpacity = useSharedValue(0);
-  const { setShowFooter } = useAppStore();
+  const { setShowFooter, lastSeenNotification, latestNotificationTimestamp } = useAppStore();
 
   useEffect(() => {
     setShowFooter(true);
@@ -347,7 +338,7 @@ export const MapScreen = ({ navigation }: any) => {
                   style={styles.settingsIcon}
                   onPress={() => navigation.navigate("Settings")}
                 >
-                  <Settings size={24} color="white" />
+                  <MaterialCommunityIcons name="cog" size={24} color="white" />
                 </TouchableOpacity>
               </View>
 
@@ -357,7 +348,8 @@ export const MapScreen = ({ navigation }: any) => {
                   activeOpacity={0.9}
                   onPress={() => navigation.navigate("Search")}
                 >
-                  <Search
+                  <MaterialCommunityIcons
+                    name="magnify"
                     size={22}
                     color="rgba(255,255,255,0.7)"
                     style={{ marginLeft: 16 }}
@@ -374,8 +366,10 @@ export const MapScreen = ({ navigation }: any) => {
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.bellBtn} onPress={() => navigation.navigate('Notifications')}>
-                  <Bell size={24} color="white" />
-                  <View style={styles.yellowDot} />
+                  <MaterialCommunityIcons name="bell-outline" size={28} color="white" />
+                  {latestNotificationTimestamp > lastSeenNotification && (
+                    <View style={styles.yellowDot} />
+                  )}
                 </TouchableOpacity>
               </View>
             </SafeAreaView>
@@ -401,7 +395,7 @@ export const MapScreen = ({ navigation }: any) => {
           style={[styles.redArrowBtn, animatedControlStyle, { left: 20 }]}
         >
           <TouchableOpacity onPress={showSheet} style={styles.fabInner}>
-            <ArrowUp size={24} color="white" />
+            <MaterialCommunityIcons name="arrow-up-circle" size={40} color="#D32F2F" />
           </TouchableOpacity>
         </Animated.View>
 
@@ -409,13 +403,13 @@ export const MapScreen = ({ navigation }: any) => {
           style={[styles.mapControls, animatedControlStyle, { right: 20 }]}
         >
           <TouchableOpacity style={styles.controlFab}>
-            <Bus size={24} color="#000" />
+            <MaterialCommunityIcons name="bus" size={24} color="#000" />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.controlFab, { marginTop: 12 }]}
             onPress={centerOnUser}
           >
-            <LocateFixed size={24} color="#000" />
+            <MaterialCommunityIcons name="crosshairs-gps" size={24} color="#000" />
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -526,11 +520,6 @@ const styles = StyleSheet.create({
   loader: { flex: 1, justifyContent: "center", alignItems: "center" },
   redArrowBtn: {
     position: "absolute",
-    width: 50,
-    height: 50,
-    backgroundColor: "#C0282C",
-    borderRadius: 25,
-    elevation: 5,
     zIndex: 10,
   },
   fabInner: {
@@ -541,8 +530,8 @@ const styles = StyleSheet.create({
   },
   mapControls: { position: "absolute", zIndex: 10 },
   controlFab: {
-    width: 56,
-    height: 56,
+    width: 40,
+    height: 40,
     backgroundColor: "white",
     borderRadius: 28,
     justifyContent: "center",

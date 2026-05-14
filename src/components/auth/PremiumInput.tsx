@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
-import { Eye, EyeOff } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface PremiumInputProps {
   label: string;
@@ -61,9 +61,9 @@ export const PremiumInput = ({
             style={styles.eyeIcon}
           >
             {isPasswordVisible ? (
-              <EyeOff size={20} color="#666" />
+              <MaterialCommunityIcons name="eye-off-outline" size={20} color="#666" />
             ) : (
-              <Eye size={20} color="#666" />
+              <MaterialCommunityIcons name="eye-outline" size={20} color="#666" />
             )}
           </TouchableOpacity>
         )}

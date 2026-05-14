@@ -23,10 +23,10 @@ import { HelpScreen } from '../features/profile/HelpScreen';
 import { useAppStore } from '../store/useAppStore';
 import { db, auth } from '../services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { TripPlanIcon } from '../components/TripPlanIcon';
 import { collection, query, where, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
-import { RemixIcon } from '../components/RemixIcon';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS } from '../core/theme';
-import { Rocket } from 'lucide-react-native';
 import { registerDevice, listenToDeviceSecurity, clearForceLogout } from '../services/deviceService';
 import { logAction } from '../services/logService';
 import { signOut } from 'firebase/auth';
@@ -38,7 +38,7 @@ const Tab = createBottomTabNavigator();
 export const ComingSoon = ({ navigation }: any) => (
   <View style={{ flex: 1, backgroundColor: '#FFF', justifyContent: 'center', alignItems: 'center', paddingBottom: 100 }}>
     <View style={{ width: 120, height: 120, borderRadius: 60, backgroundColor: '#FEF2F2', justifyContent: 'center', alignItems: 'center', marginBottom: 25 }}>
-      <Rocket size={60} color="#D32F2F" />
+      <MaterialCommunityIcons name="rocket-launch" size={60} color="#D32F2F" />
     </View>
     <Text style={{ fontSize: 24, fontWeight: '700', color: '#111' }}>Coming Soon</Text>
     <Text style={{ marginTop: 10, color: '#666', fontSize: 16, textAlign: 'center', paddingHorizontal: 40 }}>
@@ -46,6 +46,14 @@ export const ComingSoon = ({ navigation }: any) => (
     </Text>
   </View>
 );
+
+const BusStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="Map" component={MapScreen} />
+    <Stack.Screen name="Search" component={SearchScreen} />
+  </Stack.Navigator>
+);
+
 
 const MainTabs = () => {
   const { showFooter } = useAppStore();
@@ -63,15 +71,20 @@ const MainTabs = () => {
           },
           tabBarActiveTintColor: '#D32F2F',
           tabBarInactiveTintColor: '#555',
+          tabBarLabelStyle: {
+            fontSize: 12,
+            marginTop: -8,
+            fontWeight: '500',
+          },
           headerShown: false,
           lazy: true,
         }}
       >
         <Tab.Screen 
           name="BusTab" 
-          component={MapScreen} 
+          component={BusStack} 
           options={{
-            tabBarIcon: ({ color }) => <RemixIcon name="bus-fill" size={24} color={color} />,
+            tabBarIcon: ({ color }) => <MaterialCommunityIcons name="bus" size={28} color={color} />,
             tabBarLabel: 'Bus'
           }}
         />
@@ -79,7 +92,7 @@ const MainTabs = () => {
           name="TicketsTab" 
           component={HomeScreen} 
           options={{
-            tabBarIcon: ({ color }) => <RemixIcon name="ticket-fill" size={24} color={color} />,
+            tabBarIcon: ({ color }) => <MaterialCommunityIcons name="ticket-confirmation" size={28} color={color} />,
             tabBarLabel: 'Tickets'
           }}
         />
@@ -87,7 +100,7 @@ const MainTabs = () => {
           name="HubTab" 
           component={EVScreen}
           options={{
-            tabBarIcon: ({ color }) => <RemixIcon name="charging-pile-fill" size={24} color={color} />,
+            tabBarIcon: ({ color }) => <MaterialCommunityIcons name="ev-station" size={28} color={color} />,
             tabBarLabel: 'Hub'
           }}
         />
@@ -95,7 +108,7 @@ const MainTabs = () => {
           name="TripPlanTab" 
           component={ComingSoon}
           options={{
-            tabBarIcon: ({ color }) => <RemixIcon name="map-2-fill" size={24} color={color} />,
+            tabBarIcon: ({ color }) => <TripPlanIcon color={color} size={28} />,
             tabBarLabel: 'Trip Plan'
           }}
         />
@@ -103,7 +116,7 @@ const MainTabs = () => {
           name="ProfileTab" 
           component={ProfileScreen}
           options={{
-            tabBarIcon: ({ color }) => <RemixIcon name="user-fill" size={24} color={color} />,
+            tabBarIcon: ({ color }) => <MaterialCommunityIcons name="account" size={28} color={color} />,
             tabBarLabel: 'Profile'
           }}
         />
@@ -269,7 +282,6 @@ export const RootNavigator = () => {
           ) : (
             <>
               <Stack.Screen name="Main" component={MainTabs} />
-              <Stack.Screen name="Search" component={SearchScreen} />
               <Stack.Screen name="RouteDetail" component={RouteDetailScreen} options={{ presentation: 'modal' }} />
               <Stack.Screen name="Notifications" component={NotificationScreen} />
               <Stack.Screen name="Booking" component={BookingScreen} />

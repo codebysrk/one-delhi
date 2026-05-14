@@ -18,7 +18,15 @@ interface AppState {
   addTicket: (ticket: Ticket) => void;
   setLoading: (loading: boolean) => void;
   setShowFooter: (show: boolean) => void;
+  recentRoutes: any[];
+  lastSeenNotification: number;
+  latestNotificationTimestamp: number;
   setDeviceId: (id: string | null) => void;
+  setLastSeenNotification: (timestamp: number) => void;
+  setLatestNotificationTimestamp: (timestamp: number) => void;
+  addRecentRoute: (route: any) => void;
+  removeRecentRoute: (routeId: string) => void;
+  clearRecentRoutes: () => void;
   resetStore: () => void;
 }
 
@@ -32,6 +40,8 @@ export const useAppStore = create<AppState>()(
       loading: false,
       showFooter: true,
       deviceId: null,
+      recentRoutes: [],
+      lastSeenNotification: 0,
 
       setUser: (user) => set({ user }),
       setUserProfile: (userProfile) => set({ userProfile }),
@@ -43,7 +53,19 @@ export const useAppStore = create<AppState>()(
       setLoading: (loading) => set({ loading }),
       setShowFooter: (show) => set({ showFooter: show }),
       setDeviceId: (deviceId) => set({ deviceId }),
-      resetStore: () => set({ user: null, userProfile: null, tickets: [], cachedStops: [], loading: false, deviceId: null }),
+      setLastSeenNotification: (timestamp) => set({ lastSeenNotification: timestamp }),
+      setLatestNotificationTimestamp: (timestamp) => set({ latestNotificationTimestamp: timestamp }),
+      addRecentRoute: (route) => set((state) => {
+        // Filter out existing route to avoid duplicates and keep it at top
+        const filtered = state.recentRoutes.filter(r => r.route !== route.route);
+        const updated = [route, ...filtered].slice(0, 5); // Limit to 5 recent routes
+        return { recentRoutes: updated };
+      }),
+      removeRecentRoute: (routeId) => set((state) => ({
+        recentRoutes: state.recentRoutes.filter(r => r.route !== routeId)
+      })),
+      clearRecentRoutes: () => set({ recentRoutes: [] }),
+      resetStore: () => set({ user: null, userProfile: null, tickets: [], cachedStops: [], loading: false, deviceId: null, recentRoutes: [] }),
     }),
     {
       name: 'railone-storage',

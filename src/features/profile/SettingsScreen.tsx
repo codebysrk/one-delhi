@@ -1,21 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, ScrollView, Platform, TextInput, Alert, ActivityIndicator } from 'react-native';
-import { 
-  ArrowLeft, 
-  ChevronRight, 
-  User, 
-  Mail, 
-  Phone, 
-  Languages, 
-  Info, 
-  ShieldCheck, 
-  RotateCcw, 
-  FileText, 
-  Car, 
-  QrCode,
-  ArrowRight,
-  Trash2
-} from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppStore } from '../../store/useAppStore';
 import { updateProfile } from 'firebase/auth';
 import { auth } from '../../services/firebase';
@@ -60,14 +45,14 @@ export const SettingsScreen = ({ navigation }: any) => {
   ];
 
   const otherItems = [
-    { icon: <Languages size={22} color="#C0392B" />, label: "Change language" },
-    { icon: <Info size={22} color="#C0392B" />, label: "About Us" },
-    { icon: <Phone size={22} color="#C0392B" />, label: "Helplines" },
-    { icon: <ShieldCheck size={22} color="#C0392B" />, label: "Privacy Policy" },
-    { icon: <RotateCcw size={22} color="#C0392B" />, label: "Refund Policy" },
-    { icon: <FileText size={22} color="#C0392B" />, label: "Terms of Service" },
-    { icon: <Car size={22} color="#C0392B" />, label: "Last mile bookings" },
-    { icon: <QrCode size={22} color="#C0392B" />, label: "Validate Pass/Ticket" },
+    { icon: <MaterialCommunityIcons name="translate" size={22} color="#C0392B" />, label: "Change language" },
+    { icon: <MaterialCommunityIcons name="information-outline" size={22} color="#C0392B" />, label: "About Us" },
+    { icon: <MaterialCommunityIcons name="phone" size={22} color="#C0392B" />, label: "Helplines" },
+    { icon: <MaterialCommunityIcons name="shield-check-outline" size={22} color="#C0392B" />, label: "Privacy Policy" },
+    { icon: <MaterialCommunityIcons name="history" size={22} color="#C0392B" />, label: "Refund Policy" },
+    { icon: <MaterialCommunityIcons name="file-document-outline" size={22} color="#C0392B" />, label: "Terms of Service" },
+    { icon: <MaterialCommunityIcons name="car" size={22} color="#C0392B" />, label: "Last mile bookings" },
+    { icon: <MaterialCommunityIcons name="qrcode-scan" size={22} color="#C0392B" />, label: "Validate Pass/Ticket" },
   ];
 
   return (
@@ -78,7 +63,7 @@ export const SettingsScreen = ({ navigation }: any) => {
         <SafeAreaView>
           <View style={styles.headerContent}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-              <ArrowLeft size={26} color="#333" />
+              <MaterialCommunityIcons name="arrow-left" size={26} color="#333" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Settings</Text>
             {isEditing || (user && name !== user.displayName) ? (
@@ -114,7 +99,7 @@ export const SettingsScreen = ({ navigation }: any) => {
                       style={styles.redCircleBtn} 
                       onPress={() => setIsEditing(item.key)}
                     >
-                      <ArrowRight size={16} color="white" />
+                      <MaterialCommunityIcons name="arrow-right" size={16} color="white" />
                     </TouchableOpacity>
                   )}
                 </View>

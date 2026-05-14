@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { WebView } from "react-native-webview";
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
-import { ArrowLeft, Navigation, Crosshair } from "lucide-react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../services/firebase";
 
@@ -47,7 +47,7 @@ const RouteHeader = memo(({
 }) => (
   <View style={styles.header}>
     <TouchableOpacity onPress={onBack} style={styles.backBtn} activeOpacity={0.7}>
-      <ArrowLeft size={24} color="#111" />
+      <MaterialCommunityIcons name="arrow-left" size={24} color="#111" />
     </TouchableOpacity>
     <Text style={styles.routeNumberTitle}>{routeNumber}</Text>
     <Text style={styles.busCountText}>{busCount} bus</Text>
@@ -64,10 +64,10 @@ const RouteInfo = memo(({ origin, destination }: { origin: string; destination: 
 const FloatingButtons = memo(({ onLocate }: { onLocate: () => void }) => (
   <>
     <TouchableOpacity style={styles.floatingDirectionBtn} activeOpacity={0.8}>
-      <Navigation size={22} color="#FFF" />
+      <MaterialCommunityIcons name="navigation" size={22} color="#FFF" />
     </TouchableOpacity>
     <TouchableOpacity style={styles.floatingLocateBtn} onPress={onLocate} activeOpacity={0.8}>
-      <Crosshair size={22} color="#111" />
+      <MaterialCommunityIcons name="crosshairs-gps" size={22} color="#111" />
     </TouchableOpacity>
   </>
 ));

@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Platform, ImageBackground, Image } from 'react-native';
 import { useAppStore } from '../../store/useAppStore';
-import { SettingsCustomIcon } from '../../components/SettingsCustomIcon';
-import { Plus, Minus } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
 
 export const HelpScreen = ({ navigation }: any) => {
@@ -106,7 +105,7 @@ export const HelpScreen = ({ navigation }: any) => {
             >
               <Text style={styles.faqItemTitle}>{item.title}</Text>
               <View style={[styles.statusIndicator, expandedId === item.id ? styles.minusStatus : styles.plusStatus]}>
-                {expandedId === item.id ? <Minus size={14} color="white" strokeWidth={3} /> : <Plus size={14} color="white" strokeWidth={3} />}
+                {expandedId === item.id ? <MaterialCommunityIcons name="minus" size={14} color="white" /> : <MaterialCommunityIcons name="plus" size={14} color="white" />}
               </View>
             </TouchableOpacity>
             {expandedId === item.id && (
@@ -145,7 +144,7 @@ export const HelpScreen = ({ navigation }: any) => {
                   <Image source={require("../../../assets/images/map-header-logo.webp")} style={styles.logoImage} resizeMode="contain" />
                 </View>
                 <TouchableOpacity onPress={() => navigation.navigate("Settings")} style={styles.sideItem} activeOpacity={0.7}>
-                  <SettingsCustomIcon size={28} color="white" />
+                  <MaterialCommunityIcons name="cog" size={28} color="white" />
                 </TouchableOpacity>
               </View>
             </SafeAreaView>

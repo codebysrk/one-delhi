@@ -4,7 +4,7 @@ import { Screen } from '../../components/Screen';
 import { db } from '../../services/firebase';
 import { collection, getDocs, deleteDoc, doc, query, limit, orderBy, startAfter, writeBatch } from 'firebase/firestore';
 import { useAppStore } from '../../store/useAppStore';
-import { Shield, Trash2, Users, CreditCard, TrendingUp, Download, RefreshCw, Lock } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { moderateScale, verticalScale } from '../../core/responsive';
 
 export const AdminScreen = ({ navigation }: any) => {
@@ -19,7 +19,7 @@ export const AdminScreen = ({ navigation }: any) => {
   if (userProfile?.role !== 'admin') {
     return (
       <View style={styles.deniedContainer}>
-        <Lock size={64} color="#D32F2F" />
+        <MaterialCommunityIcons name="lock" size={64} color="#D32F2F" />
         <Text style={styles.deniedTitle}>Access Denied</Text>
         <Text style={styles.deniedText}>You don't have permission to access this area.</Text>
         <TouchableOpacity style={styles.deniedBtn} onPress={() => navigation.goBack()}>
@@ -134,26 +134,26 @@ export const AdminScreen = ({ navigation }: any) => {
             <Text style={styles.subtitle}>System Overview</Text>
           </View>
           <TouchableOpacity onPress={fetchAdminData} style={styles.refreshBtn}>
-            <RefreshCw size={moderateScale(20)} color="#666" />
+            <MaterialCommunityIcons name="refresh" size={moderateScale(20)} color="#666" />
           </TouchableOpacity>
         </View>
       }
     >
       {/* Stats Grid */}
       <View style={styles.statsGrid}>
-        {renderStatCard(<CreditCard />, "Tickets", stats.tickets, "#D32F2F")}
-        {renderStatCard(<TrendingUp />, "Revenue", `₹${stats.revenue}`, "#2E7D32")}
-        {renderStatCard(<Users />, "Users", stats.users, "#007BFF")}
+        {renderStatCard(<MaterialCommunityIcons name="credit-card" />, "Tickets", stats.tickets, "#D32F2F")}
+        {renderStatCard(<MaterialCommunityIcons name="trending-up" />, "Revenue", `₹${stats.revenue}`, "#2E7D32")}
+        {renderStatCard(<MaterialCommunityIcons name="account-group" />, "Users", stats.users, "#007BFF")}
       </View>
 
       <Text style={styles.sectionTitle}>Maintenance</Text>
       <View style={styles.maintenanceCard}>
          <TouchableOpacity style={styles.mItem} onPress={handleClearUsers}>
-            <View style={styles.mIconBg}><Users size={moderateScale(20)} color="#007BFF" /></View>
+            <View style={styles.mIconBg}><MaterialCommunityIcons name="account-group" size={moderateScale(20)} color="#007BFF" /></View>
             <Text style={styles.mText}>Clear All User Profiles</Text>
          </TouchableOpacity>
          <TouchableOpacity style={[styles.mItem, { borderBottomWidth: 0 }]} onPress={handleClearHistory}>
-            <View style={[styles.mIconBg, { backgroundColor: '#FFF5F5' }]}><Trash2 size={moderateScale(20)} color="#D32F2F" /></View>
+            <View style={[styles.mIconBg, { backgroundColor: '#FFF5F5' }]}><MaterialCommunityIcons name="trash-can" size={moderateScale(20)} color="#D32F2F" /></View>
             <Text style={[styles.mText, { color: '#D32F2F' }]}>Clear Global Ticket History</Text>
          </TouchableOpacity>
       </View>

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { StyleSheet, Text, View, Image, TouchableOpacity } from "react-native";
 import { Screen } from "../../components/Screen";
 import { useAppStore } from "../../store/useAppStore";
-import { RemixIcon } from "../../components/RemixIcon";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { MetroLogo } from "../../components/MetroLogo";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { TicketCard } from "../../components/TicketCard";
@@ -66,7 +66,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 { transform: [{ rotate: "-20deg" }] },
               ]}
             >
-              <RemixIcon name="bus-fill" size={64} color="#FFB74D" />
+              <MaterialCommunityIcons name="bus" size={64} color="#FFB74D" />
             </View>
           </TouchableOpacity>
 
@@ -84,7 +84,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 { transform: [{ rotate: "-20deg" }] },
               ]}
             >
-              <RemixIcon name="coupon-fill" size={64} color="#BA68C8" />
+              <MaterialCommunityIcons name="ticket-percent" size={64} color="#BA68C8" />
             </View>
           </TouchableOpacity>
 

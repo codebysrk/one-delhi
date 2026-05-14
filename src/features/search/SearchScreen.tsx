@@ -9,7 +9,7 @@ import {
   StatusBar,
   Platform,
 } from 'react-native';
-import { ArrowLeft, Bus, Circle, MapPin } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
 import { db } from '../../services/firebase';
 import { getRouteNumberOnly, formatStopName } from '../../utils/ticketHelper';
@@ -118,7 +118,7 @@ export const SearchScreen = ({ navigation }: any) => {
             onPress={() => navigation.goBack()}
             style={styles.backBtn}
           >
-            <ArrowLeft color="#333" size={24} />
+            <MaterialCommunityIcons name="arrow-left" color="#333" size={24} />
           </TouchableOpacity>
           <TextInput
             style={styles.searchInput}
@@ -144,15 +144,15 @@ export const SearchScreen = ({ navigation }: any) => {
               <View style={styles.leftColumn}>
                 {item.type === 'route' ? (
                   <>
-                    <Bus color="#555" size={24} />
+                    <MaterialCommunityIcons name="bus" color="#555" size={24} />
                     <View style={styles.routeLineContainer}>
-                      <Circle size={10} color="#C0282C" fill="white" />
+                      <MaterialCommunityIcons name="circle-outline" size={10} color="#C0282C" />
                       <View style={styles.verticalLine} />
-                      <Circle size={10} color="#C0282C" fill="white" />
+                      <MaterialCommunityIcons name="circle-outline" size={10} color="#C0282C" />
                     </View>
                   </>
                 ) : (
-                  <MapPin color="#C0282C" size={28} />
+                  <MaterialCommunityIcons name="map-marker" color="#C0282C" size={28} />
                 )}
               </View>
 

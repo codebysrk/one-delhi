@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { COLORS, RADII, SPACING, SHADOWS } from '../../core/theme';
-import { Eye, EyeOff } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface AuthInputProps {
   label: string;
@@ -70,9 +70,9 @@ export const AuthInput: React.FC<AuthInputProps> = ({
             activeOpacity={0.7}
           >
             {showPassword ? (
-              <EyeOff size={20} color={COLORS.textMuted} />
+              <MaterialCommunityIcons name="eye-off-outline" size={20} color={COLORS.textMuted} />
             ) : (
-              <Eye size={20} color={COLORS.textMuted} />
+              <MaterialCommunityIcons name="eye-outline" size={20} color={COLORS.textMuted} />
             )}
           </TouchableOpacity>
         )}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
-import { Check } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface TermsCheckboxProps {
   checked: boolean;
@@ -15,7 +15,7 @@ export const TermsCheckbox = ({ checked, onChange }: TermsCheckboxProps) => {
       activeOpacity={0.7}
     >
       <View style={[styles.checkbox, checked && styles.checked]}>
-        {checked && <Check size={14} color="white" strokeWidth={3} />}
+        {checked && <MaterialCommunityIcons name="check" size={14} color="white" />}
       </View>
       <Text style={styles.text}>
         I agree to the <Text style={styles.link}>Terms of Service</Text> and <Text style={styles.link}>Privacy Policy</Text>

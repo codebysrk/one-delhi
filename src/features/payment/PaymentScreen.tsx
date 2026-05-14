@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, StatusBar, Platform, Modal, ActivityIndicator } from 'react-native';
-import { RemixIcon } from '../../components/RemixIcon';
-import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS } from '../../core/theme';
 import { useAppStore } from '../../store/useAppStore';
 import { generateTicketId, getRouteNumberOnly } from '../../utils/ticketHelper';
@@ -100,7 +99,7 @@ export const PaymentScreen = ({ navigation, route }: any) => {
         <SafeAreaView>
           <View style={styles.headerContent}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-              <MaterialIcons name="arrow-back" size={26} color="white" />
+              <MaterialCommunityIcons name="arrow-left" size={26} color="white" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Complete Payment</Text>
           </View>
@@ -169,7 +168,7 @@ export const PaymentScreen = ({ navigation, route }: any) => {
             <MaterialCommunityIcons name="credit-card" size={28} color="#D32F2F" />
             <Text style={styles.othersText}>Wallet, Cards or Net banking</Text>
           </View>
-          <MaterialIcons name="chevron-right" size={26} color="#666" />
+          <MaterialCommunityIcons name="chevron-right" size={26} color="#666" />
         </TouchableOpacity>
 
         <View style={{ height: 100 }} />
@@ -195,7 +194,7 @@ export const PaymentScreen = ({ navigation, route }: any) => {
             ) : (
               <>
                 <View style={styles.successIconBg}>
-                  <MaterialIcons name="check" size={50} color="white" />
+                  <MaterialCommunityIcons name="check" size={50} color="white" />
                 </View>
                 <Text style={styles.successHeading}>Success!</Text>
                 <Text style={styles.modalSub}>Ticket generated successfully</Text>

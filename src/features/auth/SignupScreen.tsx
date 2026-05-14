@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platfor
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Mail, Lock, User } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { auth, db } from '../../services/firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { setDoc, doc } from 'firebase/firestore';
@@ -111,7 +111,7 @@ export const SignupScreen = ({ navigation }: any) => {
                   value={value}
                   onChangeText={onChange}
                   error={errors.fullName?.message}
-                  icon={<User size={18} color="#666" />}
+                  icon={<MaterialCommunityIcons name="account-outline" size={18} color="#666" />}
                   style={styles.compactInput}
                 />
               )}
@@ -127,7 +127,7 @@ export const SignupScreen = ({ navigation }: any) => {
                   value={value}
                   onChangeText={onChange}
                   error={errors.email?.message}
-                  icon={<Mail size={18} color="#666" />}
+                  icon={<MaterialCommunityIcons name="email-outline" size={18} color="#666" />}
                   keyboardType="email-address"
                   style={styles.compactInput}
                 />
@@ -146,7 +146,7 @@ export const SignupScreen = ({ navigation }: any) => {
                     onChangeText={onChange}
                     error={errors.password?.message}
                     secureTextEntry
-                    icon={<Lock size={18} color="#666" />}
+                    icon={<MaterialCommunityIcons name="lock-outline" size={18} color="#666" />}
                     style={[styles.compactInput, { flex: 1, marginRight: 8 }]}
                   />
                 )}
@@ -163,7 +163,7 @@ export const SignupScreen = ({ navigation }: any) => {
                     onChangeText={onChange}
                     error={errors.confirmPassword?.message}
                     secureTextEntry
-                    icon={<Lock size={18} color="#666" />}
+                    icon={<MaterialCommunityIcons name="lock-outline" size={18} color="#666" />}
                     style={[styles.compactInput, { flex: 1 }]}
                   />
                 )}

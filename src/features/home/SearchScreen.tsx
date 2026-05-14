@@ -9,9 +9,11 @@ import {
   StatusBar,
   ActivityIndicator,
   Platform,
+  Animated,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { RemixIcon } from "../../components/RemixIcon";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Swipeable } from "react-native-gesture-handler";
 import { collection, getDocs } from "firebase/firestore";
 import { db, auth } from "../../services/firebase";
 import { useAppStore } from "../../store/useAppStore";
@@ -34,6 +36,7 @@ interface Route {
 }
 
 export const SearchScreen = ({ navigation }: any) => {
+  const { recentRoutes, addRecentRoute, clearRecentRoutes, removeRecentRoute } = useAppStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [routes, setRoutes] = useState<Route[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,12 +83,13 @@ export const SearchScreen = ({ navigation }: any) => {
             deviceId: useAppStore.getState().deviceId || undefined
           });
         } catch {}
+        addRecentRoute(item);
         navigation.navigate("RouteDetail", { routeId: item.route });
       }}
     >
       <View style={styles.leftCol}>
         <View style={styles.busIconBox}>
-          <RemixIcon name="bus-fill" size={26} color="#333" />
+          <MaterialCommunityIcons name="bus" size={26} color="#333" />
         </View>
         <View style={styles.visualPath}>
           <View style={styles.circle} />
@@ -108,6 +112,46 @@ export const SearchScreen = ({ navigation }: any) => {
     </TouchableOpacity>
   ), [navigation]);
 
+  const renderRecentRouteItem = useCallback(({ item }: { item: Route }) => {
+    const renderRightActions = (
+      progress: Animated.AnimatedInterpolation<number>,
+      dragX: Animated.AnimatedInterpolation<number>
+    ) => {
+      const trans = dragX.interpolate({
+        inputRange: [-70, 0],
+        outputRange: [0, 70],
+        extrapolate: "clamp",
+      });
+
+      return (
+        <TouchableOpacity 
+          style={styles.deleteAction} 
+          onPress={() => removeRecentRoute(item.route)}
+          activeOpacity={0.8}
+        >
+          <Animated.View style={{ transform: [{ translateX: trans }] }}>
+            <MaterialCommunityIcons name="trash-can-outline" size={26} color="#FFF" />
+          </Animated.View>
+        </TouchableOpacity>
+      );
+    };
+
+    return (
+      <Swipeable 
+        renderRightActions={renderRightActions}
+        friction={2}
+        rightThreshold={40}
+        overshootRight={false}
+      >
+        {renderRouteItem({ item })}
+      </Swipeable>
+    );
+  }, [renderRouteItem, removeRecentRoute]);
+
+  const renderSeparator = useCallback(() => (
+    <View style={styles.divider} />
+  ), []);
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
@@ -117,7 +161,7 @@ export const SearchScreen = ({ navigation }: any) => {
             onPress={() => navigation.goBack()}
             style={styles.backBtn}
           >
-            <RemixIcon name="arrow-left-line" size={26} color="#333" />
+            <MaterialCommunityIcons name="arrow-left" size={26} color="#333" />
           </TouchableOpacity>
           
           <View style={styles.inputWrapper}>
@@ -136,23 +180,39 @@ export const SearchScreen = ({ navigation }: any) => {
           </View>
         </View>
 
-        {loading ? (
-          <View style={styles.loaderBox}>
-            <ActivityIndicator size="large" color="#D32F2F" />
-          </View>
+        {searchQuery.length > 0 ? (
+          loading ? (
+            <View style={styles.loaderBox}>
+              <ActivityIndicator size="large" color="#D32F2F" />
+            </View>
+          ) : (
+            <FlashList
+              data={filteredRoutes}
+              renderItem={renderRouteItem}
+              keyExtractor={(item) => item.route}
+              estimatedItemSize={80}
+              ItemSeparatorComponent={renderSeparator}
+              contentContainerStyle={styles.listContent}
+              ListEmptyComponent={
+                <View style={styles.emptyBox}>
+                  <Text style={styles.emptyText}>No routes found</Text>
+                </View>
+              }
+            />
+          )
         ) : (
-          <FlashList
-            data={filteredRoutes}
-            renderItem={renderRouteItem}
-            keyExtractor={(item) => item.route}
-            estimatedItemSize={120}
-            contentContainerStyle={styles.listContent}
-            ListEmptyComponent={
-              <View style={styles.emptyBox}>
-                <Text style={styles.emptyText}>No routes found</Text>
-              </View>
-            }
-          />
+          recentRoutes.length > 0 && (
+            <View style={{ flex: 1 }}>
+              <FlashList
+                data={recentRoutes}
+                renderItem={renderRecentRouteItem}
+                keyExtractor={(item) => `recent-${item.route}`}
+                estimatedItemSize={80}
+                ItemSeparatorComponent={renderSeparator}
+                contentContainerStyle={styles.listContent}
+              />
+            </View>
+          )
         )}
       </SafeAreaView>
     </View>
@@ -206,11 +266,10 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 16,
-    paddingTop: 5,
   },
   routeCard: {
     flexDirection: "row",
-    paddingVertical: 15,
+    paddingVertical: 8,
   },
   leftCol: {
     width: 40,
@@ -222,8 +281,8 @@ const styles = StyleSheet.create({
   },
   visualPath: {
     alignItems: "center",
-    marginTop: 5,
-    height: 45,
+    marginTop: 2,
+    height: 35,
     justifyContent: "space-between",
   },
   circle: {
@@ -245,19 +304,19 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   routeNumber: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: "900",
     color: "#000",
-    height: 35,
+    height: 30,
     textAlignVertical: "center",
   },
   textPath: {
-    height: 45,
+    height: 35,
     justifyContent: "space-between",
-    marginTop: 5,
+    marginTop: 2,
   },
   terminalName: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#666",
     fontWeight: "400",
   },
@@ -268,6 +327,38 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: "#999",
+  },
+  historyHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 10,
+  },
+  historyTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#666",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  clearText: {
+    fontSize: 14,
+    color: "#D32F2F",
+    fontWeight: "600",
+  },
+  deleteAction: {
+    backgroundColor: "#D32F2F",
+    justifyContent: "center",
+    alignItems: "center",
+    width: 70,
+    height: "100%",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#EEE",
+    marginHorizontal: 0,
   },
 });
 

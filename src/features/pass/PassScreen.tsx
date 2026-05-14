@@ -12,7 +12,7 @@ import {
   FlatList,
   Platform
 } from 'react-native';
-import { ChevronLeft, ChevronDown, Calendar as CalendarIcon } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppStore } from '../../store/useAppStore';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -64,7 +64,7 @@ export const PassScreen = ({ navigation }: any) => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <ChevronLeft color="#000" size={28} />
+          <MaterialCommunityIcons name="chevron-left" color="#000" size={28} />
         </TouchableOpacity>
       </View>
 
@@ -80,7 +80,7 @@ export const PassScreen = ({ navigation }: any) => {
               onPress={() => setShowPicker(true)}
             >
               <Text style={styles.pickerText} numberOfLines={1}>{selectedPass.label}</Text>
-              <ChevronDown color="#666" size={20} />
+              <MaterialCommunityIcons name="chevron-down" color="#666" size={20} />
             </TouchableOpacity>
             <Text style={styles.subLabel}>{selectedPass.sub}</Text>
           </View>
@@ -138,7 +138,7 @@ export const PassScreen = ({ navigation }: any) => {
               <Text style={[styles.textInput, { flex: 1, borderWidth: 0, paddingLeft: 0, textAlignVertical: 'center', paddingTop: Platform.OS === 'ios' ? 12 : 0, color: formData.dob ? '#333' : '#999' }]}>
                 {formData.dob || "DD/MM/YYYY"}
               </Text>
-              <CalendarIcon color="#000" size={20} />
+              <MaterialCommunityIcons name="calendar-month" color="#000" size={20} />
             </TouchableOpacity>
           </View>
 
@@ -157,7 +157,7 @@ export const PassScreen = ({ navigation }: any) => {
             <View style={styles.row}>
               <TouchableOpacity style={[styles.pickerContainer, { flex: 1.2, marginRight: 10 }]}>
                 <Text style={styles.pickerText} placeholderTextColor="#CCC">Select ID</Text>
-                <ChevronDown color="#CCC" size={18} />
+                <MaterialCommunityIcons name="chevron-down" color="#CCC" size={18} />
               </TouchableOpacity>
               <TextInput 
                 style={[styles.textInput, { flex: 1, marginLeft: 10 }]}

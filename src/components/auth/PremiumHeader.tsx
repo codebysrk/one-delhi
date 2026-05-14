@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Dimensions, Image } from 'react-native';
-import { ArrowLeft } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -32,7 +32,7 @@ export const PremiumHeader = ({ title, subtitle, variant = 'login', onBack }: Pr
               style={styles.backButton}
               activeOpacity={0.7}
             >
-              <ArrowLeft size={24} color="white" strokeWidth={2.5} />
+              <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
             </TouchableOpacity>
           ) : (
             <View style={styles.logoWrapper}>
