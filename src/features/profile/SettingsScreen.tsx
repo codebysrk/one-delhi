@@ -6,7 +6,7 @@ import { updateProfile, signOut } from 'firebase/auth';
 import { auth } from '../../services/firebase';
 
 export const SettingsScreen = ({ navigation }: any) => {
-  const { user, setUser, setShowFooter, resetStore } = useAppStore();
+  const { user, setUser, setShowFooter, resetStore, deviceId } = useAppStore();
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
 
@@ -97,7 +97,7 @@ export const SettingsScreen = ({ navigation }: any) => {
         </SafeAreaView>
       </View>
 
-      <View style={styles.mainContent}>
+      <ScrollView style={styles.mainContent} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Basic Information</Text>
           <View style={styles.infoBox}>
@@ -127,6 +127,16 @@ export const SettingsScreen = ({ navigation }: any) => {
                 </View>
               </View>
             ))}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Security & Device</Text>
+          <View style={styles.infoBox}>
+             <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Device ID</Text>
+                <Text style={[styles.infoValue, { fontSize: 13, color: '#666' }]}>{deviceId || 'Generating...'}</Text>
+             </View>
           </View>
         </View>
 
@@ -162,8 +172,9 @@ export const SettingsScreen = ({ navigation }: any) => {
            <Text style={styles.footerLabel}>App Version</Text>
            <Text style={styles.versionNumber}>2.0.1</Text>
         </View>
-      </View>
+      </ScrollView>
     </View>
+
   );
 };
 

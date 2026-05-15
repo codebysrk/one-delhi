@@ -2,6 +2,7 @@ import * as Device from 'expo-device';
 import * as Network from 'expo-network';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Alert } from 'react-native';
 import { doc, setDoc, updateDoc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
 import { sanitizePayload } from '../utils/firebaseUtils';
@@ -44,7 +45,19 @@ export const registerDevice = async (
   try {
     const deviceId = await getOrCreateDeviceId();
     const deviceRef = doc(db, 'devices', deviceId);
-    const deviceSnap = await getDoc(deviceRef);
+    
+    let deviceSnap;
+    try {
+      deviceSnap = await getDoc(deviceRef);
+    } catch (e: any) {
+      if (e.code === 'permission-denied') {
+        // Retry once after a small delay - sometimes auth token takes a moment
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        deviceSnap = await getDoc(deviceRef);
+      } else {
+        throw e;
+      }
+    }
 
     let ipAddress = 'Unknown';
     try {
@@ -53,6 +66,12 @@ export const registerDevice = async (
 
     const existingStatus = deviceSnap.exists() ? deviceSnap.data().status : 'APPROVED';
     const existingForceLogout = deviceSnap.exists() ? deviceSnap.data().forceLogout : false;
+
+    // If device is already banned, don't try to update or log anything (prevents permission-denied)
+    if (existingStatus === 'BANNED') {
+      console.log('[DeviceService] Device is BANNED, skipping update.');
+      return { deviceId, status: 'BANNED', forceLogout: existingForceLogout };
+    }
 
     const now = Date.now();
 
@@ -104,8 +123,11 @@ export const registerDevice = async (
     }
 
     return { deviceId, status: existingStatus, forceLogout: existingForceLogout };
-  } catch (error) {
+  } catch (error: any) {
     console.error('[DeviceService] registerDevice error:', error);
+    if (error.code === 'permission-denied') {
+      Alert.alert('Security Error', 'Missing permissions to verify device. Please check your internet or contact admin.');
+    }
     return null;
   }
 };

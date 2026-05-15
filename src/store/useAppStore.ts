@@ -21,9 +21,13 @@ interface AppState {
   recentRoutes: any[];
   lastSeenNotification: number;
   latestNotificationTimestamp: number;
+  isVerifying: boolean;
+  isAuthReady: boolean;
   setDeviceId: (id: string | null) => void;
   setLastSeenNotification: (timestamp: number) => void;
   setLatestNotificationTimestamp: (timestamp: number) => void;
+  setIsVerifying: (val: boolean) => void;
+  setIsAuthReady: (val: boolean) => void;
   addRecentRoute: (route: any) => void;
   removeRecentRoute: (routeId: string) => void;
   clearRecentRoutes: () => void;
@@ -42,6 +46,9 @@ export const useAppStore = create<AppState>()(
       deviceId: null,
       recentRoutes: [],
       lastSeenNotification: 0,
+      latestNotificationTimestamp: 0,
+      isVerifying: false,
+      isAuthReady: false,
 
       setUser: (user) => set({ user }),
       setUserProfile: (userProfile) => set({ userProfile }),
@@ -55,6 +62,8 @@ export const useAppStore = create<AppState>()(
       setDeviceId: (deviceId) => set({ deviceId }),
       setLastSeenNotification: (timestamp) => set({ lastSeenNotification: timestamp }),
       setLatestNotificationTimestamp: (timestamp) => set({ latestNotificationTimestamp: timestamp }),
+      setIsVerifying: (isVerifying) => set({ isVerifying }),
+      setIsAuthReady: (isAuthReady) => set({ isAuthReady }),
       addRecentRoute: (route) => set((state) => {
         // Filter out existing route to avoid duplicates and keep it at top
         const filtered = state.recentRoutes.filter(r => r.route !== route.route);
@@ -65,7 +74,7 @@ export const useAppStore = create<AppState>()(
         recentRoutes: state.recentRoutes.filter(r => r.route !== routeId)
       })),
       clearRecentRoutes: () => set({ recentRoutes: [] }),
-      resetStore: () => set({ user: null, userProfile: null, tickets: [], cachedStops: [], loading: false, deviceId: null, recentRoutes: [] }),
+      resetStore: () => set({ user: null, userProfile: null, tickets: [], cachedStops: [], loading: false, deviceId: null, recentRoutes: [], isVerifying: false, isAuthReady: false }),
     }),
     {
       name: 'railone-storage',

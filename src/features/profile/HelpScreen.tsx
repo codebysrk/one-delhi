@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import { useAppStore } from '../../store/useAppStore';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
+import { MainHeader } from '../../components/layout/MainHeader';
 
 export const HelpScreen = ({ navigation }: any) => {
   const { user } = useAppStore();
@@ -135,39 +136,26 @@ export const HelpScreen = ({ navigation }: any) => {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
       
-      <View style={styles.headerContainer}>
-        <ImageBackground source={require("../../../assets/images/map-header.webp")} style={styles.headerBackground} imageStyle={styles.headerImage}>
-          <View style={styles.maroonOverlay}>
-            <SafeAreaView style={styles.headerSafe} edges={['top']}>
-              <View style={styles.headerContent}>
-                <View style={styles.sideItem} />
-                <View style={styles.logoWrapper}>
-                  <Image 
-                    source={require("../../../assets/images/map-header-logo.webp")} 
-                    style={styles.logoImage} 
-                    contentFit="contain" 
-                    transition={500}
-                  />
-                </View>
-                <TouchableOpacity onPress={() => navigation.navigate("Settings")} style={styles.sideItem} activeOpacity={0.7}>
-                  <MaterialCommunityIcons name="cog" size={28} color="white" />
-                </TouchableOpacity>
-              </View>
-            </SafeAreaView>
-          </View>
-        </ImageBackground>
+      <MainHeader 
+        style={styles.headerArea}
+        showSearch={false}
+        rightElement={
+          <TouchableOpacity onPress={() => navigation.navigate("Settings")}>
+            <MaterialCommunityIcons name="cog" size={26} color="white" />
+          </TouchableOpacity>
+        }
+      />
 
-        <View style={styles.tabSection}>
-          <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('FAQs')} activeOpacity={1}>
-            <Text style={[styles.tabLabel, activeTab === 'FAQs' && styles.activeTabLabel]}>FAQs</Text>
-            {activeTab === 'FAQs' && <View style={styles.activeIndicator} />}
-          </TouchableOpacity>
-          <View style={styles.tabDivider} />
-          <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('Complaints')} activeOpacity={1}>
-            <Text style={[styles.tabLabel, activeTab === 'Complaints' && styles.activeTabLabel]}>My Complaints</Text>
-            {activeTab === 'Complaints' && <View style={styles.activeIndicator} />}
-          </TouchableOpacity>
-        </View>
+      <View style={styles.tabSection}>
+        <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('FAQs')} activeOpacity={1}>
+          <Text style={[styles.tabLabel, activeTab === 'FAQs' && styles.activeTabLabel]}>FAQs</Text>
+          {activeTab === 'FAQs' && <View style={styles.activeIndicator} />}
+        </TouchableOpacity>
+        <View style={styles.tabDivider} />
+        <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('Complaints')} activeOpacity={1}>
+          <Text style={[styles.tabLabel, activeTab === 'Complaints' && styles.activeTabLabel]}>My Complaints</Text>
+          {activeTab === 'Complaints' && <View style={styles.activeIndicator} />}
+        </TouchableOpacity>
       </View>
 
       <View style={styles.mainWrapper}>
@@ -194,15 +182,10 @@ export const HelpScreen = ({ navigation }: any) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
-  headerContainer: { backgroundColor: '#C0282C' },
-  headerBackground: { height: 90, width: '100%' },
-  headerImage: { opacity: 0.8, resizeMode: 'stretch' },
-  maroonOverlay: { flex: 1 },
-  headerSafe: { flex: 1 },
-  headerContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, height: 40, marginTop: Platform.OS === 'android' ? 40 : 40 },
-  logoWrapper: { flex: 1, alignItems: 'center' },
-  logoImage: { width: 120, height: 35 },
-  sideItem: { width: 40, alignItems: 'flex-end', justifyContent: 'center' },
+  headerArea: {
+    height: 90,
+    overflow: "hidden",
+  },
   tabSection: { flexDirection: 'row', height: 48, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
   tabItem: { flex: 1, justifyContent: 'center', alignItems: 'center', position: 'relative' },
   tabDivider: { width: 1, height: '50%', backgroundColor: '#F3F4F6', alignSelf: 'center' },

@@ -9,6 +9,7 @@ import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { useAppStore } from '../../store/useAppStore';
 import { logAction } from '../../services/logService';
 import { doc, getDoc } from 'firebase/firestore';
+import { registerDevice, clearForceLogout } from '../../services/deviceService';
 
 import { COLORS, TYPOGRAPHY, SPACING, RADII } from '../../core/theme';
 
@@ -28,6 +29,10 @@ type LoginForm = z.infer<typeof loginSchema>;
 export const LoginScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(false);
   const setUser = useAppStore((state) => state.setUser);
+  const setUserProfile = useAppStore((state) => state.setUserProfile);
+  const setDeviceId = useAppStore((state) => state.setDeviceId);
+  const setIsVerifying = useAppStore((state) => state.setIsVerifying);
+  const setIsAuthReady = useAppStore((state) => state.setIsAuthReady);
 
   const { control, handleSubmit, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -36,33 +41,80 @@ export const LoginScreen = ({ navigation }: any) => {
 
   const onLogin = async (data: LoginForm) => {
     setLoading(true);
+    setIsVerifying(true);
+    console.log("[LoginScreen] Starting login process...");
+    
     try {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
+      console.log("[LoginScreen] Firebase Auth success, checking profile...");
 
       const userDoc = await getDoc(doc(db, 'users', user.uid));
+      let userData = userDoc.exists() ? userDoc.data() : {};
       
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        if (userData.status === 'BANNED') {
+      // 1. Check if User is BANNED
+      if (userData.status === 'BANNED') {
+        console.log("[LoginScreen] User is banned, blocking access.");
+        await logAction({
+          userId: user.uid,
+          userName: userData.name || 'Banned User',
+          userEmail: user.email || '',
+          action: 'LOGIN',
+          details: 'Login attempt blocked: Account is banned.',
+          type: 'USER',
+          deviceId: useAppStore.getState().deviceId || undefined
+        });
+
+        await signOut(auth);
+        setLoading(false);
+        setIsVerifying(false);
+
+        setTimeout(() => {
+          setLoading(false);
+          setIsVerifying(false);
+          Alert.alert(
+            'ACCESS DENIED', 
+            '🚫 YOUR ACCOUNT IS BANNED\n\nThis account has been permanently suspended for violating our security policies. You will not be able to log in from any device.\n\nContact: support@onedelhi.gov.in'
+          );
+        }, 100);
+        return;
+      }
+
+      // 2. Register Device and Check if BANNED
+      console.log("[LoginScreen] Checking device security...");
+      const deviceResult = await registerDevice(
+        user.uid,
+        userData.name || 'User',
+        user.email || ''
+      );
+
+      
+      if (deviceResult) {
+        if (deviceResult.status === 'BANNED') {
+          console.log("[LoginScreen] Device is BANNED. Aborting.");
+          setLoading(false);
+          setIsVerifying(false);
           await signOut(auth);
           
-          await logAction({
-            userId: user.uid,
-            userName: userData.name || 'Banned User',
-            userEmail: user.email || '',
-            action: 'LOGIN',
-            details: 'Login attempt blocked: Account is banned.',
-            type: 'USER',
-            deviceId: useAppStore.getState().deviceId || undefined
-          });
-
-          Alert.alert('Access Denied', 'Your account has been banned. Please contact support.');
-          setLoading(false);
+          setTimeout(() => {
+            Alert.alert(
+              'ACCESS DENIED', 
+              '📱 THIS DEVICE IS RESTRICTED\n\nThis specific mobile device has been banned from accessing the system. Please contact support.'
+            );
+          }, 500);
           return;
+        }
+
+        // If it was a force logout, clear it now that we are logging in manually
+        if (deviceResult.forceLogout) {
+          console.log("[LoginScreen] Clearing stale forceLogout flag...");
+          await clearForceLogout(deviceResult.deviceId).catch(err => 
+            console.error("[LoginScreen] Failed to clear forceLogout:", err)
+          );
         }
       }
 
+      console.log("[LoginScreen] All checks passed, logging login and setting user.");
       await logAction({
         userId: user.uid,
         userName: user.displayName || 'User',
@@ -75,15 +127,30 @@ export const LoginScreen = ({ navigation }: any) => {
         deviceId: useAppStore.getState().deviceId || undefined
       });
 
+      // Verification complete
+      console.log("[LoginScreen] Login success, updating store states...");
+      setDeviceId(deviceResult.deviceId); 
+      setUserProfile(userData); 
       setUser(user);
+      setIsAuthReady(true); // FINAL STEP: ALLOW MAIN APP
+      setLoading(false);
+      setIsVerifying(false);
+      console.log("[LoginScreen] Store states updated. Transition should trigger.");
     } catch (error: any) {
+      console.error("[LoginScreen] Login error:", error);
       let msg = 'Invalid email or password. Please try again.';
       if (error.code === 'auth/too-many-requests') {
         msg = 'Too many failed attempts. Please try again later.';
+      } else if (error.code === 'permission-denied') {
+        msg = 'Security verification failed. Please check your internet or contact support.';
       }
+      setLoading(false);
+      setIsVerifying(false);
       Alert.alert('Login Failed', msg);
     } finally {
+      console.log("[LoginScreen] Login process finished, clearing flags.");
       setLoading(false);
+      setIsVerifying(false);
     }
   };
 

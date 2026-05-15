@@ -16,6 +16,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import * as Location from "expo-location";
+import { MainHeader } from "../../components/layout/MainHeader";
 
 const EV_STATIONS = [
   {
@@ -128,45 +129,16 @@ export const EVScreen = ({ navigation }: any) => {
       </View>
 
       {/* Header as Overlay */}
-      <View style={styles.headerOverlayContainer}>
-        <ImageBackground
-          source={require("../../../assets/images/map-header.webp")}
-          style={styles.headerBg}
-          imageStyle={{ opacity: 1 }}
-        >
-          <View style={styles.headerOverlayColor}>
-            <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
-              <View style={styles.topBar}>
-                <View style={{ width: 40 }} />
-                <Image
-                  source={require("../../../assets/images/map-header-logo.webp")}
-                  style={styles.headerLogo}
-                  contentFit="contain"
-                />
-                <TouchableOpacity
-                  onPress={() => navigation.navigate("Settings")}
-                >
-                  <MaterialCommunityIcons name="cog" size={26} color="white" />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.searchBox}>
-                <MaterialCommunityIcons
-                  name="magnify"
-                  size={26}
-                  color="white"
-                  style={{ marginLeft: 15 }}
-                />
-                <TextInput
-                  placeholder="Search 0+ charge points"
-                  placeholderTextColor="rgba(255,255,255,0.7)"
-                  style={styles.searchInput}
-                />
-              </View>
-            </SafeAreaView>
-          </View>
-        </ImageBackground>
-      </View>
+      <MainHeader 
+        style={styles.headerOverlayContainer}
+        showSearch={true}
+        searchPlaceholder="Search 0+ charge points"
+        rightElement={
+          <TouchableOpacity onPress={() => navigation.navigate("Settings")}>
+            <MaterialCommunityIcons name="cog" size={26} color="white" />
+          </TouchableOpacity>
+        }
+      />
 
       {/* Controls & Bottom Content as Overlays */}
       <View style={styles.contentOverlay} pointerEvents="box-none">

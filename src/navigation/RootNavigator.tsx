@@ -44,7 +44,7 @@ export const ComingSoon = ({ navigation }: any) => (
 export const RootNavigator = () => {
   const { width } = useWindowDimensions();
   const navigationRef = useNavigationContainerRef();
-  const { user, setUser, userProfile, setUserProfile, setTickets, resetStore, showFooter } = useAppStore();
+  const { user, setUser, userProfile, setUserProfile, setTickets, resetStore, showFooter, isVerifying, isAuthReady, setIsAuthReady } = useAppStore();
   const [initializing, setInitializing] = useState(true);
 
   const fetchUserProfile = useCallback(async (userId: string) => {
@@ -59,6 +59,7 @@ export const RootNavigator = () => {
   }, [setUserProfile]);
 
   const fetchUserTickets = useCallback(async (userId: string) => {
+    if (!userId) return;
     try {
       const q = query(
         collection(db, "tickets"), 
@@ -71,7 +72,11 @@ export const RootNavigator = () => {
         userTickets.push({ id: doc.id, ...doc.data() });
       });
       setTickets(userTickets);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.code === 'permission-denied') {
+        // Silent catch for security-related permission denials during auth transitions
+        return;
+      }
       console.error("Error fetching user tickets:", error);
       // Do NOT clear tickets here. Keep the cached ones for offline access.
     }
@@ -80,108 +85,179 @@ export const RootNavigator = () => {
     const handleSecurityAction = useCallback(async (action: 'BANNED' | 'LOGOUT', type: 'USER' | 'DEVICE') => {
       const currentState = useAppStore.getState();
       
+      // Stop any pending verification spinners
+      currentState.setIsVerifying(false);
+      currentState.setIsAuthReady(false);
+
       // Clear forceLogout flag before signing out
       if (action === 'LOGOUT' && currentState.deviceId) {
         await clearForceLogout(currentState.deviceId).catch(() => {});
       }
-      
+
+      // Log the security action while still authenticated
+      if (currentState.user) {
+        await logAction({
+          userId: currentState.user.uid,
+          userName: currentState.userProfile?.name || 'User',
+          userEmail: currentState.user.email || '',
+          action: action === 'BANNED' ? 'BANNED' : 'LOGOUT',
+          details: `Security action triggered: ${action} (${type})`,
+          type: 'USER',
+          deviceId: currentState.deviceId || undefined
+        }).catch(() => {});
+      }
+
       await signOut(auth);
       resetStore();
       
       const message = action === 'BANNED'
-        ? `Your ${type.toLowerCase()} has been banned. Please contact support.`
-        : 'You have been remotely logged out by the administrator.';
+        ? (type === 'USER' 
+            ? 'ACCOUNT BANNED!\n\nYour account has been permanently suspended. You cannot login from any device. Please contact support.' 
+            : 'DEVICE RESTRICTED!\n\nThis specific device has been banned. You may still be able to login from a different, authorized device.')
+        : 'SECURITY NOTICE\n\nYou have been remotely logged out by the administrator for security reasons.';
 
-      Alert.alert('Security Alert', message);
+      Alert.alert('Access Denied', message);
     }, [resetStore]);
+    
+    // Handle Security Verification and Listener
+    useEffect(() => {
+      let securityUnsubscribe: (() => void) | null = null;
+
+      const initSecurity = async () => {
+        if (!user || isVerifying || !userProfile || !isAuthReady) return;
+        
+        try {
+          // Double check auth status before making any calls
+          if (!auth.currentUser) {
+            console.log("[RootNavigator] Auth lost before security init, skipping.");
+            return;
+          }
+
+          const currentState = useAppStore.getState();
+          let currentDeviceId = currentState.deviceId;
+          let currentStatus = 'APPROVED';
+          let shouldLogout = false;
+
+          // Only register if we don't have a deviceId in store
+          if (!currentDeviceId) {
+            console.log("[RootNavigator] Initializing first-time device registration...");
+            const [deviceResult] = await Promise.all([
+              registerDevice(
+                user.uid,
+                userProfile.name || 'User',
+                userProfile.email || ''
+              ),
+              fetchUserTickets(user.uid)
+            ]);
+
+            if (deviceResult) {
+              currentDeviceId = deviceResult.deviceId;
+              currentStatus = deviceResult.status;
+              shouldLogout = deviceResult.forceLogout;
+              useAppStore.getState().setDeviceId(currentDeviceId);
+            }
+          } else {
+            // Already registered, just fetch tickets
+            await fetchUserTickets(user.uid);
+          }
+
+          if (currentDeviceId) {
+            if (currentStatus === 'BANNED') {
+              await handleSecurityAction('BANNED', 'DEVICE');
+              return;
+            }
+            if (shouldLogout) {
+              await handleSecurityAction('LOGOUT', 'DEVICE');
+              return;
+            }
+
+            // Safety delay to ensure firestore state has propagated
+            await new Promise(resolve => setTimeout(resolve, 800));
+
+            securityUnsubscribe = listenToDeviceSecurity(currentDeviceId, async (action) => {
+              console.log("[RootNavigator] Security alert received:", action);
+              await handleSecurityAction(action, 'DEVICE');
+            });
+
+            logAction({
+              userId: user.uid,
+              userName: userProfile.name || 'User',
+              userEmail: user.email || '',
+              action: 'LOGIN',
+              details: 'User session active',
+              type: 'USER',
+              deviceId: currentDeviceId
+            }).catch(() => {});
+          }
+        } catch (error) {
+          console.error("[RootNavigator] Security init error:", error);
+        }
+      };
+
+      initSecurity();
+
+      return () => {
+        if (securityUnsubscribe) {
+          securityUnsubscribe();
+        }
+      };
+    }, [user?.uid, isVerifying, !!userProfile, isAuthReady, fetchUserTickets, handleSecurityAction]);
 
     useEffect(() => {
     let isMounted = true;
-    let securityUnsubscribe: (() => void) | null = null;
-
 
     const subscriber = onAuthStateChanged(auth, async (firebaseUser) => {
       if (!isMounted) return;
       
       try {
         if (firebaseUser) {
-          // 1. Fetch Profile
+          console.log("[RootNavigator] Auth state changed: User detected.");
+          
+          // Fetch Profile
           const docSnap = await getDoc(doc(db, "users", firebaseUser.uid));
           if (docSnap.exists()) {
             const profile = docSnap.data();
             
-            // 2. Check if User is BANNED
             if (profile.status === 'BANNED') {
               await handleSecurityAction('BANNED', 'USER');
               return;
             }
             
+            // Always set user and profile to ensure UI transitions correctly
             setUser(firebaseUser);
             setUserProfile(profile);
 
-            // Parallelize device registration and ticket fetching for faster startup
-            const [deviceResult] = await Promise.all([
-              registerDevice(
-                firebaseUser.uid,
-                profile.name || 'User',
-                profile.email
-              ),
-              fetchUserTickets(firebaseUser.uid)
-            ]);
-
-            if (deviceResult) {
-              const { deviceId, status, forceLogout } = deviceResult;
-              useAppStore.getState().setDeviceId(deviceId);
-
-              // 4. Check if Device is BANNED or FORCE LOGOUT
-              if (status === 'BANNED') {
-                await handleSecurityAction('BANNED', 'DEVICE');
-                return;
-              }
-              if (forceLogout) {
-                await handleSecurityAction('LOGOUT', 'DEVICE');
-                return;
-              }
-
-              // 5. Listen for realtime security updates
-              securityUnsubscribe = listenToDeviceSecurity(deviceId, async (action) => {
-                await handleSecurityAction(action, 'DEVICE');
-              });
-
-              // 6. Log Login (non-awaited to speed up navigation)
-              logAction({
-                userId: firebaseUser.uid,
-                userName: profile.name || 'User',
-                userEmail: profile.email,
-                action: 'LOGIN',
-                details: 'User logged in successfully',
-                type: 'USER',
-                deviceId
-              }).catch(() => {});
+            // IF RETURNING USER (session resume), set Auth Ready
+            // If NEW LOGIN, isAuthReady remains false until LoginScreen finishes
+            if (!useAppStore.getState().isVerifying) {
+              console.log("[RootNavigator] Resuming session, setting Auth Ready.");
+              setIsAuthReady(true);
             }
+          } else {
+            // Profile doesn't exist yet (signup in progress)
+            setUser(firebaseUser);
           }
         } else {
-          if (securityUnsubscribe) securityUnsubscribe();
+          console.log("[RootNavigator] Auth state changed: No user.");
           resetStore();
         }
       } catch (error: any) {
         if (error.code === 'permission-denied') {
-          // If we can't read the profile, the user is likely banned
+          // Silent catch for profile read denial (usually means banned)
           await handleSecurityAction('BANNED', 'USER');
-        } else {
-          console.error("Auth state change error:", error);
+          return;
         }
+        console.error("Auth listener error:", error);
       } finally {
         if (initializing && isMounted) setInitializing(false);
       }
     });
-    
+
     return () => {
       isMounted = false;
       subscriber();
-      if (securityUnsubscribe) securityUnsubscribe();
     };
-  }, [fetchUserTickets, resetStore, setUser, setUserProfile, handleSecurityAction]);
+  }, [setUser, setUserProfile, resetStore, handleSecurityAction, initializing, setIsAuthReady]);
 
   useEffect(() => {
     let lastBackPressed = 0;
@@ -237,7 +313,7 @@ export const RootNavigator = () => {
             gestureDirection: 'horizontal',
           }} 
         >
-          {!user ? (
+          {(!user || !isAuthReady || isVerifying) ? (
             <Stack.Screen name="Auth" component={AuthNavigator} />
           ) : (
             <>

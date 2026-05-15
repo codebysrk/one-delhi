@@ -5,9 +5,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { auth, db } from '../../services/firebase';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth';
 import { setDoc, doc } from 'firebase/firestore';
 import { logAction } from '../../services/logService';
+import { useAppStore } from '../../store/useAppStore';
+import { registerDevice } from '../../services/deviceService';
 
 // Premium UI Components
 import { PremiumHeader } from '../../components/auth/PremiumHeader';
@@ -33,6 +35,11 @@ type SignupForm = z.infer<typeof signupSchema>;
 
 export const SignupScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(false);
+  const setUser = useAppStore((state) => state.setUser);
+  const setUserProfile = useAppStore((state) => state.setUserProfile);
+  const setDeviceId = useAppStore((state) => state.setDeviceId);
+  const setIsVerifying = useAppStore((state) => state.setIsVerifying);
+  const setIsAuthReady = useAppStore((state) => state.setIsAuthReady);
 
   const { control, handleSubmit, formState: { errors } } = useForm<SignupForm>({
     resolver: zodResolver(signupSchema),
@@ -44,7 +51,9 @@ export const SignupScreen = ({ navigation }: any) => {
 
   const onSignup = async (data: SignupForm) => {
     setLoading(true);
+    setIsVerifying(true);
     try {
+      // 1. Create User
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
@@ -52,7 +61,22 @@ export const SignupScreen = ({ navigation }: any) => {
         displayName: data.fullName,
       });
 
-      // Create user document in Firestore
+      // 2. Register/Check Device
+      const deviceResult = await registerDevice(user.uid, data.fullName, data.email);
+      
+      if (deviceResult && deviceResult.status === 'BANNED') {
+        setLoading(false);
+        setIsVerifying(false);
+        await signOut(auth);
+        
+        Alert.alert(
+          'ACCESS DENIED', 
+          '📱 THIS DEVICE IS RESTRICTED\n\nThis specific mobile device has been banned from accessing the system. You cannot create new accounts from this device.'
+        );
+        return;
+      }
+
+      // 3. Create user document in Firestore
       await setDoc(doc(db, 'users', user.uid), {
         name: data.fullName,
         email: data.email,
@@ -69,20 +93,37 @@ export const SignupScreen = ({ navigation }: any) => {
         action: 'SIGNUP',
         details: 'New user account created successfully.',
         type: 'USER',
+        deviceId: deviceResult?.deviceId
       });
 
-      Alert.alert('Success', 'Account created successfully!', [
-        { text: 'OK', onPress: () => {} }
-      ]);
+      setUserProfile({
+        name: data.fullName,
+        email: data.email,
+        gender: data.gender,
+        createdAt: new Date().toISOString(),
+        role: 'USER',
+        status: 'ACTIVE',
+      });
+      if (deviceResult) {
+        setDeviceId(deviceResult.deviceId);
+      }
+      setUser(user);
+      setIsAuthReady(true); // FINAL STEP
+      setIsVerifying(false);
+      setLoading(false);
+      Alert.alert('Success', 'Account created successfully!');
 
     } catch (error: any) {
       let msg = error.message.replace('Firebase: ', '');
       if (error.code === 'auth/email-already-in-use') {
         msg = 'This email is already registered. Please login.';
+      } else if (error.code === 'permission-denied') {
+        msg = 'Security verification failed. This device may be restricted.';
       }
       Alert.alert('Signup Failed', msg);
     } finally {
       setLoading(false);
+      setIsVerifying(false);
     }
   };
 

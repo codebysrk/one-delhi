@@ -52,6 +52,7 @@ export const PaymentScreen = ({ navigation, route }: any) => {
         time: timeStr,
         timestamp: Timestamp.now(),
         userId: auth.currentUser?.uid,
+        deviceId: useAppStore.getState().deviceId, // ADD DEVICE ID
         status: 'Active',
         tid: tid
       };

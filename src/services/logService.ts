@@ -1,4 +1,4 @@
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
 import { sanitizePayload } from '../utils/firebaseUtils';
 
@@ -33,30 +33,44 @@ export interface LogData {
   ipAddress?: string;
   targetType?: 'USER' | 'ROUTE' | 'TICKET' | 'DEVICE';
   targetId?: string;
-  timestamp: number;
+  timestamp: any; // Can be number or ServerTimestamp
 }
 
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 
 export const logAction = async (data: Omit<LogData, 'timestamp'>): Promise<void> => {
+  if (!data || !data.userId) {
+    console.warn('[LogService] Attempted to log action without userId. Skipping.');
+    return;
+  }
+
   try {
     const deviceMeta = {
-      model: Device.modelName,
-      os: Device.osName,
-      osVersion: Device.osVersion,
+      model: Device.modelName || 'Unknown',
+      os: Device.osName || 'Unknown',
+      osVersion: Device.osVersion || 'Unknown',
       appVersion: Constants.expoConfig?.version || '1.0.0',
-      isRooted: !Device.isDevice, // Basic check
+      isRooted: !Device.isDevice,
     };
 
     const logData = sanitizePayload({
       ...data,
       deviceMeta,
-      timestamp: Date.now(),
+      timestamp: serverTimestamp(),
     });
-    await addDoc(collection(db, 'logs'), logData);
+
+    try {
+      const logRef = doc(collection(db, 'logs'));
+      await setDoc(logRef, logData, { merge: true });
+    } catch (error: any) {
+      if (error.code === 'permission-denied') {
+        // Silent catch for security-related permission denials
+        return;
+      }
+      console.error("[LogService] Failed to write log:", error);
+    }
   } catch (error) {
-    // Logging must never crash the app
-    console.error('[LogService] Failed to write log:', error);
+    console.error("[LogService] Critical log error:", error);
   }
 };

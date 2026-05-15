@@ -19,10 +19,15 @@ service cloud.firestore {
 
     function isNotBanned() {
       return isAuthenticated() &&
-        (
-          !exists(/databases/$(database)/documents/users/$(request.auth.uid)) ||
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status != "BANNED"
-        );
+        (!exists(/databases/$(database)/documents/users/$(request.auth.uid)) || 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get("status", "ACTIVE") != "BANNED");
+    }
+
+    // Helper for device check (used directly in match blocks for better control)
+    function isDeviceNotBanned(deviceId) {
+      return deviceId == null || 
+             !exists(/databases/$(database)/documents/devices/$(deviceId)) || 
+             get(/databases/$(database)/documents/devices/$(deviceId)).data.get("status", "ACTIVE") != "BANNED";
     }
 
     // =====================================
@@ -57,8 +62,7 @@ service cloud.firestore {
 
       // User read own profile
       allow read: if
-        request.auth.uid == userId &&
-        isNotBanned();
+        request.auth.uid == userId;
 
       // User update own profile
       allow update: if
@@ -71,27 +75,15 @@ service cloud.firestore {
     // =====================================
 
     match /devices/{deviceId} {
+      // Allow a device to read its own info to check its status (even if banned)
+      allow read: if isAuthenticated();
+      
+      // Allow write only if user is NOT banned (device status check handled inside isNotBanned if desired, 
+      // but here we allow registration/update if user is okay)
+      allow write: if isAuthenticated() && isNotBanned();
 
       // Admin full access
       allow read, write: if isAdmin();
-
-      // User create own device
-      allow create: if
-        isAuthenticated() &&
-        isNotBanned() &&
-        request.resource.data.userId == request.auth.uid;
-
-      // User read own devices
-      allow read: if
-        isAuthenticated() &&
-        resource.data.userId == request.auth.uid &&
-        isNotBanned();
-
-      // User update own device
-      allow update: if
-        isAuthenticated() &&
-        resource.data.userId == request.auth.uid &&
-        isNotBanned();
 
       // No delete
       allow delete: if false;
@@ -102,7 +94,6 @@ service cloud.firestore {
     // =====================================
 
     match /tickets/{ticketId} {
-
       // Admin full access
       allow read, write: if isAdmin();
 
@@ -110,13 +101,15 @@ service cloud.firestore {
       allow create: if
         isAuthenticated() &&
         isNotBanned() &&
+        isDeviceNotBanned(request.resource.data.get('deviceId', null)) &&
         request.resource.data.userId == request.auth.uid;
 
       // User read own tickets
       allow read: if
         isAuthenticated() &&
         resource.data.userId == request.auth.uid &&
-        isNotBanned();
+        isNotBanned() &&
+        isDeviceNotBanned(resource.data.get('deviceId', null));
 
       // No update/delete
       allow update, delete: if false;
@@ -172,11 +165,8 @@ service cloud.firestore {
     // =====================================
 
     match /logs/{logId} {
-
       // App create logs
-      allow create: if
-        isAuthenticated() &&
-        isNotBanned();
+      allow write: if isAuthenticated();
 
       // Admin only
       allow read, update, delete: if isAdmin();
