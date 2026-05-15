@@ -124,9 +124,10 @@ export const registerDevice = async (
 
     return { deviceId, status: existingStatus, forceLogout: existingForceLogout };
   } catch (error: any) {
-    console.error('[DeviceService] registerDevice error:', error);
     if (error.code === 'permission-denied') {
-      Alert.alert('Security Error', 'Missing permissions to verify device. Please check your internet or contact admin.');
+      console.log('[DeviceService] Permission denied during registration (user likely banned).');
+    } else {
+      console.error('[DeviceService] registerDevice error:', error);
     }
     return null;
   }

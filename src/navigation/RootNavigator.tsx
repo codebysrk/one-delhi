@@ -17,7 +17,7 @@ import { SettingsScreen } from '../features/profile/SettingsScreen';
 import { useAppStore } from '../store/useAppStore';
 import { db, auth } from '../services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, query, where, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { registerDevice, listenToDeviceSecurity, clearForceLogout } from '../services/deviceService';
 import { logAction } from '../services/logService';
@@ -85,7 +85,7 @@ export const RootNavigator = () => {
     const handleSecurityAction = useCallback(async (action: 'BANNED' | 'LOGOUT', type: 'USER' | 'DEVICE') => {
       const currentState = useAppStore.getState();
       
-      // Stop any pending verification spinners
+      // Stop any pending verification spinners and reset auth ready
       currentState.setIsVerifying(false);
       currentState.setIsAuthReady(false);
 
@@ -121,24 +121,25 @@ export const RootNavigator = () => {
     
     // Handle Security Verification and Listener
     useEffect(() => {
-      let securityUnsubscribe: (() => void) | null = null;
+      let deviceUnsubscribe: (() => void) | null = null;
+      let userUnsubscribe: (() => void) | null = null;
 
       const initSecurity = async () => {
+        console.log("[RootNavigator] Running initSecurity. State:", { 
+          hasUser: !!user, 
+          isVerifying, 
+          hasProfile: !!userProfile, 
+          isAuthReady 
+        });
+
         if (!user || isVerifying || !userProfile || !isAuthReady) return;
         
         try {
-          // Double check auth status before making any calls
-          if (!auth.currentUser) {
-            console.log("[RootNavigator] Auth lost before security init, skipping.");
-            return;
-          }
-
           const currentState = useAppStore.getState();
           let currentDeviceId = currentState.deviceId;
-          let currentStatus = 'APPROVED';
-          let shouldLogout = false;
+          console.log("[RootNavigator] Current Device ID in store:", currentDeviceId);
 
-          // Only register if we don't have a deviceId in store
+          // 1. Get or Register Device
           if (!currentDeviceId) {
             console.log("[RootNavigator] Initializing first-time device registration...");
             const [deviceResult] = await Promise.all([
@@ -151,43 +152,50 @@ export const RootNavigator = () => {
             ]);
 
             if (deviceResult) {
+              console.log("[RootNavigator] Device registered successfully:", deviceResult.deviceId);
               currentDeviceId = deviceResult.deviceId;
-              currentStatus = deviceResult.status;
-              shouldLogout = deviceResult.forceLogout;
               useAppStore.getState().setDeviceId(currentDeviceId);
+              
+              if (deviceResult.status === 'BANNED') {
+                await handleSecurityAction('BANNED', 'DEVICE');
+                return;
+              }
             }
           } else {
-            // Already registered, just fetch tickets
+            console.log("[RootNavigator] Device already known, fetching tickets...");
             await fetchUserTickets(user.uid);
           }
 
           if (currentDeviceId) {
-            if (currentStatus === 'BANNED') {
-              await handleSecurityAction('BANNED', 'DEVICE');
-              return;
-            }
-            if (shouldLogout) {
-              await handleSecurityAction('LOGOUT', 'DEVICE');
-              return;
-            }
-
+            console.log("[RootNavigator] Setting up real-time listeners for device:", currentDeviceId);
+            
             // Safety delay to ensure firestore state has propagated
             await new Promise(resolve => setTimeout(resolve, 800));
 
-            securityUnsubscribe = listenToDeviceSecurity(currentDeviceId, async (action) => {
-              console.log("[RootNavigator] Security alert received:", action);
+            // REAL-TIME DEVICE LISTENER
+            deviceUnsubscribe = listenToDeviceSecurity(currentDeviceId, async (action) => {
+              console.log("[RootNavigator] REAL-TIME SECURITY EVENT (Device):", action);
               await handleSecurityAction(action, 'DEVICE');
             });
 
-            logAction({
-              userId: user.uid,
-              userName: userProfile.name || 'User',
-              userEmail: user.email || '',
-              action: 'LOGIN',
-              details: 'User session active',
-              type: 'USER',
-              deviceId: currentDeviceId
-            }).catch(() => {});
+            // REAL-TIME USER BAN LISTENER
+            userUnsubscribe = onSnapshot(doc(db, 'users', user.uid), (snap) => {
+              const data = snap.data();
+              console.log("[RootNavigator] User profile update detected. Status:", data?.status);
+              if (snap.exists() && data?.status === 'BANNED') {
+                console.log("[RootNavigator] User BANNED in real-time. Triggering logout.");
+                handleSecurityAction('BANNED', 'USER');
+              }
+            }, (err) => {
+              if (err.code === 'permission-denied') {
+                console.log("[RootNavigator] Permission denied for user doc (likely BANNED). Triggering logout.");
+                handleSecurityAction('BANNED', 'USER');
+              }
+            });
+
+            console.log("[RootNavigator] Real-time listeners active.");
+          } else {
+            console.warn("[RootNavigator] No device ID available. Security listeners NOT active.");
           }
         } catch (error) {
           console.error("[RootNavigator] Security init error:", error);
@@ -197,9 +205,8 @@ export const RootNavigator = () => {
       initSecurity();
 
       return () => {
-        if (securityUnsubscribe) {
-          securityUnsubscribe();
-        }
+        if (deviceUnsubscribe) deviceUnsubscribe();
+        if (userUnsubscribe) userUnsubscribe();
       };
     }, [user?.uid, isVerifying, !!userProfile, isAuthReady, fetchUserTickets, handleSecurityAction]);
 
@@ -213,16 +220,13 @@ export const RootNavigator = () => {
         if (firebaseUser) {
           console.log("[RootNavigator] Auth state changed: User detected.");
           
-          // Fetch Profile
-          const docSnap = await getDoc(doc(db, "users", firebaseUser.uid));
-          if (docSnap.exists()) {
-            const profile = docSnap.data();
+          try {
+            // Fetch Profile
+            const docSnap = await getDoc(doc(db, "users", firebaseUser.uid));
+            const profile = docSnap.exists() ? docSnap.data() : null;
             
-            if (profile.status === 'BANNED') {
-              await handleSecurityAction('BANNED', 'USER');
-              return;
-            }
-            
+            if (!isMounted) return;
+
             // Always set user and profile to ensure UI transitions correctly
             setUser(firebaseUser);
             setUserProfile(profile);
@@ -233,21 +237,23 @@ export const RootNavigator = () => {
               console.log("[RootNavigator] Resuming session, setting Auth Ready.");
               setIsAuthReady(true);
             }
-          } else {
-            // Profile doesn't exist yet (signup in progress)
-            setUser(firebaseUser);
+          } catch (error: any) {
+            console.error("[RootNavigator] Profile fetch error during auth change:", error);
+            // If it's a permission error, it's likely a BANNED user
+            // We set the user anyway so the LoginScreen/Security check can handle it
+            if (error.code === 'permission-denied') {
+              setUser(firebaseUser);
+            } else {
+              // For other errors like network, we can keep the user but maybe don't set auth ready
+              setUser(firebaseUser);
+            }
           }
         } else {
           console.log("[RootNavigator] Auth state changed: No user.");
           resetStore();
         }
-      } catch (error: any) {
-        if (error.code === 'permission-denied') {
-          // Silent catch for profile read denial (usually means banned)
-          await handleSecurityAction('BANNED', 'USER');
-          return;
-        }
-        console.error("Auth listener error:", error);
+      } catch (error) {
+        console.error("[RootNavigator] Auth state change error:", error);
       } finally {
         if (initializing && isMounted) setInitializing(false);
       }
