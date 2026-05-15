@@ -180,9 +180,15 @@ export const RootNavigator = () => {
 
             // REAL-TIME USER BAN LISTENER
             userUnsubscribe = onSnapshot(doc(db, 'users', user.uid), (snap) => {
+              if (!snap.exists()) {
+                console.log("[RootNavigator] User document DELETED. Logging out.");
+                handleSecurityAction('BANNED', 'USER');
+                return;
+              }
+
               const data = snap.data();
               console.log("[RootNavigator] User profile update detected. Status:", data?.status);
-              if (snap.exists() && data?.status === 'BANNED') {
+              if (data?.status === 'BANNED') {
                 console.log("[RootNavigator] User BANNED in real-time. Triggering logout.");
                 handleSecurityAction('BANNED', 'USER');
               }
