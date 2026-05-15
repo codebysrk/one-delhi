@@ -17,7 +17,12 @@ export const sanitizePayload = (obj: any): any => {
   Object.keys(obj).forEach((key) => {
     const val = obj[key];
     if (val !== undefined) {
-      newObj[key] = sanitizePayload(val);
+      // Don't recurse into Firestore sentinels (FieldValues) or Timestamps
+      if (val && typeof val === 'object' && (val.constructor?.name === 'FieldValue' || val._methodName || val.nanoseconds !== undefined)) {
+        newObj[key] = val;
+      } else {
+        newObj[key] = sanitizePayload(val);
+      }
     }
   });
 

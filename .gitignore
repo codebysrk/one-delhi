@@ -26,3 +26,10 @@ ios/
 
 # MacOS
 .DS_Store
+
+# Diagnostic and Security
+functions/firebase-service-account.json
+functions/all_users_dump.json
+functions/*.js
+brain/
+scratch/
