@@ -1,24 +1,27 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ticket, TicketStatus, getRemainingValidity, isTicketExpired, getRouteNumberOnly, formatTimeTo12hr } from '../utils/ticketHelper';
+import { Ticket, TicketStatus, getRemainingValidity, isTicketExpired, getRouteNumberOnly, formatTimeTo12hr } from '../../utils/ticketHelper';
 import { InvalidStamp } from './InvalidStamp';
+import { COLORS, TYPOGRAPHY, SPACING, SHADOWS, RADII } from '../../core/theme';
 
 interface TicketCardProps {
   ticket: Ticket;
   onPress: () => void;
   showTimer?: boolean;
   largeText?: boolean;
+  showTID?: boolean;
+  hideDivider?: boolean;
+  compact?: boolean;
 }
 
-export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onPress, showTimer, largeText }) => {
+export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onPress, showTimer, largeText, showTID = true, hideDivider = false, compact = false }) => {
   const expired = isTicketExpired(ticket.timestamp);
   const isInvalid = ticket.status === TicketStatus.INVALID;
   
   const showStamp = expired || isInvalid;
-  const stampColor = '#D32F2F';
+  const stampColor = COLORS.primary;
 
   const getFormattedActiveDateTime = () => {
-    // Handle raw number, Firestore Timestamp class, or plain {seconds, nanoseconds} objects
     const ts = typeof ticket.timestamp === 'number' 
       ? ticket.timestamp 
       : (ticket.timestamp as any)?.toMillis?.() 
@@ -37,39 +40,43 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onPress, showTim
   const displayDateTime = !showStamp ? getFormattedActiveDateTime() : `${ticket.date} | ${formatTimeTo12hr(ticket.time)}`;
 
   const textStyle = [styles.mainText, largeText && styles.largeMainText];
+  const secondaryTextStyle = [styles.secondaryText, largeText && styles.largeSecondaryText];
+  const locationTextStyle = [styles.locationText, largeText && styles.largeLocationText];
+  const totalTextStyle = [styles.totalText, largeText && styles.largeTotalText];
 
   return (
     <TouchableOpacity 
       style={styles.card} 
       onPress={onPress}
-      activeOpacity={1}
+      activeOpacity={0.9}
     >
-      <View style={styles.topBorder} />
       <View style={styles.headerStrip} />
       
-      <View style={styles.body}>
+      <View style={[styles.body, compact && { paddingBottom: 8 }]}>
         <View style={styles.dataRow}>
           <Text style={textStyle}>{getRouteNumberOnly(ticket.route || ticket.id || 'Bus')}</Text>
           <Text style={textStyle}>₹{(Number(ticket.qty || 1) * Number(ticket.baseFare || 10)).toFixed(1)}</Text>
         </View>
  
         <View style={styles.dataRow}>
-          <Text style={textStyle}>{displayDateTime}</Text>
-          <Text style={textStyle}>x {ticket.qty || 1}</Text>
+          <Text style={secondaryTextStyle}>{displayDateTime}</Text>
+          <Text style={secondaryTextStyle}>x {ticket.qty || 1}</Text>
         </View>
  
         <View style={styles.dataRow}>
-          <Text style={textStyle} numberOfLines={1}>{ticket.source || ticket.src || ticket.from || 'Boarding'}</Text>
-          <Text style={textStyle}>₹{Number(ticket.total || ticket.fare || 0).toFixed(1)}</Text>
+          <Text style={locationTextStyle} numberOfLines={1}>{ticket.source || ticket.src || ticket.from || 'Boarding'}</Text>
+          <Text style={totalTextStyle}>₹{Number(ticket.total || ticket.fare || 0).toFixed(1)}</Text>
         </View>
  
         <View style={styles.destRow}>
-          <Text style={textStyle} numberOfLines={2}>{ticket.dest || ticket.dst || ticket.to || 'Destination'}</Text>
+          <Text style={locationTextStyle} numberOfLines={2}>{ticket.dest || ticket.dst || ticket.to || 'Destination'}</Text>
         </View>
 
-        <View style={styles.tidContainer}>
-          <Text style={styles.tidText}>{ticket.tid || ticket.id || 'T0000000000'}</Text>
-        </View>
+        {showTID && (
+          <View style={[styles.tidContainer, hideDivider && { borderTopWidth: 0 }]}>
+            <Text style={styles.tidText}>{ticket.tid || ticket.id || 'T0000000000'}</Text>
+          </View>
+        )}
 
         {showTimer && !expired && (
           <View style={styles.timerMini}>
@@ -93,64 +100,97 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onPress, showTim
 
 const styles = StyleSheet.create({
   card: { 
-    backgroundColor: 'white', 
-    borderRadius: 4, 
+    backgroundColor: COLORS.white, 
     overflow: 'hidden', 
     borderWidth: 1, 
-    borderColor: '#E0E0E0',
+    borderColor: COLORS.border,
     width: '100%',
-    marginVertical: 4
+    ...SHADOWS.soft,
   },
-  topBorder: { height: 1, backgroundColor: '#CCC' },
-  headerStrip: { height: 16, backgroundColor: '#757575', marginTop: 8 },
-  
+  headerStrip: { 
+    height: 16, 
+    backgroundColor: '#757575', 
+    marginTop: SPACING.sm 
+  },
   body: { 
-    paddingHorizontal: 20, 
-    paddingVertical: 8, 
+    paddingHorizontal: SPACING.lg, 
+    paddingVertical: SPACING.lg, 
     position: 'relative' 
   },
   dataRow: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center',
-    marginBottom: 6 
+    marginBottom: SPACING.sm 
   },
   destRow: {
-    marginBottom: 6
+    marginBottom: SPACING.xs
   },
   mainText: { 
-    fontSize: 16, 
-    color: '#000', 
+    ...TYPOGRAPHY.h4,
+    color: COLORS.text, 
     fontWeight: '400',
-    letterSpacing: -0.2
   },
   largeMainText: {
-    fontSize: 18,
+    ...TYPOGRAPHY.h3,
+    fontWeight: '400',
   },
-  
+  secondaryText: {
+    ...TYPOGRAPHY.bodyLarge,
+    color: COLORS.text,
+  },
+  largeSecondaryText: {
+    ...TYPOGRAPHY.h4,
+    fontWeight: '400',
+  },
+  locationText: {
+    ...TYPOGRAPHY.bodyLarge,
+    color: COLORS.text,
+    flex: 1,
+  },
+  largeLocationText: {
+    ...TYPOGRAPHY.h4,
+    fontWeight: '400',
+  },
+  totalText: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.text,
+    fontWeight: '400',
+  },
+  largeTotalText: {
+    ...TYPOGRAPHY.h3,
+    fontWeight: '400',
+  },
   tidContainer: {
     alignItems: 'center',
-    marginTop: 8
+    marginTop: 0,
+    paddingTop: 0,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.surfaceVariant,
   },
   tidText: { 
-    fontSize: 14, 
-    color: '#444', 
-    fontWeight: '400',
-    letterSpacing: 0.2
+    ...TYPOGRAPHY.bodySmall,
+    fontSize: 13,
+    color: COLORS.textMuted,
+    letterSpacing: 1,
   },
-
   timerMini: {
-    marginTop: 10,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    marginTop: SPACING.md,
+    paddingVertical: SPACING.sm,
+    backgroundColor: '#FEF2F2',
+    borderRadius: RADII.sm,
     alignItems: 'center'
   },
-  timerText: { fontSize: 12, color: '#D32F2F', fontWeight: '600' },
+  timerText: { 
+    ...TYPOGRAPHY.bodySmall, 
+    color: COLORS.primary, 
+    fontWeight: '700' 
+  },
   stampOverlay: {
     position: 'absolute',
-    top: '30%',
+    top: '35%',
     left: '25%',
     zIndex: 10,
+    opacity: 0.8,
   }
 });

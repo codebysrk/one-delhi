@@ -126,7 +126,13 @@ export const listenToDeviceSecurity = (
       onAction('LOGOUT');
     }
   }, (error) => {
-    console.error('[DeviceService] Security listener error:', error);
+    if (error.code === 'permission-denied') {
+      // If permission is denied, it's because the security rules (isNotBanned) 
+      // have blocked access, which means the user or device is likely banned.
+      onAction('BANNED');
+    } else {
+      console.error('[DeviceService] Security listener error:', error);
+    }
   });
 };
 

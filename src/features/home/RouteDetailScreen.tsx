@@ -17,7 +17,7 @@ import { WebView } from "react-native-webview";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../services/firebase";
-import { EliteBottomSheet } from "../../components/EliteBottomSheet";
+import { EliteBottomSheet } from "../../components/layout/EliteBottomSheet";
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 

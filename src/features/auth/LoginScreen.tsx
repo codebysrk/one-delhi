@@ -10,10 +10,12 @@ import { useAppStore } from '../../store/useAppStore';
 import { logAction } from '../../services/logService';
 import { doc, getDoc } from 'firebase/firestore';
 
+import { COLORS, TYPOGRAPHY, SPACING, RADII } from '../../core/theme';
+
 // Premium UI Components
 import { PremiumHeader } from '../../components/auth/PremiumHeader';
 import { PremiumInput } from '../../components/auth/PremiumInput';
-import { PremiumButton } from '../../components/auth/PremiumButton';
+import { Button } from '../../components/ui/Button';
 import { PremiumSocialButton } from '../../components/auth/PremiumSocialButton';
 
 const loginSchema = z.object({
@@ -140,10 +142,11 @@ export const LoginScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
 
-            <PremiumButton 
-              label="Login"
+            <Button 
+              title="Login"
               onPress={handleSubmit(onLogin)}
               loading={loading}
+              size="large"
               style={styles.loginBtn}
             />
 
@@ -163,32 +166,32 @@ export const LoginScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F3F3F3',
+    backgroundColor: COLORS.background,
   },
   flex: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 34,
-    paddingBottom: 40,
+    paddingHorizontal: SPACING.xl,
+    paddingTop: SPACING.xxl,
+    paddingBottom: SPACING.xxl,
   },
   form: {
     flex: 1,
   },
   forgotBtn: {
     alignSelf: 'flex-end',
-    marginTop: -8,
-    marginBottom: 20,
-    padding: 4,
+    marginTop: -SPACING.sm,
+    marginBottom: SPACING.xl,
+    padding: SPACING.xs,
   },
   forgotText: {
-    color: '#B3261E',
-    fontSize: 14,
+    color: COLORS.primary,
+    ...TYPOGRAPHY.bodySmall,
     fontWeight: '600',
   },
   loginBtn: {
-    marginTop: 10,
+    marginTop: SPACING.sm,
   },
   divider: {
     flexDirection: 'row',
@@ -212,27 +215,16 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'column',
     alignItems: 'center',
-    marginTop: 10,
-    gap: 4,
+    marginTop: SPACING.md,
+    gap: SPACING.xs,
   },
   footerText: {
-    color: '#666',
-    fontSize: 14,
+    color: COLORS.textSecondary,
+    ...TYPOGRAPHY.bodySmall,
   },
   signupText: {
-    color: '#B3261E',
-    fontSize: 16,
+    color: COLORS.primary,
+    ...TYPOGRAPHY.bodyMedium,
     fontWeight: '700',
   },
-  bottomBranding: {
-    marginTop: 40,
-    alignItems: 'center',
-  },
-  brandingText: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    fontWeight: '500',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  }
 });

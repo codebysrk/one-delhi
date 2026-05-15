@@ -1,7 +1,7 @@
 import React from 'react';
-import { StatusBar, View, ScrollView, Platform, StyleSheet } from 'react-native';
+import { StatusBar, View, ScrollView, Platform, StyleSheet, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS, SHADOWS } from '../core/theme';
+import { COLORS, SHADOWS, SPACING, LAYOUT } from '../../core/theme';
 
 interface ScreenProps {
   children: React.ReactNode;
@@ -9,6 +9,7 @@ interface ScreenProps {
   scrollable?: boolean;
   backgroundColor?: string;
   noPadding?: boolean;
+  style?: ViewStyle;
 }
 
 export const Screen: React.FC<ScreenProps> = ({
@@ -17,17 +18,19 @@ export const Screen: React.FC<ScreenProps> = ({
   scrollable = false,
   backgroundColor = COLORS.background,
   noPadding = false,
+  style,
 }) => {
   const Container = scrollable ? ScrollView : View;
 
   return (
     <SafeAreaView 
-      style={{ flex: 1, backgroundColor }} 
+      style={[{ flex: 1, backgroundColor }, style]} 
       edges={['right', 'left', 'top']}
     >
       <StatusBar 
-        barStyle="light-content" 
-        backgroundColor={COLORS.primary}
+        barStyle="dark-content" 
+        backgroundColor="transparent"
+        translucent
       />
       {header && <View style={styles.fixedHeader}>{header}</View>}
       <Container
@@ -38,7 +41,7 @@ export const Screen: React.FC<ScreenProps> = ({
       >
         <View style={[
           styles.inner, 
-          !noPadding && { paddingHorizontal: 15, paddingTop: 10 }
+          !noPadding && { paddingHorizontal: LAYOUT.screenPadding, paddingTop: SPACING.md }
         ]}>
           {children}
         </View>
@@ -53,17 +56,17 @@ const styles = StyleSheet.create({
   },
   fixedHeader: {
     zIndex: 10,
-    backgroundColor: 'white',
+    backgroundColor: COLORS.white,
     ...SHADOWS.soft,
-    elevation: 4, // Add elevation for Android
+    elevation: 4,
+    height: LAYOUT.headerHeight,
+    justifyContent: 'center',
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 80, 
+    paddingBottom: 0, 
   },
   inner: {
     flex: 1,
   }
 });
-
-

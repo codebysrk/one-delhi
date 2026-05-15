@@ -18,12 +18,13 @@ import Animated, {
   useAnimatedReaction,
   runOnJS,
 } from "react-native-reanimated";
+import { COLORS, SHADOWS, RADII, SPACING } from "../../core/theme";
 
 interface EliteBottomSheetProps {
   children: React.ReactNode;
   headerContent?: React.ReactNode;
-  snapPoints: number[]; // Direct translateY values (e.g. [0, 300, 600])
-  translateY: Animated.SharedValue<number>; // Shared value for syncing
+  snapPoints: number[]; // Direct translateY values
+  translateY: Animated.SharedValue<number>;
   sheetHeight?: number | string;
 }
 
@@ -37,12 +38,10 @@ export const EliteBottomSheet = ({
   const { height: SCREEN_HEIGHT } = useWindowDimensions();
   const context = useSharedValue({ y: 0 });
 
-  // Use snapPoints as direct translateY values
   const internalSnapPoints = useMemo(() => snapPoints, [snapPoints]);
-
   const SNAP_TOP = Math.min(...internalSnapPoints);
   const SNAP_BOTTOM = Math.max(...internalSnapPoints);
-  const SNAP_VELOCITY = 500;
+  const SNAP_VELOCITY = 800;
 
   const gesture = Gesture.Pan()
     .onStart(() => {
@@ -58,27 +57,20 @@ export const EliteBottomSheet = ({
     })
     .onEnd((event) => {
       const { velocityY } = event;
-      const springConfig = { damping: 25, stiffness: 180 };
+      const springConfig = { damping: 25, stiffness: 180, mass: 0.8 };
 
-      // 1. High velocity swipe handling
       if (Math.abs(velocityY) > SNAP_VELOCITY) {
-        const direction = velocityY < 0 ? -1 : 1; // -1 for up, 1 for down
-        
+        const direction = velocityY < 0 ? -1 : 1;
         let targetPoint = translateY.value;
         if (direction === -1) {
-            // Swiping Up: Find the first point smaller than current Y (moving upwards)
-            // Points are [0, 200, 500], so reverse to search [500, 200, 0]
             targetPoint = [...internalSnapPoints].reverse().find(p => p < translateY.value) ?? SNAP_TOP;
         } else {
-            // Swiping Down: Find the first point larger than current Y (moving downwards)
-            // Search in [0, 200, 500]
             targetPoint = internalSnapPoints.find(p => p > translateY.value) ?? SNAP_BOTTOM;
         }
         translateY.value = withSpring(targetPoint, springConfig);
         return;
       }
 
-      // 2. Position-based snapping (find closest point)
       const closestPoint = internalSnapPoints.reduce((prev, curr) => {
         return Math.abs(curr - translateY.value) < Math.abs(prev - translateY.value) ? curr : prev;
       });
@@ -87,20 +79,17 @@ export const EliteBottomSheet = ({
     });
 
   const animatedSheetStyle = useAnimatedStyle(() => {
+    const borderRadius = interpolate(
+      translateY.value,
+      [SNAP_TOP, SNAP_TOP + 50],
+      [0, RADII.xl],
+      Extrapolate.CLAMP
+    );
+
     return {
       transform: [{ translateY: translateY.value }],
-      borderTopLeftRadius: interpolate(
-        translateY.value,
-        [SNAP_TOP, SNAP_TOP + 100],
-        [0, 32],
-        Extrapolate.CLAMP
-      ),
-      borderTopRightRadius: interpolate(
-        translateY.value,
-        [SNAP_TOP, SNAP_TOP + 100],
-        [0, 32],
-        Extrapolate.CLAMP
-      ),
+      borderTopLeftRadius: borderRadius,
+      borderTopRightRadius: borderRadius,
     };
   });
 
@@ -122,29 +111,23 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
-    bottom: -15, // Match original offset
-    backgroundColor: "white",
-    elevation: 30,
+    bottom: -SPACING.md, 
+    backgroundColor: COLORS.white,
     zIndex: 100,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
+    ...SHADOWS.high,
   },
   dragArea: { 
-    paddingHorizontal: 20, 
-    paddingTop: 8,
-    paddingBottom: 2,
+    paddingHorizontal: SPACING.lg, 
+    paddingTop: SPACING.sm,
+    paddingBottom: SPACING.xs,
   },
   handleBar: {
     width: 40,
     height: 4,
-    backgroundColor: "#E5E7EB",
-    borderRadius: 2,
+    backgroundColor: COLORS.border,
+    borderRadius: RADII.xs,
     alignSelf: "center",
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
   },
   contentContainer: {
     flex: 1,

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
-import { db } from '../services/firebase';
-import { useAppStore } from '../store/useAppStore';
+import { db } from '../../services/firebase';
+import { useAppStore } from '../../store/useAppStore';
 
 export const NotificationListener = () => {
   const { setLatestNotificationTimestamp, user } = useAppStore();
@@ -23,6 +23,10 @@ export const NotificationListener = () => {
         }
       }
     }, (error) => {
+      if (error.code === 'permission-denied') {
+        // This is expected when a user is banned or logged out
+        return;
+      }
       if (__DEV__) console.error('[NotificationListener] Firestore error:', error);
     });
 

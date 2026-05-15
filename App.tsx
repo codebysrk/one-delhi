@@ -12,7 +12,7 @@ import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 
 import { Asset } from 'expo-asset';
-import { NotificationListener } from './src/components/NotificationListener';
+import { NotificationListener } from './src/components/feedback/NotificationListener';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -31,6 +31,8 @@ export default function App() {
   const [appIsReady, setAppIsReady] = useState(false);
   const [fontsLoaded] = useFonts({
     'Exiger': require('./assets/fonts/Exiger-Stamp.otf'),
+    'StencilBold': require('./assets/fonts/OPTIStencil-Bold.otf'),
+    'StencilDisplay': require('./assets/fonts/StencilDisplayOpti.otf'),
   });
 
   useEffect(() => {

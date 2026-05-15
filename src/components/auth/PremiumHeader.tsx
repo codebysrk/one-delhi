@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Dimensions, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Dimensions } from 'react-native';
+import { Image } from 'expo-image';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -39,7 +40,8 @@ export const PremiumHeader = ({ title, subtitle, variant = 'login', onBack }: Pr
               <Image 
                 source={require('../../../assets/images/icon.png')} 
                 style={styles.logo}
-                resizeMode="contain"
+                contentFit="contain"
+                transition={500}
               />
             </View>
           )}

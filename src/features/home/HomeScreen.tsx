@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { StyleSheet, Text, View, Image, TouchableOpacity } from "react-native";
-import { Screen } from "../../components/Screen";
+import { StyleSheet, Text, View, TouchableOpacity } from "react-native";
+import { Image } from "expo-image";
+import { Screen } from "../../components/layout/Screen";
 import { useAppStore } from "../../store/useAppStore";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { MetroLogo } from "../../components/MetroLogo";
+import { MetroLogo } from "../../components/icons/MetroLogo";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { TicketCard } from "../../components/TicketCard";
+import { TicketCard } from "../../components/ui/TicketCard";
 import { getLatestActiveTicket } from "../../utils/ticketHelper";
 
 type RootStackParamList = {
@@ -48,7 +49,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <Image
           source={require("../../../assets/images/transit_header.webp")}
           style={styles.illustrationImg}
-          resizeMode="cover"
+          contentFit="cover"
+          transition={500}
         />
       </View>
 
@@ -119,6 +121,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               onPress={() => navigation.navigate("Ticket")}
               showTimer={false}
               largeText={true}
+              showTID={false}
             />
           ) : (
             <View style={styles.topEmptyCard}>
@@ -181,7 +184,6 @@ const styles = StyleSheet.create({
     flex: 1,
     aspectRatio: 1.6,
     backgroundColor: "white",
-    borderRadius: 4,
     padding: 10,
     justifyContent: "center",
     elevation: 6,
@@ -226,7 +228,6 @@ const styles = StyleSheet.create({
   topEmptyCard: {
    backgroundColor: "#F9FAFB",
     height: 190,
-    borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
@@ -242,7 +243,6 @@ const styles = StyleSheet.create({
   bottomEmptyCard: {
     backgroundColor: "#F9FAFB",
     height: 100,
-    borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,

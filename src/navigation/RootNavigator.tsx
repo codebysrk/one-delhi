@@ -1,41 +1,32 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, useWindowDimensions, Platform } from 'react-native';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { LoginScreen } from '../features/auth/LoginScreen';
-import { SignupScreen } from '../features/auth/SignupScreen';
-import { MapScreen } from '../features/home/MapScreen';
-import { HomeScreen } from '../features/home/HomeScreen';
+import { AuthNavigator } from './navigators/AuthNavigator';
+import { MainTabNavigator } from './navigators/MainTabNavigator';
+import { RouteDetailScreen } from '../features/home/RouteDetailScreen';
+import { NotificationScreen } from '../features/notifications/NotificationScreen';
 import { BookingScreen } from '../features/booking/BookingScreen';
 import { PaymentScreen } from '../features/payment/PaymentScreen';
+import { PassScreen } from '../features/pass/PassScreen';
 import { TicketScreen } from '../features/qr/TicketScreen';
 import { HistoryScreen } from '../features/history/HistoryScreen';
 import { ProfileScreen } from '../features/profile/ProfileScreen';
-import { SettingsScreen } from '../features/profile/SettingsScreen';
-import { EVScreen } from '../features/ev/EVScreen';
-import { PassScreen } from '../features/pass/PassScreen';
-import { SearchScreen } from '../features/home/SearchScreen';
-import { RouteDetailScreen } from '../features/home/RouteDetailScreen';
-import { NotificationScreen } from '../features/notifications/NotificationScreen';
 import { HelpScreen } from '../features/profile/HelpScreen';
-import { TripPlanScreen } from '../features/trips/TripPlanScreen';
+import { SettingsScreen } from '../features/profile/SettingsScreen';
 import { useAppStore } from '../store/useAppStore';
 import { db, auth } from '../services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { TripPlanIcon } from '../components/TripPlanIcon';
 import { collection, query, where, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { registerDevice, listenToDeviceSecurity, clearForceLogout } from '../services/deviceService';
 import { logAction } from '../services/logService';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { signOut } from 'firebase/auth';
 import { Alert, BackHandler, ToastAndroid } from 'react-native';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 
 const Stack = createNativeStackNavigator();
-const Tab = createBottomTabNavigator();
 
 export const ComingSoon = ({ navigation }: any) => (
   <View style={{ flex: 1, backgroundColor: '#FFF', justifyContent: 'center', alignItems: 'center', paddingBottom: 100 }}>
@@ -49,130 +40,6 @@ export const ComingSoon = ({ navigation }: any) => (
   </View>
 );
 
-const TabButton = (props: any) => {
-  const { item, onPress, accessibilityState } = props;
-  const focused = accessibilityState.selected;
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const handlePressIn = () => {
-    Haptics.selectionAsync();
-    scale.value = withSpring(0.9, { damping: 10, stiffness: 200 });
-  };
-
-  const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 10, stiffness: 200 });
-  };
-
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      activeOpacity={1}
-      style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
-    >
-      <Animated.View style={[animatedStyle, { alignItems: 'center', justifyContent: 'center' }]}>
-        {props.children}
-      </Animated.View>
-    </TouchableOpacity>
-  );
-};
-
-const BusStack = () => (
-  <Stack.Navigator screenOptions={{ headerShown: false }}>
-    <Stack.Screen name="Map" component={MapScreen} />
-    <Stack.Screen name="Search" component={SearchScreen} />
-  </Stack.Navigator>
-);
-
-
-const MainTabs = () => {
-  const { showFooter } = useAppStore();
-  
-  return (
-    <View style={{ flex: 1 }}>
-      <Tab.Navigator
-        screenOptions={{
-          tabBarStyle: {
-            backgroundColor: '#FFFFFF',
-            borderTopWidth: 1,
-            borderTopColor: '#EEE',
-            height: 65,
-            paddingBottom: 10,
-          },
-          tabBarActiveTintColor: '#D32F2F',
-          tabBarInactiveTintColor: '#555',
-          tabBarLabelStyle: {
-            fontSize: 12,
-            marginTop: -8,
-            fontWeight: '500',
-          },
-          headerShown: false,
-          lazy: true,
-        }}
-      >
-        <Tab.Screen 
-          name="BusTab" 
-          component={BusStack} 
-          options={{
-            tabBarIcon: ({ color }) => <MaterialCommunityIcons name="bus" size={28} color={color} />,
-            tabBarLabel: 'Bus',
-            tabBarButton: (props) => <TabButton {...props} />
-          }}
-        />
-        <Tab.Screen 
-          name="TicketsTab" 
-          component={HomeScreen} 
-          options={{
-            tabBarIcon: ({ color }) => <MaterialCommunityIcons name="ticket-confirmation" size={28} color={color} />,
-            tabBarLabel: 'Tickets',
-            tabBarButton: (props) => <TabButton {...props} />
-          }}
-        />
-        <Tab.Screen 
-          name="HubTab" 
-          component={EVScreen}
-          options={{
-            tabBarIcon: ({ color }) => <MaterialCommunityIcons name="ev-station" size={28} color={color} />,
-            tabBarLabel: 'Hub',
-            tabBarButton: (props) => <TabButton {...props} />
-          }}
-        />
-        <Tab.Screen 
-          name="TripPlanTab" 
-          component={TripPlanScreen}
-          options={{
-            tabBarIcon: ({ color }) => <TripPlanIcon color={color} size={28} />,
-            tabBarLabel: 'Trip Plan',
-            tabBarButton: (props) => <TabButton {...props} />
-          }}
-        />
-        <Tab.Screen 
-          name="HelpTab" 
-          component={HelpScreen}
-          options={{
-            tabBarIcon: ({ color }) => <MaterialCommunityIcons name="help-circle" size={28} color={color} />,
-            tabBarLabel: 'Help',
-            tabBarButton: (props) => <TabButton {...props} />
-          }}
-        />
-      </Tab.Navigator>
-      
-      {showFooter && (
-        <View style={styles.footerContainer}>
-          <View style={styles.footerShadow} />
-          <View style={styles.globalFooter}>
-            <Text style={styles.footerText}>Powered by IIIT-Delhi</Text>
-          </View>
-        </View>
-      )}
-    </View>
-  );
-};
 
 export const RootNavigator = () => {
   const { width } = useWindowDimensions();
@@ -236,65 +103,77 @@ export const RootNavigator = () => {
     const subscriber = onAuthStateChanged(auth, async (firebaseUser) => {
       if (!isMounted) return;
       
-      if (firebaseUser) {
-        // 1. Fetch Profile
-        const docSnap = await getDoc(doc(db, "users", firebaseUser.uid));
-        if (docSnap.exists()) {
-          const profile = docSnap.data();
-          
-          // 2. Check if User is BANNED
-          if (profile.status === 'BANNED') {
-            await handleSecurityAction('BANNED', 'USER');
-            return;
-          }
-          
-          setUser(firebaseUser);
-          setUserProfile(profile);
-
-          // 3. Register Device
-          const deviceResult = await registerDevice(
-            firebaseUser.uid,
-            profile.name || 'User',
-            profile.email
-          );
-
-          if (deviceResult) {
-            const { deviceId, status, forceLogout } = deviceResult;
-            useAppStore.getState().setDeviceId(deviceId);
-
-            // 4. Check if Device is BANNED or FORCE LOGOUT
-            if (status === 'BANNED') {
-              await handleSecurityAction('BANNED', 'DEVICE');
+      try {
+        if (firebaseUser) {
+          // 1. Fetch Profile
+          const docSnap = await getDoc(doc(db, "users", firebaseUser.uid));
+          if (docSnap.exists()) {
+            const profile = docSnap.data();
+            
+            // 2. Check if User is BANNED
+            if (profile.status === 'BANNED') {
+              await handleSecurityAction('BANNED', 'USER');
               return;
             }
-            if (forceLogout) {
-              await handleSecurityAction('LOGOUT', 'DEVICE');
-              return;
+            
+            setUser(firebaseUser);
+            setUserProfile(profile);
+
+            // Parallelize device registration and ticket fetching for faster startup
+            const [deviceResult] = await Promise.all([
+              registerDevice(
+                firebaseUser.uid,
+                profile.name || 'User',
+                profile.email
+              ),
+              fetchUserTickets(firebaseUser.uid)
+            ]);
+
+            if (deviceResult) {
+              const { deviceId, status, forceLogout } = deviceResult;
+              useAppStore.getState().setDeviceId(deviceId);
+
+              // 4. Check if Device is BANNED or FORCE LOGOUT
+              if (status === 'BANNED') {
+                await handleSecurityAction('BANNED', 'DEVICE');
+                return;
+              }
+              if (forceLogout) {
+                await handleSecurityAction('LOGOUT', 'DEVICE');
+                return;
+              }
+
+              // 5. Listen for realtime security updates
+              securityUnsubscribe = listenToDeviceSecurity(deviceId, async (action) => {
+                await handleSecurityAction(action, 'DEVICE');
+              });
+
+              // 6. Log Login (non-awaited to speed up navigation)
+              logAction({
+                userId: firebaseUser.uid,
+                userName: profile.name || 'User',
+                userEmail: profile.email,
+                action: 'LOGIN',
+                details: 'User logged in successfully',
+                type: 'USER',
+                deviceId
+              }).catch(() => {});
             }
-
-            // 5. Listen for realtime security updates
-            securityUnsubscribe = listenToDeviceSecurity(deviceId, async (action) => {
-               await handleSecurityAction(action, 'DEVICE');
-            });
-
-            // 6. Log Login
-            await logAction({
-              userId: firebaseUser.uid,
-              userName: profile.name || 'User',
-              userEmail: profile.email,
-              action: 'LOGIN',
-              details: 'User logged in successfully',
-              type: 'USER',
-              deviceId
-            });
           }
+        } else {
+          if (securityUnsubscribe) securityUnsubscribe();
+          resetStore();
         }
-        await fetchUserTickets(firebaseUser.uid); 
-      } else {
-        if (securityUnsubscribe) securityUnsubscribe();
-        resetStore();
+      } catch (error: any) {
+        if (error.code === 'permission-denied') {
+          // If we can't read the profile, the user is likely banned
+          await handleSecurityAction('BANNED', 'USER');
+        } else {
+          console.error("Auth state change error:", error);
+        }
+      } finally {
+        if (initializing && isMounted) setInitializing(false);
       }
-      if (initializing && isMounted) setInitializing(false);
     });
     
     return () => {
@@ -319,7 +198,9 @@ export const RootNavigator = () => {
       }
 
       lastBackPressed = now;
-      ToastAndroid.show('Press back again to exit', ToastAndroid.SHORT);
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('Press back again to exit', ToastAndroid.SHORT);
+      }
       return true;
     };
 
@@ -357,13 +238,10 @@ export const RootNavigator = () => {
           }} 
         >
           {!user ? (
-            <>
-              <Stack.Screen name="Login" component={LoginScreen} />
-              <Stack.Screen name="Signup" component={SignupScreen} />
-            </>
+            <Stack.Screen name="Auth" component={AuthNavigator} />
           ) : (
             <>
-              <Stack.Screen name="Main" component={MainTabs} />
+              <Stack.Screen name="Main" component={MainTabNavigator} />
               <Stack.Screen name="RouteDetail" component={RouteDetailScreen} options={{ presentation: 'modal' }} />
               <Stack.Screen name="Notifications" component={NotificationScreen} />
               <Stack.Screen name="Booking" component={BookingScreen} />

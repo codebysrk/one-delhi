@@ -44,7 +44,7 @@ import Animated, {
 import { useAppStore } from "../../store/useAppStore";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../services/firebase";
-import { EliteBottomSheet } from "../../components/EliteBottomSheet";
+import { EliteBottomSheet } from "../../components/layout/EliteBottomSheet";
 
 const AnimatedImage = Animated.createAnimatedComponent(Image);
 import { transform } from "zod";

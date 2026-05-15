@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
   stampLabel: {
     fontSize: 35,
     letterSpacing: 2,
-    fontFamily: 'Exiger',
+    fontFamily: 'StencilBold',
     textAlign: 'center',
     textTransform: 'uppercase',
   }

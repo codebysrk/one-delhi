@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Animated, Platform, StatusBar, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Animated, Platform, StatusBar, Alert } from 'react-native';
+import { Image } from 'expo-image';
 import { useAppStore } from '../../store/useAppStore';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { getLatestActiveTicket, getRouteNumberOnly, formatTimeTo12hr, isTicketExpired } from '../../utils/ticketHelper';
 import QRCode from 'react-native-qrcode-svg';
 import { useKeepAwake } from 'expo-keep-awake';
-import { InvalidStamp } from '../../components/InvalidStamp';
+import { InvalidStamp } from '../../components/ui/InvalidStamp';
 import * as ScreenCapture from 'expo-screen-capture';
 import { usePreventScreenCapture } from 'expo-screen-capture';
 import { logAction } from '../../services/logService';
@@ -202,7 +203,7 @@ export const TicketScreen = ({ navigation, route }: any) => {
 
         {/* Sticky Branding Footer */}
         <View style={styles.footer}>
-          <Image source={logoImg} style={styles.logoImg} resizeMode="contain" />
+          <Image source={logoImg} style={styles.logoImg} contentFit="contain" />
           <Text style={styles.poweredText}>Powered by IIIT-Delhi</Text>
         </View>
       </SafeAreaView>

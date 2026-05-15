@@ -6,7 +6,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { generateTicketId, getRouteNumberOnly } from '../../utils/ticketHelper';
 import { db, auth } from '../../services/firebase';
 import { collection, addDoc, Timestamp, setDoc, doc } from 'firebase/firestore';
-import { PaytmIcon, PhonePeIcon, GPayIcon, AmazonPayIcon } from '../../components/PaymentIcons';
+import { PaytmIcon, PhonePeIcon, GPayIcon, AmazonPayIcon } from '../../components/icons/PaymentIcons';
 import { sanitizePayload } from '../../utils/firebaseUtils';
 import { logAction } from '../../services/logService';
 

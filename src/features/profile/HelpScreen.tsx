@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Platform, ImageBackground, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Platform, ImageBackground } from 'react-native';
+import { Image } from 'expo-image';
 import { useAppStore } from '../../store/useAppStore';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
@@ -141,7 +142,12 @@ export const HelpScreen = ({ navigation }: any) => {
               <View style={styles.headerContent}>
                 <View style={styles.sideItem} />
                 <View style={styles.logoWrapper}>
-                  <Image source={require("../../../assets/images/map-header-logo.webp")} style={styles.logoImage} resizeMode="contain" />
+                  <Image 
+                    source={require("../../../assets/images/map-header-logo.webp")} 
+                    style={styles.logoImage} 
+                    contentFit="contain" 
+                    transition={500}
+                  />
                 </View>
                 <TouchableOpacity onPress={() => navigation.navigate("Settings")} style={styles.sideItem} activeOpacity={0.7}>
                   <MaterialCommunityIcons name="cog" size={28} color="white" />
