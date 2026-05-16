@@ -4,10 +4,10 @@ import {
   Text, 
   StyleSheet, 
   TouchableOpacity, 
-  ImageBackground, 
   Platform, 
   TextInput,
-  ViewStyle
+  ViewStyle,
+  ImageBackground
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';

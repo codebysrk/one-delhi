@@ -27,6 +27,7 @@ import Animated, {
   FadeInDown,
 } from "react-native-reanimated";
 import { FlashList } from "@shopify/flash-list";
+import { ANIMATIONS } from "../../core/theme";
 
 // --- Interfaces ---
 interface RouteData {
@@ -105,7 +106,7 @@ const StopTimelineItem = memo(({
   isLast: boolean;
 }) => (
   <Animated.View 
-    entering={FadeInDown.delay(index * 30).duration(400)}
+    entering={FadeInDown.delay(index * 30).duration(ANIMATIONS.fastTiming.duration)}
     style={styles.stopRow}
   >
     <View style={styles.visualColumn}>
@@ -166,16 +167,13 @@ export const RouteDetailScreen = ({ route, navigation }: any) => {
 
   const showSheet = () => {
     // लाल तीर वाला बटन दबाने पर शीट को वापस बीच वाली (Mid) पोजीशन पर ले जाना
-    translateY.value = withSpring(SNAP_MID, { damping: 25, stiffness: 180 });
+    translateY.value = withSpring(SNAP_MID, ANIMATIONS.fastSpring);
   };
 
   useFocusEffect(
     useCallback(() => {
       // जब भी यूज़र इस स्क्रीन पर आएगा, शीट अपने आप बीच वाली (Mid) पोजीशन पर सेट हो जाएगी
-      translateY.value = withSpring(SNAP_MID, {
-        damping: 25,
-        stiffness: 180,
-      });
+      translateY.value = withSpring(SNAP_MID, ANIMATIONS.fastSpring);
     }, [SNAP_MID]),
   );
 

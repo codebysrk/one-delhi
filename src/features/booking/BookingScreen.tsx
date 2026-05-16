@@ -32,6 +32,7 @@ import Animated, {
 import { getDocs, collection } from "firebase/firestore";
 import { db } from "../../services/firebase";
 import { AppState, AppStateStatus } from "react-native";
+import { ANIMATIONS } from "../../core/theme";
 
 // --- 1. Separate Memoized Item Components for Peak Performance ---
 
@@ -1061,8 +1062,8 @@ export const BookingScreen = ({ navigation }: any) => {
       {/* Toast */}
       {showToast && (
         <Animated.View
-          entering={FadeIn.duration(400)}
-          exiting={FadeOut.duration(400)}
+          entering={FadeIn.duration(ANIMATIONS.fastTiming.duration)}
+          exiting={FadeOut.duration(ANIMATIONS.fastTiming.duration)}
           style={styles.toast}
         >
           <Text style={styles.toastText}>Session expired</Text>

@@ -1,11 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { MapScreen } from '../../features/home/MapScreen';
 import { HomeScreen } from '../../features/home/HomeScreen';
 import { EVScreen } from '../../features/ev/EVScreen';
@@ -14,7 +13,7 @@ import { HelpScreen } from '../../features/profile/HelpScreen';
 import { SearchScreen } from '../../features/home/SearchScreen';
 import { TripPlanIcon } from '../../components/icons/TripPlanIcon';
 import { useAppStore } from '../../store/useAppStore';
-import { COLORS, TYPOGRAPHY, LAYOUT } from '../../core/theme';
+import { COLORS, TYPOGRAPHY, LAYOUT, ANIMATIONS } from '../../core/theme';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -24,31 +23,28 @@ const TabButton = (props: any) => {
   const focused = accessibilityState.selected;
   const scale = useSharedValue(1);
 
+  React.useEffect(() => {
+    scale.value = withSpring(focused ? 1.1 : 1, ANIMATIONS.fastSpring);
+  }, [focused]);
+
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
 
-  const handlePressIn = () => {
-    Haptics.selectionAsync();
-    scale.value = withSpring(0.9, { damping: 10, stiffness: 200 });
-  };
-
-  const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 10, stiffness: 200 });
+  const handlePress = () => {
+    onPress();
   };
 
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      activeOpacity={1}
+    <Pressable
+      onPress={handlePress}
+      android_ripple={{ color: 'rgba(0, 0, 0, 0.1)', borderless: true, radius: 45 }}
       style={styles.tabButton}
     >
       <Animated.View style={[animatedStyle, styles.tabButtonInner]}>
         {props.children}
       </Animated.View>
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 

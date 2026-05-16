@@ -14,7 +14,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-na
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
-import * as Haptics from 'expo-haptics';
+import { ANIMATIONS } from '../../core/theme';
 
 export const PremiumButton = ({
   label,
@@ -31,12 +31,11 @@ export const PremiumButton = ({
   }));
 
   const onPressIn = () => {
-    Haptics.selectionAsync();
-    scale.value = withSpring(0.95, { damping: 10, stiffness: 200 });
+    scale.value = withSpring(0.95, ANIMATIONS.fastSpring);
   };
 
   const onPressOut = () => {
-    scale.value = withSpring(1, { damping: 10, stiffness: 200 });
+    scale.value = withSpring(1, ANIMATIONS.fastSpring);
   };
 
   return (

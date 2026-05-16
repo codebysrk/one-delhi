@@ -320,7 +320,7 @@ export const RootNavigator = () => {
           screenOptions={{ 
             headerShown: false,
             animation: 'slide_from_right',
-            animationDuration: 350,
+            animationDuration: 10,
             gestureEnabled: true,
             gestureDirection: 'horizontal',
           }} 

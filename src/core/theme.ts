@@ -96,3 +96,22 @@ export const LAYOUT = {
   tabBarHeight: 65,
 };
 
+export const ANIMATIONS = {
+  spring: {
+    damping: 20,
+    stiffness: 150,
+    mass: 0.8,
+  },
+  fastSpring: {
+    damping: 15,
+    stiffness: 200,
+    mass: 0.5,
+  },
+  timing: {
+    duration: 300,
+  },
+  fastTiming: {
+    duration: 200,
+  }
+};
+

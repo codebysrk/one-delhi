@@ -35,6 +35,7 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../services/firebase";
 import { EliteBottomSheet } from "../../components/layout/EliteBottomSheet";
 import { MainHeader } from "../../components/layout/MainHeader";
+import { ANIMATIONS } from "../../core/theme";
 
 const SHEET_MIN_HEIGHT = 210;
 
@@ -85,7 +86,7 @@ export const MapScreen = ({ navigation }: any) => {
 
   useFocusEffect(
     useCallback(() => {
-      translateY.value = withSpring(SNAP_MID, { damping: 25, stiffness: 180 });
+      translateY.value = withSpring(SNAP_MID, ANIMATIONS.fastSpring);
     }, []),
   );
 
@@ -125,7 +126,7 @@ export const MapScreen = ({ navigation }: any) => {
   };
 
   const showSheet = () => {
-    translateY.value = withSpring(SNAP_MID, { damping: 25, stiffness: 180 });
+    translateY.value = withSpring(SNAP_MID, ANIMATIONS.fastSpring);
   };
 
   const animatedRedArrowStyle = useAnimatedStyle(() => {
@@ -405,7 +406,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     marginBottom: 15,
-    paddingHorizontal: 20,
+    paddingHorizontal: 0,
   },
   tabBtn: { paddingHorizontal: 18, paddingVertical: 8, borderRadius: 22 },
   activeTabBtn: { backgroundColor: "#C0282C" },

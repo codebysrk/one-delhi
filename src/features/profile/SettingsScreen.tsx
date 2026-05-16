@@ -92,12 +92,16 @@ export const SettingsScreen = ({ navigation }: any) => {
               <TouchableOpacity onPress={handleSave} disabled={loading} style={styles.saveBtn}>
                 {loading ? <ActivityIndicator size="small" color="#C0392B" /> : <Text style={styles.saveText}>Save</Text>}
               </TouchableOpacity>
-            ) : <View style={{ width: 40 }} />}
+            ) : (
+              <TouchableOpacity onPress={handleLogout} style={styles.saveBtn}>
+                <MaterialCommunityIcons name="logout" size={26} color="#C0392B" />
+              </TouchableOpacity>
+            )}
           </View>
         </SafeAreaView>
       </View>
 
-      <ScrollView style={styles.mainContent} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.mainContent} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Basic Information</Text>
           <View style={styles.infoBox}>
@@ -131,16 +135,6 @@ export const SettingsScreen = ({ navigation }: any) => {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Security & Device</Text>
-          <View style={styles.infoBox}>
-             <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Device ID</Text>
-                <Text style={[styles.infoValue, { fontSize: 13, color: '#666' }]}>{deviceId || 'Generating...'}</Text>
-             </View>
-          </View>
-        </View>
-
-        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Others</Text>
           <View style={styles.othersBox}>
             {otherItems.map((item, index) => (
@@ -158,16 +152,6 @@ export const SettingsScreen = ({ navigation }: any) => {
           </View>
         </View>
 
-        <TouchableOpacity 
-          style={[styles.otherRow, { marginTop: 25, paddingVertical: 10 }]}
-          onPress={handleLogout}
-        >
-          <View style={styles.iconBox}>
-             <MaterialCommunityIcons name="logout" size={22} color="#C0392B" />
-          </View>
-          <Text style={[styles.otherLabel, { color: '#C0392B', fontWeight: '700' }]}>Logout</Text>
-        </TouchableOpacity>
-
         <View style={styles.footer}>
            <Text style={styles.footerLabel}>App Version</Text>
            <Text style={styles.versionNumber}>2.0.1</Text>
@@ -182,9 +166,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF' },
   header: { backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0', paddingTop: Platform.OS === 'android' ? 30 : 0 },
   headerContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, height: 60 },
-  backBtn: { padding: 4 },
+  backBtn: { width: 50, height: 44, justifyContent: 'center', alignItems: 'flex-start' },
   headerTitle: { color: '#333', fontSize: 26, fontWeight: '400', flex: 1, textAlign: 'center' },
-  saveBtn: { padding: 8 },
+  saveBtn: { width: 50, height: 44, justifyContent: 'center', alignItems: 'flex-end' },
   saveText: { color: '#C0392B', fontWeight: '700', fontSize: 16 },
   mainContent: { flex: 1, paddingHorizontal: 20 },
   section: { marginTop: 15 },

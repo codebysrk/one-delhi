@@ -18,7 +18,7 @@ import Animated, {
   useAnimatedReaction,
   runOnJS,
 } from "react-native-reanimated";
-import { COLORS, SHADOWS, RADII, SPACING } from "../../core/theme";
+import { COLORS, SHADOWS, RADII, SPACING, ANIMATIONS } from "../../core/theme";
 
 interface EliteBottomSheetProps {
   children: React.ReactNode;
@@ -57,7 +57,7 @@ export const EliteBottomSheet = ({
     })
     .onEnd((event) => {
       const { velocityY } = event;
-      const springConfig = { damping: 25, stiffness: 180, mass: 0.8 };
+      const springConfig = ANIMATIONS.fastSpring;
 
       if (Math.abs(velocityY) > SNAP_VELOCITY) {
         const direction = velocityY < 0 ? -1 : 1;

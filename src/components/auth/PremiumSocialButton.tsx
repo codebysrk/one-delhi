@@ -11,6 +11,7 @@ interface PremiumSocialButtonProps {
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+import { ANIMATIONS } from '../../core/theme';
 
 export const PremiumSocialButton = ({ provider, label, onPress }: PremiumSocialButtonProps) => {
   const isGoogle = provider === 'google';
@@ -21,11 +22,11 @@ export const PremiumSocialButton = ({ provider, label, onPress }: PremiumSocialB
   }));
 
   const onPressIn = () => {
-    scale.value = withSpring(0.97, { damping: 10, stiffness: 300 });
+    scale.value = withSpring(0.97, ANIMATIONS.fastSpring);
   };
 
   const onPressOut = () => {
-    scale.value = withSpring(1, { damping: 10, stiffness: 300 });
+    scale.value = withSpring(1, ANIMATIONS.fastSpring);
   };
   
   return (
