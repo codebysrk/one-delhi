@@ -4,44 +4,30 @@ import {
   Text, 
   StyleSheet, 
   TouchableOpacity, 
-  ImageBackground, 
   TextInput, 
   StatusBar,
   ScrollView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
+import { MainHeader } from '../../components/layout/MainHeader';
 
 export const TripPlanScreen = ({ navigation }: any) => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
       
-      {/* Premium Header */}
-      <View style={styles.headerArea}>
-        <ImageBackground 
-          source={require('../../../assets/images/map-header.webp')}
-          style={styles.headerBg}
-          imageStyle={{ opacity: 1 }}
-        >
-          <View style={styles.headerOverlay}>
-            <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-              <View style={styles.topBar}>
-                <View style={{ width: 40 }} />
-                <Image 
-                  source={require('../../../assets/images/map-header-logo.webp')}
-                  style={styles.headerLogo}
-                  contentFit="contain"
-                />
-                <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
-                  <MaterialCommunityIcons name="cog" size={26} color="white" />
-                </TouchableOpacity>
-              </View>
-            </SafeAreaView>
-          </View>
-        </ImageBackground>
-      </View>
+      {/* Shared Premium Header */}
+      <MainHeader 
+        style={styles.headerArea}
+        showSearch={false}
+        imageStyle={{ resizeMode: 'stretch', opacity: 1, transform: [{ translateY: 85 }, { scaleX: 1 }, { scaleY: 2.2 }] }}
+        rightElement={
+          <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
+            <MaterialCommunityIcons name="cog" size={26} color="white" />
+          </TouchableOpacity>
+        }
+      />
 
       {/* Main Form Content */}
       <View style={styles.content}>
@@ -103,7 +89,7 @@ export const TripPlanScreen = ({ navigation }: any) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'white' },
-  headerArea: { height: 110 },
+  headerArea: { height: 90, overflow: 'hidden' },
   headerBg: { flex: 1 },
   headerOverlay: { flex: 1, backgroundColor: 'rgba(168, 28, 20, 0.7)' },
   topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', height: 60, paddingHorizontal: 15 },

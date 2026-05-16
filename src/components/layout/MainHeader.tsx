@@ -38,7 +38,7 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
       <ImageBackground
         source={require("../../../assets/images/map-header.webp")}
         style={styles.headerBg}
-        imageStyle={[{ opacity: 1, resizeMode: 'cover', transform: [{ translateY: 35}] }, imageStyle]}
+        imageStyle={[{ opacity: .9, resizeMode: 'stretch', transform: [{ translateY: 55},{ scaleX: 1 }, { scaleY: 1.3 }] }, imageStyle]}
       >
         <View style={styles.darkOverlay}>
           <SafeAreaView style={styles.safeHeader} edges={["top", "left", "right"]}>
@@ -97,13 +97,13 @@ const styles = StyleSheet.create({
     /* DEFAULT HEADER HEIGHT FOR MAP/EV SCREENS */
     height: 160,
     overflow: "hidden",
-    backgroundColor: '#C0282C',
+    backgroundColor: '#A51F38',
   },
   headerBg: { flex: 1 },
   darkOverlay: { 
     flex: 1, 
     /* TIP: ADJUST '0.12' FOR BLENDING (0.0 to 1.0) OR USE 'transparent' TO REMOVE */
-    backgroundColor: "rgba(248, 188, 9, 0.1)" 
+    backgroundColor: "rgba(167, 167, 167, 0)" 
   },
   safeHeader: { flex: 1 },
   topBar: {

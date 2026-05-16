@@ -20,14 +20,18 @@ import {
   useWindowDimensions,
   BackHandler,
   Platform,
-  FlatList,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { useAppStore } from "../../store/useAppStore";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import Animated, {
   FadeIn,
   FadeOut,
+  useSharedValue,
+  useAnimatedStyle,
+  FadeInUp,
+  FadeOutDown,
 } from "react-native-reanimated";
 import { getDocs, collection } from "firebase/firestore";
 import { db } from "../../services/firebase";
@@ -36,57 +40,87 @@ import { ANIMATIONS } from "../../core/theme";
 
 // --- 1. Separate Memoized Item Components for Peak Performance ---
 
-const RouteItem = React.memo(({ item, index, onSelect }: { item: any; index: number; onSelect: (item: any) => void }) => {
-  const _onPress = useCallback(() => onSelect(item), [item, onSelect]);
-  return (
-    <TouchableOpacity
-      activeOpacity={0.7}
-      style={[styles.routeItem, index === 0 && { borderTopWidth: 0 }]}
-      onPress={_onPress}
-    >
-      <View style={styles.routeItemContent}>
-        <View style={styles.routeIconHeader}>
-          <MaterialCommunityIcons name="bus" size={22} color="#000000ff" style={{ marginLeft: -5 }} />
-          <Text style={styles.routeNumberText}>
-            {item.id?.replace(/UP$|DOWN$/, "")}
+const RouteItem = React.memo(
+  ({
+    item,
+    index,
+    onSelect,
+  }: {
+    item: any;
+    index: number;
+    onSelect: (item: any) => void;
+  }) => {
+    const _onPress = useCallback(() => onSelect(item), [item, onSelect]);
+    return (
+      <TouchableOpacity
+        activeOpacity={0.7}
+        style={[styles.routeItem, index === 0 && { borderTopWidth: 0 }]}
+        onPress={_onPress}
+      >
+        <View style={styles.routeItemContent}>
+          <View style={styles.routeIconHeader}>
+            <MaterialCommunityIcons
+              name="bus"
+              size={22}
+              color="#000000ff"
+              style={{ marginLeft: -5 }}
+            />
+            <Text style={styles.routeNumberText}>
+              {item.id?.replace(/UP$|DOWN$/, "")}
+            </Text>
+          </View>
+          <View style={styles.routeVisualPath}>
+            <View style={styles.routePathVisualizer}>
+              <View style={[styles.routeCircle, styles.routeCircleTop]} />
+              <View style={styles.routeLine} />
+              <View style={[styles.routeCircle, styles.routeCircleBottom]} />
+            </View>
+            <View style={styles.routeLabels}>
+              <Text style={styles.routeTerminalLabel} numberOfLines={1}>
+                {item.stops?.[0]}
+              </Text>
+              <Text style={styles.routeTerminalLabel} numberOfLines={1}>
+                {item.stops?.[item.stops.length - 1]}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  },
+);
+
+const StopItem = React.memo(
+  ({
+    item,
+    index,
+    onSelect,
+    activeInput,
+  }: {
+    item: any;
+    index: number;
+    onSelect: (type: any, item: any) => void;
+    activeInput: any;
+  }) => {
+    const _onPress = useCallback(
+      () => onSelect(activeInput, item),
+      [activeInput, item, onSelect],
+    );
+    return (
+      <TouchableOpacity
+        activeOpacity={0.6}
+        style={[styles.stopItem, index === 0 && { borderTopWidth: 0 }]}
+        onPress={_onPress}
+      >
+        <View style={styles.stopItemRow}>
+          <Text style={styles.stopItemText} numberOfLines={1}>
+            {item}
           </Text>
         </View>
-        <View style={styles.routeVisualPath}>
-          <View style={styles.routePathVisualizer}>
-            <View style={[styles.routeCircle, styles.routeCircleTop]} />
-            <View style={styles.routeLine} />
-            <View style={[styles.routeCircle, styles.routeCircleBottom]} />
-          </View>
-          <View style={styles.routeLabels}>
-            <Text style={styles.routeTerminalLabel} numberOfLines={1}>
-              {item.stops?.[0]}
-            </Text>
-            <Text style={styles.routeTerminalLabel} numberOfLines={1}>
-              {item.stops?.[item.stops.length - 1]}
-            </Text>
-          </View>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-});
-
-const StopItem = React.memo(({ item, index, onSelect, activeInput }: { item: any; index: number; onSelect: (type: any, item: any) => void; activeInput: any }) => {
-  const _onPress = useCallback(() => onSelect(activeInput, item), [activeInput, item, onSelect]);
-  return (
-    <TouchableOpacity
-      activeOpacity={0.6}
-      style={[styles.stopItem, index === 0 && { borderTopWidth: 0 }]}
-      onPress={_onPress}
-    >
-      <View style={styles.stopItemRow}>
-        <Text style={styles.stopItemText} numberOfLines={1}>
-          {item}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
-});
+      </TouchableOpacity>
+    );
+  },
+);
 
 interface Route {
   id: string;
@@ -103,8 +137,8 @@ interface FareSlab {
 }
 
 const FARE_SLABS: FareSlab[] = [
-  { minStops: 1, maxStops: 4, nonACFare: 5, acFare: 10 },    // Tier 1: Small distance
-  { minStops: 5, maxStops: 9, nonACFare: 10, acFare: 15 },   // Tier 2: Medium distance
+  { minStops: 1, maxStops: 4, nonACFare: 5, acFare: 10 }, // Tier 1: Small distance
+  { minStops: 5, maxStops: 9, nonACFare: 10, acFare: 15 }, // Tier 2: Medium distance
   { minStops: 10, maxStops: 14, nonACFare: 15, acFare: 20 }, // Tier 3: Long distance
   { minStops: 15, maxStops: Infinity, nonACFare: 15, acFare: 25 }, // Tier 4: Very long distance
 ];
@@ -163,24 +197,46 @@ const validateManualFare = (
   return { isValid: true, status: "VALID" };
 };
 
-const TimerPill = React.memo(({ timeLeft }: { timeLeft: number }) => {
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
+const TimerPill = React.memo(
+  ({ timeLeft }: { timeLeft: Animated.SharedValue<number> }) => {
+    const animatedProps = useAnimatedStyle(() => {
+      const seconds = Math.floor(timeLeft.value);
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      const timeStr = `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+      return {
+        text: `Pay within ${timeStr}`,
+      };
+    });
 
-  return (
-    <View style={styles.timerContainer}>
-      <View style={styles.timerPill}>
-        <Text style={styles.timerText}>
-          Pay within{" "}
-          <Text style={styles.timerBold}>{formatTime(timeLeft)}</Text>
-        </Text>
+    // Alternative for text display in Reanimated without frequent re-renders
+    const [displayTime, setDisplayTime] = useState("03:00");
+
+    // Since Animated.Text doesn't support shared value directly for content easily in all versions,
+    // we'll use a local state inside THIS small component only.
+    useEffect(() => {
+      const interval = setInterval(() => {
+        const seconds = Math.floor(timeLeft.value);
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        setDisplayTime(
+          `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`,
+        );
+      }, 1000);
+      return () => clearInterval(interval);
+    }, [timeLeft]);
+
+    return (
+      <View style={styles.timerContainer}>
+        <View style={styles.timerPill}>
+          <Text style={styles.timerText}>
+            Pay within <Text style={styles.timerBold}>{displayTime}</Text>
+          </Text>
+        </View>
       </View>
-    </View>
-  );
-});
+    );
+  },
+);
 
 const BusTypeSelector = React.memo(
   ({
@@ -199,7 +255,9 @@ const BusTypeSelector = React.memo(
             style={[
               styles.typeBtn,
               busType === type &&
-                (type === "AC" ? styles.typeBtnActive : styles.typeBtnActiveNonAC),
+                (type === "AC"
+                  ? styles.typeBtnActive
+                  : styles.typeBtnActiveNonAC),
             ]}
             onPress={() => onTypeChange(type)}
           >
@@ -294,8 +352,9 @@ const FareDisplay = React.memo(
 
 export const BookingScreen = ({ navigation }: any) => {
   // --- 1. Hooks & State ---
-  const { setShowFooter } = useAppStore();
-  const [timeLeft, setTimeLeft] = useState(180);
+  const setShowFooter = useAppStore((state) => state.setShowFooter);
+  const timeLeft = useSharedValue(180);
+  const [timeLeftForLogic, setTimeLeftForLogic] = useState(180); // Still need this for navigation logic but we can update it less frequently or only at 0
   const [busType, setBusType] = useState<"AC" | "Non-AC">("AC");
   const [qty, setQty] = useState(1);
 
@@ -311,9 +370,15 @@ export const BookingScreen = ({ navigation }: any) => {
   const [selectedFullRouteId, setSelectedFullRouteId] = useState("");
   const [dbRoutes, setDbRoutes] = useState<Route[]>([]);
   const [isDbLoading, setIsDbLoading] = useState(true);
-  const [routeSelection, setRouteSelection] = useState<{start:number;end:number}|undefined>(undefined);
-  const [sourceSelection, setSourceSelection] = useState<{start:number;end:number}|undefined>(undefined);
-  const [destSelection, setDestSelection] = useState<{start:number;end:number}|undefined>(undefined);
+  const [routeSelection, setRouteSelection] = useState<
+    { start: number; end: number } | undefined
+  >(undefined);
+  const [sourceSelection, setSourceSelection] = useState<
+    { start: number; end: number } | undefined
+  >(undefined);
+  const [destSelection, setDestSelection] = useState<
+    { start: number; end: number } | undefined
+  >(undefined);
 
   // Fare calculation state
   const [validationStatus, setValidationStatus] = useState<
@@ -371,7 +436,8 @@ export const BookingScreen = ({ navigation }: any) => {
     setDestSearch("");
     setQty(1);
     setBusType("AC");
-    setTimeLeft(180);
+    timeLeft.value = 180;
+    setTimeLeftForLogic(180);
     setActiveInput(null);
   }, []);
 
@@ -392,25 +458,25 @@ export const BookingScreen = ({ navigation }: any) => {
         setIsDbLoading(true);
         const querySnapshot = await getDocs(collection(db, "routes"));
         const fetchedRoutes: Route[] = [];
-        
+
         querySnapshot.forEach((docSnap) => {
           const r = docSnap.data();
           if (r.directions?.up) {
             fetchedRoutes.push({
               id: `${r.route}UP`,
               name: `${r.route} UP`,
-              stops: r.directions.up.stops
+              stops: r.directions.up.stops,
             });
           }
           if (r.directions?.down) {
             fetchedRoutes.push({
               id: `${r.route}DOWN`,
               name: `${r.route} DOWN`,
-              stops: r.directions.down.stops
+              stops: r.directions.down.stops,
             });
           }
         });
-        
+
         setDbRoutes(fetchedRoutes);
       } catch (error) {
         console.error("Error fetching routes:", error);
@@ -422,8 +488,6 @@ export const BookingScreen = ({ navigation }: any) => {
     fetchRoutes();
   }, []);
 
-
-
   // Real-Time Sync Timer Logic with AppState resilience
   useEffect(() => {
     const startTime = Date.now();
@@ -432,8 +496,13 @@ export const BookingScreen = ({ navigation }: any) => {
     const updateTimer = () => {
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
       const remaining = Math.max(0, duration - elapsed);
-      setTimeLeft(remaining);
-      
+      timeLeft.value = remaining;
+
+      // Update logic state only when it hits 0 to trigger navigation
+      if (remaining === 0) {
+        setTimeLeftForLogic(0);
+      }
+
       if (remaining <= 0 && timerRef.current) {
         clearInterval(timerRef.current);
       }
@@ -441,11 +510,14 @@ export const BookingScreen = ({ navigation }: any) => {
 
     timerRef.current = setInterval(updateTimer, 1000);
 
-    const subscription = AppState.addEventListener("change", (nextAppState: AppStateStatus) => {
-      if (nextAppState === "active") {
-        updateTimer();
-      }
-    });
+    const subscription = AppState.addEventListener(
+      "change",
+      (nextAppState: AppStateStatus) => {
+        if (nextAppState === "active") {
+          updateTimer();
+        }
+      },
+    );
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -479,7 +551,7 @@ export const BookingScreen = ({ navigation }: any) => {
   }, [activeInput]);
 
   useEffect(() => {
-    if (timeLeft === 0) {
+    if (timeLeftForLogic === 0) {
       setShowToast(true);
       setTimeout(() => {
         setShowToast(false);
@@ -487,7 +559,7 @@ export const BookingScreen = ({ navigation }: any) => {
         navigation.navigate("Main");
       }, 1000);
     }
-  }, [timeLeft, navigation, resetForm]);
+  }, [timeLeftForLogic, navigation, resetForm]);
 
   // Auto fare calculation based on stop count and bus type
   const calculateAutoFare = useCallback(() => {
@@ -579,7 +651,7 @@ export const BookingScreen = ({ navigation }: any) => {
   const getFinalFare = useCallback(() => {
     const currentFare = getCurrentFare();
     const subTotal = currentFare.fare * qty;
-    
+
     // Apply 10% discount for mobile booking (standard One Delhi rule)
     const discountAmount = subTotal * 0.1;
     const discountedTotal = subTotal - discountAmount;
@@ -738,7 +810,10 @@ export const BookingScreen = ({ navigation }: any) => {
       return {
         bottom: windowHeight - inputTop,
         maxHeight: spaceAbove,
-        positionStyle: { bottom: windowHeight - inputTop, maxHeight: spaceAbove },
+        positionStyle: {
+          bottom: windowHeight - inputTop,
+          maxHeight: spaceAbove,
+        },
       };
     } else {
       return {
@@ -827,24 +902,38 @@ export const BookingScreen = ({ navigation }: any) => {
     },
     [handleFocus],
   );
-  
+
   // Auto-focus logic using useEffect to handle async state updates properly
   useEffect(() => {
-    if (selectedFullRouteId && !sourceSearch && !activeInput && !autoFocusTrack.current.route) {
+    if (
+      selectedFullRouteId &&
+      !sourceSearch &&
+      !activeInput &&
+      !autoFocusTrack.current.route
+    ) {
       autoFocusTrack.current.route = true;
       handleFocus("source");
-    } else if (selectedFullRouteId && sourceSearch && !destSearch && !activeInput && !autoFocusTrack.current.source) {
+    } else if (
+      selectedFullRouteId &&
+      sourceSearch &&
+      !destSearch &&
+      !activeInput &&
+      !autoFocusTrack.current.source
+    ) {
       autoFocusTrack.current.source = true;
       handleFocus("dest");
     }
-    
+
     // Reset tracking if fields are cleared
     if (!selectedFullRouteId) autoFocusTrack.current.route = false;
     if (!sourceSearch) autoFocusTrack.current.source = false;
   }, [selectedFullRouteId, sourceSearch, destSearch, handleFocus, activeInput]);
 
   // Use the memoized components in renderItem
-  const onRouteSelect = useCallback((item: any) => handleSelect("route", item), [handleSelect]);
+  const onRouteSelect = useCallback(
+    (item: any) => handleSelect("route", item),
+    [handleSelect],
+  );
 
   const renderRouteItem = useCallback(
     ({ item, index }: { item: any; index: number }) => (
@@ -855,7 +944,12 @@ export const BookingScreen = ({ navigation }: any) => {
 
   const renderSourceDestItem = useCallback(
     ({ item, index }: { item: any; index: number }) => (
-      <StopItem item={item} index={index} onSelect={handleSelect} activeInput={activeInput} />
+      <StopItem
+        item={item}
+        index={index}
+        onSelect={handleSelect}
+        activeInput={activeInput}
+      />
     ),
     [activeInput, handleSelect],
   );
@@ -868,8 +962,15 @@ export const BookingScreen = ({ navigation }: any) => {
       <View style={styles.header}>
         <SafeAreaView>
           <View style={styles.headerRow}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-              <MaterialCommunityIcons name="arrow-left" size={26} color="#FFF" />
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backBtn}
+            >
+              <MaterialCommunityIcons
+                name="arrow-left"
+                size={26}
+                color="#FFF"
+              />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Buy tickets</Text>
             <View style={styles.backBtn} />
@@ -884,7 +985,12 @@ export const BookingScreen = ({ navigation }: any) => {
           {/* Route Input */}
           <View style={styles.inputSection}>
             <Text style={styles.inputLabel}>Route Info</Text>
-            <View style={[styles.inputBox, activeInput === "route" && styles.inputBoxFocused]}>
+            <View
+              style={[
+                styles.inputBox,
+                activeInput === "route" && styles.inputBoxFocused,
+              ]}
+            >
               <View style={styles.inputIcon}>
                 <MaterialIcons name="route" size={24} color="#000" />
               </View>
@@ -902,18 +1008,19 @@ export const BookingScreen = ({ navigation }: any) => {
                 scrollEnabled
                 selection={routeSelection}
               />
-
             </View>
           </View>
 
           {/* Source/Destination */}
           <View style={styles.inputSection}>
             <Text style={styles.inputLabel}>From - To</Text>
-            <View style={[
-              styles.inputBox, 
-              activeInput === "source" && styles.inputBoxFocused,
-              !selectedFullRouteId && styles.inputBoxDisabled
-            ]}>
+            <View
+              style={[
+                styles.inputBox,
+                activeInput === "source" && styles.inputBoxFocused,
+                !selectedFullRouteId && styles.inputBoxDisabled,
+              ]}
+            >
               <View style={styles.inputIcon}>
                 <View style={styles.stopDot} />
               </View>
@@ -930,16 +1037,22 @@ export const BookingScreen = ({ navigation }: any) => {
                 scrollEnabled
                 selection={sourceSelection}
               />
-
             </View>
 
-            <View style={[
-              styles.inputBox, 
-              activeInput === "dest" && styles.inputBoxFocused,
-              (!selectedFullRouteId || !sourceSearch) && styles.inputBoxDisabled
-            ]}>
+            <View
+              style={[
+                styles.inputBox,
+                activeInput === "dest" && styles.inputBoxFocused,
+                (!selectedFullRouteId || !sourceSearch) &&
+                  styles.inputBoxDisabled,
+              ]}
+            >
               <View style={styles.inputIcon}>
-                <MaterialCommunityIcons name="map-marker" size={20} color="#000" />
+                <MaterialCommunityIcons
+                  name="map-marker"
+                  size={20}
+                  color="#000"
+                />
               </View>
               <TextInput
                 ref={destInputRef}
@@ -954,7 +1067,6 @@ export const BookingScreen = ({ navigation }: any) => {
                 scrollEnabled
                 selection={destSelection}
               />
-
             </View>
           </View>
 
@@ -990,10 +1102,19 @@ export const BookingScreen = ({ navigation }: any) => {
         <TouchableOpacity
           style={[
             styles.buyBtn,
-            (!routeSearch || !sourceSearch || !destSearch || validationStatus !== "VALID") && styles.buyBtnDisabled,
+            (!routeSearch ||
+              !sourceSearch ||
+              !destSearch ||
+              validationStatus !== "VALID") &&
+              styles.buyBtnDisabled,
           ]}
           onPress={handleBuy}
-          disabled={!routeSearch || !sourceSearch || !destSearch || validationStatus !== "VALID"}
+          disabled={
+            !routeSearch ||
+            !sourceSearch ||
+            !destSearch ||
+            validationStatus !== "VALID"
+          }
         >
           <Text style={styles.buyText}>BUY</Text>
         </TouchableOpacity>
@@ -1001,9 +1122,13 @@ export const BookingScreen = ({ navigation }: any) => {
 
       {/* Dropdown List */}
       {activeInput && dropdownPlacement && measuredPos.width > 0 && (
-        <View
+        <Animated.View
+          entering={FadeInUp.duration(150)}
+          exiting={FadeOutDown.duration(100)}
           style={[
-            activeInput === "route" ? styles.routeDropdown : styles.stopDropdown,
+            activeInput === "route"
+              ? styles.routeDropdown
+              : styles.stopDropdown,
             {
               position: "absolute",
               left: measuredPos.x + 60,
@@ -1014,7 +1139,8 @@ export const BookingScreen = ({ navigation }: any) => {
             },
           ]}
         >
-          <FlatList
+          <FlashList
+            estimatedItemSize={60}
             showsVerticalScrollIndicator={false}
             data={
               activeInput === "route"
@@ -1056,7 +1182,7 @@ export const BookingScreen = ({ navigation }: any) => {
               activeInput === "route" ? renderRouteItem : renderSourceDestItem
             }
           />
-        </View>
+        </Animated.View>
       )}
 
       {/* Toast */}

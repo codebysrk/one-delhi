@@ -30,9 +30,7 @@ export default function App() {
   const { width, height } = useWindowDimensions();
   const [appIsReady, setAppIsReady] = useState(false);
   const [fontsLoaded] = useFonts({
-    'Exiger': require('./assets/fonts/Exiger-Stamp.otf'),
     'StencilBold': require('./assets/fonts/OPTIStencil-Bold.otf'),
-    'StencilDisplay': require('./assets/fonts/StencilDisplayOpti.otf'),
   });
 
   useEffect(() => {

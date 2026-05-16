@@ -9,13 +9,13 @@ interface InvalidStampProps {
   size?: number;
 }
 
-export const InvalidStamp: React.FC<InvalidStampProps> = ({ 
+export const InvalidStamp = React.memo(({ 
   text = "INVALID", 
   color = "#971d1dff",
   rotation = "-12deg",
   style,
   size = 35
-}) => {
+}: InvalidStampProps) => {
   return (
     <View style={[style, { transform: [{ rotate: rotation }] }]}>
       <View style={[styles.stampBox, { borderColor: color, paddingHorizontal: size * 0.2, paddingVertical: 1 }]}>
@@ -23,7 +23,7 @@ export const InvalidStamp: React.FC<InvalidStampProps> = ({
       </View>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   stampBox: {

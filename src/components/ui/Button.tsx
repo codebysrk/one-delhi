@@ -23,7 +23,7 @@ interface ButtonProps {
   textStyle?: TextStyle;
 }
 
-export const Button: React.FC<ButtonProps> = ({
+export const Button = React.memo(({
   title,
   onPress,
   type = 'primary',
@@ -33,7 +33,7 @@ export const Button: React.FC<ButtonProps> = ({
   icon,
   style,
   textStyle,
-}) => {
+}: ButtonProps) => {
   const isOutline = type === 'outline';
   const isSecondary = type === 'secondary';
   const isGhost = type === 'ghost';
@@ -59,7 +59,7 @@ export const Button: React.FC<ButtonProps> = ({
     <TouchableOpacity
       onPress={onPress}
       disabled={disabled || loading}
-      activeOpacity={0.8}
+      activeOpacity={0.6}
       style={containerStyles}
     >
       {loading ? (
@@ -79,7 +79,7 @@ export const Button: React.FC<ButtonProps> = ({
       )}
     </TouchableOpacity>
   );
-};
+});
 
 const styles = StyleSheet.create({
   base: {

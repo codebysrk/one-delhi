@@ -16,7 +16,7 @@ interface TicketCardProps {
   fullStampOpacity?: boolean;
 }
 
-export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onPress, showTimer, largeText, showTID = true, hideDivider = false, compact = false, use12hrFormat = false, fullStampOpacity = false }) => {
+export const TicketCard = React.memo(({ ticket, onPress, showTimer, largeText, showTID = true, hideDivider = false, compact = false, use12hrFormat = false, fullStampOpacity = false }: TicketCardProps) => {
   const expired = isTicketExpired(ticket.timestamp);
   const isInvalid = ticket.status === TicketStatus.INVALID;
   
@@ -104,7 +104,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onPress, showTim
       </View>
     </TouchableOpacity>
   );
-};
+});
 
 const styles = StyleSheet.create({
   card: { 

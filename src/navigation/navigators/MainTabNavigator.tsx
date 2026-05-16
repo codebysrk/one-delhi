@@ -38,7 +38,7 @@ const TabButton = (props: any) => {
   return (
     <Pressable
       onPress={handlePress}
-      android_ripple={{ color: 'rgba(0, 0, 0, 0.1)', borderless: true, radius: 45 }}
+      android_ripple={{ color: 'rgba(0, 0, 0, 0.25)', borderless: true, radius: 45 }}
       style={styles.tabButton}
     >
       <Animated.View style={[animatedStyle, styles.tabButtonInner]}>

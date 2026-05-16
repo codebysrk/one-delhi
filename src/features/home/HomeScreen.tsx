@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { StyleSheet, Text, View, TouchableOpacity } from "react-native";
 import { Image } from "expo-image";
 import { Screen } from "../../components/layout/Screen";
@@ -22,7 +22,8 @@ interface HomeScreenProps {
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
-  const { tickets, setShowFooter } = useAppStore();
+  const tickets = useAppStore(state => state.tickets);
+  const setShowFooter = useAppStore(state => state.setShowFooter);
   const [tick, setTick] = useState(0);
 
   // Real-time update every minute to refresh timer/expiry
@@ -43,6 +44,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     [tickets, tick],
   );
 
+  const handleNavigate = useCallback((screen: keyof RootStackParamList) => {
+    navigation.navigate(screen);
+  }, [navigation]);
+
   return (
     <Screen noPadding backgroundColor="#F5F5F5" scrollable>
       <View style={styles.headerIllustration}>
@@ -59,7 +64,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <View style={styles.gridContainer}>
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => navigation.navigate("Booking")}
+            onPress={() => handleNavigate("Booking")}
           >
             <Text style={styles.actionTitle}>Bus{"\n"}Ticket</Text>
             <View
@@ -74,7 +79,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => navigation.navigate("Pass")}
+            onPress={() => handleNavigate("Pass")}
           >
             <View style={styles.newBadgeCenter}>
               <Text style={styles.newBadgeText}>New</Text>
@@ -92,7 +97,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
           <TouchableOpacity
             style={[styles.actionCard, { backgroundColor: "#D9D9D9" }]}
-            onPress={() => navigation.navigate("ComingSoon")}
+            onPress={() => handleNavigate("ComingSoon")}
           >
             <Text style={styles.actionTitle}>Metro{"\n"}Ticket</Text>
             <View
@@ -110,7 +115,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionLabel}>My Bus Ticket</Text>
-            <TouchableOpacity onPress={() => navigation.navigate("History")}>
+            <TouchableOpacity onPress={() => handleNavigate("History")}>
               <Text style={styles.viewAll}>View all tickets</Text>
             </TouchableOpacity>
           </View>
@@ -118,7 +123,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           {latestTicket ? (
             <TicketCard
               ticket={latestTicket}
-              onPress={() => navigation.navigate("Ticket")}
+              onPress={() => handleNavigate("Ticket")}
               showTimer={false}
               largeText={true}
               showTID={false}
@@ -136,7 +141,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionLabel}>My Metro Ticket</Text>
-            <TouchableOpacity onPress={() => navigation.navigate("History")}>
+            <TouchableOpacity onPress={() => handleNavigate("History")}>
               <Text style={styles.viewAll}>View all tickets</Text>
             </TouchableOpacity>
           </View>
@@ -149,13 +154,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionLabel}>My Bus Pass</Text>
-            <TouchableOpacity onPress={() => navigation.navigate("History")}>
+            <TouchableOpacity onPress={() => handleNavigate("History")}>
               <Text style={styles.viewAll}>View all passes</Text>
             </TouchableOpacity>
           </View>
           <TouchableOpacity
             style={styles.bottomEmptyCard}
-            onPress={() => navigation.navigate("Pass")}
+            onPress={() => handleNavigate("Pass")}
           >
             <Text style={styles.bottomEmptyText}>Click to View</Text>
           </TouchableOpacity>

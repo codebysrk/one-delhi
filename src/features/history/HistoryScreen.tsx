@@ -1,14 +1,18 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, SafeAreaView, StatusBar, Platform, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Platform, RefreshControl, ActivityIndicator } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../../services/firebase';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { TicketCard } from '../../components/ui/TicketCard';
 import { getRouteNumberOnly, formatTimeTo12hr, isTicketExpired } from '../../utils/ticketHelper';
 import { useAppStore } from '../../store/useAppStore';
+import { Skeleton } from '../../components/ui/Skeleton';
 
 export const HistoryScreen = ({ navigation }: any) => {
-  const { user, tickets: cachedTickets, setTickets } = useAppStore();
+  const user = useAppStore(state => state.user);
+  const cachedTickets = useAppStore(state => state.tickets);
+  const setTickets = useAppStore(state => state.setTickets);
   const [loading, setLoading] = useState(cachedTickets.length === 0);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -61,8 +65,24 @@ export const HistoryScreen = ({ navigation }: any) => {
 
   if (loading) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#D32F2F" />
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <SafeAreaView>
+            <View style={styles.headerContent}>
+              <View style={styles.backBtn}>
+                <Skeleton width={28} height={28} borderRadius={14} />
+              </View>
+              <Skeleton width={150} height={24} />
+            </View>
+          </SafeAreaView>
+        </View>
+        <View style={styles.listContent}>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <View key={i} style={styles.cardWrapper}>
+              <Skeleton width="100%" height={150} borderRadius={0} />
+            </View>
+          ))}
+        </View>
       </View>
     );
   }
@@ -83,12 +103,13 @@ export const HistoryScreen = ({ navigation }: any) => {
       </View>
 
       {cachedTickets.length > 0 ? (
-        <FlatList
+        <FlashList
           data={cachedTickets}
           renderItem={renderTicketItem}
           keyExtractor={(item) => item.id || item.tid}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          estimatedItemSize={160}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#D32F2F']} />
           }

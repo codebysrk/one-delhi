@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback, memo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Platform, ImageBackground, ScrollView, useWindowDimensions } from 'react-native';
 import { Image } from "expo-image";
 import { useAppStore } from "../../store/useAppStore";
@@ -266,15 +266,15 @@ export const HelpScreen = ({ navigation }: any) => {
     return data;
   }, []);
 
-  const handleTabPress = (tab: "FAQs" | "Complaints") => {
+  const handleTabPress = useCallback((tab: "FAQs" | "Complaints") => {
     setActiveTab(tab);
     scrollRef.current?.scrollTo({
       x: tab === "FAQs" ? 0 : width,
       animated: true,
     });
-  };
+  }, [width]);
 
-  const handleScroll = (event: any) => {
+  const handleScroll = useCallback((event: any) => {
     const xOffset = event.nativeEvent.contentOffset.x;
     scrollX.value = xOffset;
     if (xOffset >= width / 2 && activeTab !== "Complaints") {
@@ -282,17 +282,17 @@ export const HelpScreen = ({ navigation }: any) => {
     } else if (xOffset < width / 2 && activeTab !== "FAQs") {
       setActiveTab("FAQs");
     }
-  };
+  }, [width, activeTab, scrollX]);
 
   const indicatorStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: (scrollX.value / width) * (width / 2) }],
   }));
 
-  const toggleExpand = (id: string) => {
-    setExpandedId(expandedId === id ? null : id);
-  };
+  const toggleExpand = useCallback((id: string) => {
+    setExpandedId(prev => prev === id ? null : id);
+  }, []);
 
-  const renderItem = ({ item }: { item: any }) => {
+  const renderItem = useCallback(({ item }: { item: any }) => {
     if (item.type === "sticky-title") {
       return (
         <View style={styles.stickyTitleWrapper}>
@@ -308,6 +308,7 @@ export const HelpScreen = ({ navigation }: any) => {
       );
     }
     if (item.type === "item") {
+      const isExpanded = expandedId === item.id;
       return (
         <View style={styles.faqRowItemWrapper}>
           <View style={styles.faqRowItem}>
@@ -320,12 +321,12 @@ export const HelpScreen = ({ navigation }: any) => {
               <View
                 style={[
                   styles.statusIndicator,
-                  expandedId === item.id
+                  isExpanded
                     ? styles.minusStatus
                     : styles.plusStatus,
                 ]}
               >
-                {expandedId === item.id ? (
+                {isExpanded ? (
                   <MaterialCommunityIcons
                     name="minus"
                     size={14}
@@ -336,7 +337,7 @@ export const HelpScreen = ({ navigation }: any) => {
                 )}
               </View>
             </TouchableOpacity>
-            {expandedId === item.id && (
+            {isExpanded && (
               <View style={styles.faqDetailBox}>
                 <Text style={styles.faqDetailText}>{item.content}</Text>
               </View>
@@ -356,7 +357,7 @@ export const HelpScreen = ({ navigation }: any) => {
       );
     }
     return null;
-  };
+  }, [expandedId, toggleExpand]);
 
   return (
     <View style={styles.container}>
@@ -369,6 +370,7 @@ export const HelpScreen = ({ navigation }: any) => {
       <MainHeader
         style={styles.headerArea}
         showSearch={false}
+        imageStyle={{ resizeMode: 'stretch', opacity: 1, transform: [{ translateY:85 }, { scaleX: 1 }, { scaleY: 2.2 }] }}
         rightElement={
           <TouchableOpacity onPress={() => navigation.navigate("Settings")}>
             <MaterialCommunityIcons name="cog" size={26} color="white" />
