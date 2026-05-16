@@ -52,6 +52,8 @@ export const HistoryScreen = ({ navigation }: any) => {
           showTimer={false}
           hideDivider={true}
           compact={true}
+          use12hrFormat={true}
+          fullStampOpacity={true}
         />
       </View>
     );

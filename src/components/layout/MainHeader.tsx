@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     height: 60,
     paddingLeft: 16,
-    paddingRight: 6,
+    paddingRight: 16,
   },
   logoBox: { 
     flex: 1,
@@ -127,13 +127,13 @@ const styles = StyleSheet.create({
     width: 44, 
     height: 44,
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'flex-end'
   },
   searchContainer: {
     /* ADJUST VERTICAL SPACING OF SEARCH BAR */
     flexDirection: "row",
     paddingLeft: 16,
-    paddingRight: 6,
+    paddingRight: 16,
     alignItems: "center",
     marginTop: 12,
   },

@@ -6,18 +6,20 @@ interface InvalidStampProps {
   color?: string;
   rotation?: string;
   style?: any;
+  size?: number;
 }
 
 export const InvalidStamp: React.FC<InvalidStampProps> = ({ 
   text = "INVALID", 
   color = "#971d1dff",
   rotation = "-12deg",
-  style
+  style,
+  size = 35
 }) => {
   return (
     <View style={[style, { transform: [{ rotate: rotation }] }]}>
-      <View style={[styles.stampBox, { borderColor: color }]}>
-        <Text style={[styles.stampLabel, { color }]}>{text}</Text>
+      <View style={[styles.stampBox, { borderColor: color, paddingHorizontal: size * 0.2, paddingVertical: 1 }]}>
+        <Text style={[styles.stampLabel, { color, fontSize: size }]}>{text}</Text>
       </View>
     </View>
   );
@@ -27,7 +29,7 @@ const styles = StyleSheet.create({
   stampBox: {
     borderWidth: 2,
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 1,
     borderStyle: 'solid',
     alignSelf: 'flex-start',
   },

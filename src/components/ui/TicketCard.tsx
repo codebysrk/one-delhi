@@ -12,9 +12,11 @@ interface TicketCardProps {
   showTID?: boolean;
   hideDivider?: boolean;
   compact?: boolean;
+  use12hrFormat?: boolean;
+  fullStampOpacity?: boolean;
 }
 
-export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onPress, showTimer, largeText, showTID = true, hideDivider = false, compact = false }) => {
+export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onPress, showTimer, largeText, showTID = true, hideDivider = false, compact = false, use12hrFormat = false, fullStampOpacity = false }) => {
   const expired = isTicketExpired(ticket.timestamp);
   const isInvalid = ticket.status === TicketStatus.INVALID;
   
@@ -34,6 +36,10 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onPress, showTim
     const hours = String(d.getHours()).padStart(2, '0');
     const mins = String(d.getMinutes()).padStart(2, '0');
     const secs = String(d.getSeconds()).padStart(2, '0');
+    
+    if (use12hrFormat) {
+      return `${day}-${month}-${year} ${formatTimeTo12hr(`${hours}:${mins}`)}`;
+    }
     return `${day}-${month}-${year} ${hours}:${mins}:${secs}`;
   };
 
@@ -90,7 +96,9 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onPress, showTim
           <InvalidStamp 
             text="INVALID" 
             color={stampColor}
-            style={styles.stampOverlay}
+            style={[styles.stampOverlay, fullStampOpacity && { opacity: 0.95 }, compact && { left: '26%', top: '42%' }]}
+            size={compact ? 30 : 35}
+            rotation={compact ? "-10deg" : "-12deg"}
           />
         )}
       </View>

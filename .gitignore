@@ -31,5 +31,6 @@ ios/
 functions/firebase-service-account.json
 functions/all_users_dump.json
 functions/*.js
+functions/all_tickets.json
 brain/
 scratch/

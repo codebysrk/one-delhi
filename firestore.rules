@@ -12,26 +12,17 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isAuthenticated() && (
-        request.auth.token.email == "admin@onedelhi.com" ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get("role", "").upper() == "ADMIN"))
-      );
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
     }
 
     function isNotBanned() {
       return isAuthenticated() &&
-        (isAdmin() || 
-         !exists(/databases/$(database)/documents/users/$(request.auth.uid)) || 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get("status", "ACTIVE") != "BANNED");
-    }
-
-    // Helper for device check (used directly in match blocks for better control)
-    function isDeviceNotBanned(deviceId) {
-      return isAdmin() ||
-             deviceId == null || 
-             !exists(/databases/$(database)/documents/devices/$(deviceId)) || 
-             get(/databases/$(database)/documents/devices/$(deviceId)).data.get("status", "ACTIVE") != "BANNED";
+        (
+          !exists(/databases/$(database)/documents/users/$(request.auth.uid)) ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status != "BANNED"
+        );
     }
 
     // =====================================
@@ -46,11 +37,15 @@ service cloud.firestore {
       // Admin can create users/admins
       allow create: if isAdmin();
 
-      // Admin can update users/admins
-      allow update: if isAdmin();
+      // Admin can update ONLY role/status
+      allow update: if isAdmin() &&
+        request.resource.data.name == resource.data.name &&
+        request.resource.data.email == resource.data.email &&
+        request.resource.data.phone == resource.data.phone &&
+        request.resource.data.createdAt == resource.data.createdAt;
 
-      // Admin delete access
-      allow delete: if isAdmin();
+      // No direct delete
+      allow delete: if false;
 
       // =====================================
       // USER SELF ACCESS
@@ -62,7 +57,8 @@ service cloud.firestore {
 
       // User read own profile
       allow read: if
-        request.auth.uid == userId;
+        request.auth.uid == userId &&
+        isNotBanned();
 
       // User update own profile
       allow update: if
@@ -75,15 +71,27 @@ service cloud.firestore {
     // =====================================
 
     match /devices/{deviceId} {
-      // Allow a device to read its own info to check its status (even if banned)
-      allow read: if isAuthenticated();
-      
-      // Allow write only if user is NOT banned (device status check handled inside isNotBanned if desired, 
-      // but here we allow registration/update if user is okay)
-      allow write: if isAuthenticated() && isNotBanned();
 
       // Admin full access
       allow read, write: if isAdmin();
+
+      // User create own device
+      allow create: if
+        isAuthenticated() &&
+        isNotBanned() &&
+        request.resource.data.userId == request.auth.uid;
+
+      // User read own devices
+      allow read: if
+        isAuthenticated() &&
+        resource.data.userId == request.auth.uid &&
+        isNotBanned();
+
+      // User update own device
+      allow update: if
+        isAuthenticated() &&
+        resource.data.userId == request.auth.uid &&
+        isNotBanned();
 
       // No delete
       allow delete: if false;
@@ -94,6 +102,7 @@ service cloud.firestore {
     // =====================================
 
     match /tickets/{ticketId} {
+
       // Admin full access
       allow read, write: if isAdmin();
 
@@ -101,15 +110,13 @@ service cloud.firestore {
       allow create: if
         isAuthenticated() &&
         isNotBanned() &&
-        isDeviceNotBanned(request.resource.data.get('deviceId', null)) &&
         request.resource.data.userId == request.auth.uid;
 
       // User read own tickets
       allow read: if
         isAuthenticated() &&
         resource.data.userId == request.auth.uid &&
-        isNotBanned() &&
-        isDeviceNotBanned(resource.data.get('deviceId', null));
+        isNotBanned();
 
       // No update/delete
       allow update, delete: if false;
@@ -120,8 +127,12 @@ service cloud.firestore {
     // =====================================
 
     match /notifications/{notificationId} {
-      // Users can read broadcast
-      allow read: if isAuthenticated() && (isAdmin() || isNotBanned());
+
+      // Users read only
+      allow read: if
+        isAuthenticated() &&
+        isNotBanned();
+
       // Admin manage
       allow write: if isAdmin();
     }
@@ -131,7 +142,13 @@ service cloud.firestore {
     // =====================================
 
     match /routes/{routeId} {
-      allow read: if isAuthenticated() && (isAdmin() || isNotBanned());
+
+      // Users can read
+      allow read: if
+        isAuthenticated() &&
+        isNotBanned();
+
+      // Admin manage
       allow write: if isAdmin();
     }
 
@@ -140,7 +157,13 @@ service cloud.firestore {
     // =====================================
 
     match /stops/{stopId} {
-      allow read: if isAuthenticated() && (isAdmin() || isNotBanned());
+
+      // Users can read
+      allow read: if
+        isAuthenticated() &&
+        isNotBanned();
+
+      // Admin manage
       allow write: if isAdmin();
     }
 
@@ -149,12 +172,14 @@ service cloud.firestore {
     // =====================================
 
     match /logs/{logId} {
-      allow read, write: if isAdmin();
-      allow create: if isAuthenticated();
-    }
 
-    match /deleted_users/{docId} {
-      allow read, write: if isAdmin();
+      // App create logs
+      allow create: if
+        isAuthenticated() &&
+        isNotBanned();
+
+      // Admin only
+      allow read, update, delete: if isAdmin();
     }
 
     // =====================================
@@ -162,8 +187,14 @@ service cloud.firestore {
     // =====================================
 
     match /metadata/{documentId} {
-      allow read: if isAuthenticated() && (isAdmin() || isNotBanned());
-      allow write: if isAdmin();
+
+      // Users can read
+      allow read: if
+        isAuthenticated() &&
+        isNotBanned();
+
+      // Admin manage
+      allow write: if isAdmin(); 
     }
   }
 }
