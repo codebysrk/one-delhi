@@ -5,12 +5,14 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
   ActivityIndicator,
   Platform,
   Animated,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Screen } from "../../components/layout/Screen";
+import { Header } from "../../components/layout/Header";
 import { FlashList } from "@shopify/flash-list";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Swipeable } from "react-native-gesture-handler";
@@ -174,7 +176,7 @@ export const SearchScreen = ({ navigation }: any) => {
     >
       <View style={styles.leftCol}>
         <View style={styles.busIconBox}>
-          <MaterialCommunityIcons name="bus" size={26} color="#333" />
+          <MaterialCommunityIcons name="bus" size={20} color="#333" />
         </View>
         <View style={styles.visualPath}>
           <View style={styles.circle} />
@@ -233,74 +235,69 @@ export const SearchScreen = ({ navigation }: any) => {
     );
   }, [renderRouteItem, removeRecentRoute]);
 
-  const renderSeparator = useCallback(() => (
-    <View style={styles.divider} />
-  ), []);
+  const insets = useSafeAreaInsets();
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="yellow" translucent />
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
-          <TouchableOpacity 
-            onPress={() => navigation.goBack()}
-            style={styles.backBtn}
-          >
-            <MaterialCommunityIcons name="arrow-left" size={26} color="#333" />
-          </TouchableOpacity>
-          
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search 500+ Route"
-              placeholderTextColor="#999"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoFocus
-              multiline={false}
-              scrollEnabled
-              textAlign="left"
-              numberOfLines={1}
+    <Screen 
+      noPadding 
+      ignoreTopSafe 
+      style={{ backgroundColor: '#FFF' }}
+    >
+      <Header 
+        onBackPress={() => navigation.goBack()}
+        backgroundColor="#FFFFFF"
+        textColor="#000000"
+        height={50}
+        showShadow={true}
+      >
+        <View style={styles.inputWrapper}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search 500+ Route"
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            multiline={false}
+            scrollEnabled
+            textAlign="left"
+            numberOfLines={1}
+          />
+        </View>
+      </Header>
+
+      {searchQuery.length > 0 ? (
+        loading ? (
+          <View style={styles.loaderBox}>
+            <ActivityIndicator size="large" color="#D32F2F" />
+          </View>
+        ) : (
+          <FlashList
+            data={filteredRoutes}
+            renderItem={renderRouteItem}
+            keyExtractor={(item) => item.id}
+            estimatedItemSize={80}
+            contentContainerStyle={StyleSheet.flatten([styles.listContent, { paddingBottom: insets.bottom + 20 }])}
+            ListEmptyComponent={
+              <View style={styles.emptyBox}>
+                <Text style={styles.emptyText}>No routes found</Text>
+              </View>
+            }
+          />
+        )
+      ) : (
+        mappedRecentRoutes.length > 0 && (
+          <View style={{ flex: 1 }}>
+            <FlashList
+              data={mappedRecentRoutes}
+              renderItem={renderRecentRouteItem}
+              keyExtractor={(item) => `recent-${item.id}`}
+              estimatedItemSize={80}
+              contentContainerStyle={StyleSheet.flatten([styles.listContent, { paddingBottom: insets.bottom + 20 }])}
             />
           </View>
-        </View>
-
-        {searchQuery.length > 0 ? (
-          loading ? (
-            <View style={styles.loaderBox}>
-              <ActivityIndicator size="large" color="#D32F2F" />
-            </View>
-          ) : (
-            <FlashList
-              data={filteredRoutes}
-              renderItem={renderRouteItem}
-              keyExtractor={(item) => item.id}
-              estimatedItemSize={80}
-              ItemSeparatorComponent={renderSeparator}
-              contentContainerStyle={styles.listContent}
-              ListEmptyComponent={
-                <View style={styles.emptyBox}>
-                  <Text style={styles.emptyText}>No routes found</Text>
-                </View>
-              }
-            />
-          )
-        ) : (
-          mappedRecentRoutes.length > 0 && (
-            <View style={{ flex: 1 }}>
-              <FlashList
-                data={mappedRecentRoutes}
-                renderItem={renderRecentRouteItem}
-                keyExtractor={(item) => `recent-${item.id}`}
-                estimatedItemSize={80}
-                ItemSeparatorComponent={renderSeparator}
-                contentContainerStyle={styles.listContent}
-              />
-            </View>
-          )
-        )}
-      </SafeAreaView>
-    </View>
+        )
+      )}
+    </Screen>
   );
 };
 
@@ -311,22 +308,6 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === "android" ? (StatusBar.currentHeight || 0) + 10 : 10,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E5E5",
-    backgroundColor: "#FFF",
-    overflow: "visible",
-  },
-  backBtn: {
-    padding: 4,
-    marginRight: 10,
-    flexShrink: 0,
   },
   inputWrapper: {
     flex: 1,
@@ -357,17 +338,17 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   leftCol: {
-    width: 40,
+    width: 28, // Reduced width to bring icon/path closer to text
     alignItems: "center",
   },
   busIconBox: {
-    height: 35,
+    height: 25, // Matched with routeNumber height to align the paths below
     justifyContent: "center",
   },
   visualPath: {
     alignItems: "center",
     marginTop: 2,
-    height: 35,
+    height: 38, // Slightly reduced to bring circles closer together
     justifyContent: "space-between",
   },
   circle: {
@@ -379,29 +360,29 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   line: {
-    width: 1,
+    width: 1.5, // Matches circle border thickness perfectly
     flex: 1,
     backgroundColor: "#B91C1C",
-    marginVertical: 2,
+    marginVertical: -1, // Seamlessly connects inside the circles with zero gap
   },
   routeInfo: {
     flex: 1,
-    marginLeft: 10,
+    marginLeft: 6, // Reduced margin to bring text closer to the left column
   },
   routeNumber: {
-    fontSize: 18,
-    fontWeight: "900",
+    fontSize: 16, // Increased slightly for better hierarchy
+    fontWeight: "700",
     color: "#000",
-    height: 30,
+    height: 25,
     textAlignVertical: "center",
   },
   textPath: {
-    height: 35,
+    height: 38, // Slightly reduced to bring stop text lines closer together
     justifyContent: "space-between",
     marginTop: 2,
   },
   terminalName: {
-    fontSize: 14,
+    fontSize: 15, // Increased from 14 for better stop name readability
     color: "#666",
     fontWeight: "400",
   },

@@ -1,8 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, SafeAreaView,
+  View, Text, StyleSheet, TouchableOpacity,
   StatusBar, Platform, FlatList, ActivityIndicator, RefreshControl
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScreenContainer } from '../../components/layout/Screen';
+import { Header } from '../../components/layout/Header';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { collection, query, orderBy, onSnapshot, limit } from 'firebase/firestore';
 import { db } from '../../services/firebase';
@@ -32,7 +35,7 @@ export const NotificationScreen = ({ navigation }: any) => {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
       setNotifications(data);
       setLoading(false);
 
@@ -74,39 +77,47 @@ export const NotificationScreen = ({ navigation }: any) => {
     );
   };
 
-  return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="yellow" translucent />
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <MaterialCommunityIcons name="arrow-left" color="#333" size={24} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Notifications</Text>
-        </View>
+  const insets = useSafeAreaInsets();
 
-        {loading ? (
-          <View style={styles.center}>
-            <ActivityIndicator size="large" color="#D32F2F" />
-          </View>
-        ) : (
-          <FlatList
-            data={notifications}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id}
-            estimatedItemSize={100}
-            contentContainerStyle={styles.listContent}
-            ItemSeparatorComponent={() => <View style={styles.divider} />}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <MaterialCommunityIcons name="bell" color="#CCC" size={60} />
-                <Text style={styles.emptyText}>No notifications yet</Text>
-              </View>
-            }
-          />
-        )}
-      </SafeAreaView>
-    </View>
+  return (
+    <ScreenContainer 
+      noPadding 
+      ignoreTopSafe 
+      style={{ backgroundColor: '#FFF' }}
+    >
+      <Header
+        title="Notifications"
+        onBackPress={() => navigation.goBack()}
+        backgroundColor="#FFFFFF"
+        textColor="#000000"
+        height={50}
+        titleStyle={{ fontSize: 18 }}
+        showShadow={true}
+      />
+
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#D32F2F" />
+        </View>
+      ) : notifications.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No notifications available</Text>
+          <View style={styles.emptyDivider} />
+        </View>
+      ) : (
+        <FlatList
+          data={notifications}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          style={{ flex: 1 }}
+          contentContainerStyle={StyleSheet.flatten([
+            styles.listContent,
+            { paddingBottom: insets.bottom + 20 }
+          ])}
+          ItemSeparatorComponent={() => <View style={styles.divider} />}
+        />
+      )}
+    </ScreenContainer>
   );
 };
 
@@ -116,20 +127,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    height: 60,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEE',
-    gap: 12,
-  },
-  backBtn: { padding: 8 },
-  headerTitle: { fontSize: 20, fontWeight: '700', color: '#000' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   listContent: { paddingVertical: 10 },
-  notificationItem: { flexDirection: 'row', padding: 20, backgroundColor: '#FFF' },
+  notificationItem: { flexDirection: 'row', paddingVertical: 20, paddingHorizontal: 16, backgroundColor: '#FFF' },
   iconContainer: {
     width: 44,
     height: 44,
@@ -149,9 +149,23 @@ const styles = StyleSheet.create({
   itemTitle: { fontSize: 15, fontWeight: '700', color: '#111827', flex: 1, marginRight: 8 },
   itemTime: { fontSize: 11, color: '#9CA3AF' },
   itemMessage: { fontSize: 14, color: '#4B5563', lineHeight: 20 },
-  divider: { height: 1, backgroundColor: '#F3F4F6', marginHorizontal: 20 },
-  emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 100 },
-  emptyText: { marginTop: 16, fontSize: 16, color: '#999', fontWeight: '500' },
+  divider: { height: 1, backgroundColor: '#F3F4F6', marginHorizontal: 16 },
+  emptyContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 24,
+    alignItems: 'flex-start',
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000000',
+  },
+  emptyDivider: {
+    height: 1,
+    backgroundColor: '#EEEEEE',
+    width: '100%',
+    marginTop: 12,
+  },
   unreadItem: {
     backgroundColor: '#FFF8F8', // Very light red tint
   },

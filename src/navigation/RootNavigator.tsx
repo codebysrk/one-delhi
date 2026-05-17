@@ -11,7 +11,6 @@ import { PaymentScreen } from '../features/payment/PaymentScreen';
 import { PassScreen } from '../features/pass/PassScreen';
 import { TicketScreen } from '../features/qr/TicketScreen';
 import { HistoryScreen } from '../features/history/HistoryScreen';
-import { ProfileScreen } from '../features/profile/ProfileScreen';
 import { HelpScreen } from '../features/profile/HelpScreen';
 import { SettingsScreen } from '../features/profile/SettingsScreen';
 import { useAppStore } from '../store/useAppStore';
@@ -26,19 +25,31 @@ import { Alert, BackHandler, ToastAndroid } from 'react-native';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 
+import { Screen } from '../components/layout/Screen';
+import { Header } from '../components/layout/Header';
+
 const Stack = createNativeStackNavigator();
 
 export const ComingSoon = ({ navigation }: any) => (
-  <View style={{ flex: 1, backgroundColor: '#FFF', justifyContent: 'center', alignItems: 'center', paddingBottom: 100 }}>
-    <StatusBar barStyle="dark-content" backgroundColor="yellow" translucent />
-    <View style={{ width: 120, height: 120, borderRadius: 60, backgroundColor: '#FEF2F2', justifyContent: 'center', alignItems: 'center', marginBottom: 25 }}>
-      <MaterialCommunityIcons name="rocket-launch" size={60} color="#D32F2F" />
+  <Screen noPadding ignoreTopSafe style={{ backgroundColor: '#FFF' }}>
+    <Header
+      title="Coming Soon"
+      onBackPress={() => navigation.goBack()}
+      backgroundColor="#FFFFFF"
+      textColor="#000000"
+      height={50}
+      showShadow={true}
+    />
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 100 }}>
+      <View style={{ width: 120, height: 120, borderRadius: 60, backgroundColor: '#FEF2F2', justifyContent: 'center', alignItems: 'center', marginBottom: 25 }}>
+        <MaterialCommunityIcons name="rocket-launch" size={60} color="#D32F2F" />
+      </View>
+      <Text style={{ fontSize: 24, fontWeight: '700', color: '#111' }}>Coming Soon</Text>
+      <Text style={{ marginTop: 10, color: '#666', fontSize: 16, textAlign: 'center', paddingHorizontal: 40 }}>
+        We are working hard to bring this feature to you. Stay tuned!
+      </Text>
     </View>
-    <Text style={{ fontSize: 24, fontWeight: '700', color: '#111' }}>Coming Soon</Text>
-    <Text style={{ marginTop: 10, color: '#666', fontSize: 16, textAlign: 'center', paddingHorizontal: 40 }}>
-      We are working hard to bring this feature to you. Stay tuned!
-    </Text>
-  </View>
+  </Screen>
 );
 
 
@@ -350,7 +361,6 @@ export const RootNavigator = () => {
               <Stack.Screen name="Pass" component={PassScreen} />
               <Stack.Screen name="Ticket" component={TicketScreen} options={{ presentation: 'modal' }} />
               <Stack.Screen name="History" component={HistoryScreen} />
-              <Stack.Screen name="Profile" component={ProfileScreen} />
               <Stack.Screen name="Help" component={HelpScreen} />
               <Stack.Screen name="Settings" component={SettingsScreen} />
               <Stack.Screen name="ComingSoon" component={ComingSoon} />

@@ -114,6 +114,8 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     width: '100%',
     ...SHADOWS.soft,
+    borderBottomLeftRadius: 5,
+    borderBottomRightRadius: 5,
   },
   headerStrip: { 
     height: 16, 

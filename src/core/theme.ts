@@ -93,7 +93,7 @@ export const LAYOUT = {
   screenPadding: SPACING.lg,
   cardPadding: SPACING.md,
   headerHeight: 56,
-  tabBarHeight: 65,
+  tabBarHeight: 60,
 };
 
 export const ANIMATIONS = {

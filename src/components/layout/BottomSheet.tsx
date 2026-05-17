@@ -1,51 +1,47 @@
-import React, { useEffect, useCallback } from 'react';
-import { View, StyleSheet, useWindowDimensions, TouchableWithoutFeedback, Platform } from 'react-native';
-import { GestureDetector, Gesture } from 'react-native-gesture-handler';
+import React, { useCallback, useMemo } from "react";
+import {
+  StyleSheet,
+  View,
+  useWindowDimensions,
+  Platform,
+} from "react-native";
+import {
+  GestureDetector,
+  Gesture,
+} from "react-native-gesture-handler";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  runOnJS,
   interpolate,
   Extrapolate,
-} from 'react-native-reanimated';
-import { COLORS } from '../core/theme';
-
-
+  useAnimatedReaction,
+  runOnJS,
+} from "react-native-reanimated";
+import { COLORS, SHADOWS, RADII, SPACING, ANIMATIONS } from "../../core/theme";
 
 interface BottomSheetProps {
-  isVisible: boolean;
-  onClose: () => void;
   children: React.ReactNode;
-  height?: number;
+  headerContent?: React.ReactNode;
+  snapPoints: number[]; // Direct translateY values
+  translateY: Animated.SharedValue<number>;
+  sheetHeight?: number | string;
 }
 
-export const BottomSheet = ({ isVisible, onClose, children, height: customHeight }: BottomSheetProps) => {
+export const BottomSheet = ({
+  children,
+  headerContent,
+  snapPoints,
+  translateY,
+  sheetHeight = "100%",
+}: BottomSheetProps) => {
   const { height: SCREEN_HEIGHT } = useWindowDimensions();
-  const height = customHeight || SCREEN_HEIGHT * 0.5;
-  const MAX_TRANSLATE_Y = -SCREEN_HEIGHT + 50;
-  const translateY = useSharedValue(0);
-  const active = useSharedValue(false);
-
-  const scrollTo = useCallback((destination: number) => {
-    'worklet';
-    active.value = destination !== 0;
-    translateY.value = withSpring(destination, {
-      damping: 20,
-      stiffness: 250,
-      mass: 0.5,
-    });
-  }, []);
-
-  useEffect(() => {
-    if (isVisible) {
-      scrollTo(-height);
-    } else {
-      scrollTo(0);
-    }
-  }, [isVisible, height, scrollTo]);
-
   const context = useSharedValue({ y: 0 });
+
+  const internalSnapPoints = useMemo(() => snapPoints, [snapPoints]);
+  const SNAP_TOP = Math.min(...internalSnapPoints);
+  const SNAP_BOTTOM = Math.max(...internalSnapPoints);
+  const SNAP_VELOCITY = 800;
 
   const gesture = Gesture.Pan()
     .onStart(() => {
@@ -55,77 +51,105 @@ export const BottomSheet = ({ isVisible, onClose, children, height: customHeight
     .onUpdate((event) => {
       'worklet';
       translateY.value = event.translationY + context.value.y;
-      translateY.value = Math.max(translateY.value, MAX_TRANSLATE_Y);
-    })
-    .onEnd(() => {
-      'worklet';
-      if (translateY.value > -height + 100) {
-        scrollTo(0);
-        runOnJS(onClose)();
-      } else {
-        scrollTo(-height);
+      
+      // Rubber-banding at the top
+      if (translateY.value < SNAP_TOP) {
+        translateY.value = SNAP_TOP + (translateY.value - SNAP_TOP) * 0.3;
       }
     })
-    .simultaneousWithExternalGesture(Gesture.Native());
+    .onEnd((event) => {
+      'worklet';
+      const { velocityY } = event;
+      const springConfig = ANIMATIONS.fastSpring;
 
-  const rBottomSheetStyle = useAnimatedStyle(() => {
+      if (Math.abs(velocityY) > SNAP_VELOCITY) {
+        const direction = velocityY < 0 ? -1 : 1;
+        let targetPoint = direction === -1 ? SNAP_TOP : SNAP_BOTTOM;
+        
+        if (direction === -1) {
+          for (let i = internalSnapPoints.length - 1; i >= 0; i--) {
+            if (internalSnapPoints[i] < translateY.value) {
+              targetPoint = internalSnapPoints[i];
+              break;
+            }
+          }
+        } else {
+          for (let i = 0; i < internalSnapPoints.length; i++) {
+            if (internalSnapPoints[i] > translateY.value) {
+              targetPoint = internalSnapPoints[i];
+              break;
+            }
+          }
+        }
+        translateY.value = withSpring(targetPoint, springConfig);
+        return;
+      }
+
+      let closestPoint = internalSnapPoints[0];
+      let minDiff = Math.abs(internalSnapPoints[0] - translateY.value);
+      for (let i = 1; i < internalSnapPoints.length; i++) {
+        const diff = Math.abs(internalSnapPoints[i] - translateY.value);
+        if (diff < minDiff) {
+          closestPoint = internalSnapPoints[i];
+          minDiff = diff;
+        }
+      }
+
+      translateY.value = withSpring(closestPoint, springConfig);
+    });
+
+  const animatedSheetStyle = useAnimatedStyle(() => {
+    const borderRadius = interpolate(
+      translateY.value,
+      [SNAP_TOP, SNAP_TOP + 50],
+      [0, RADII.xl],
+      Extrapolate.CLAMP
+    );
+
     return {
       transform: [{ translateY: translateY.value }],
-    };
-  });
-
-  const rBackdropStyle = useAnimatedStyle(() => {
-    return {
-      opacity: interpolate(
-        translateY.value,
-        [0, -height],
-        [0, 0.5],
-        Extrapolate.CLAMP
-      ),
-      pointerEvents: active.value ? 'auto' : 'none',
+      borderTopLeftRadius: borderRadius,
+      borderTopRightRadius: borderRadius,
     };
   });
 
   return (
-    <>
-      <TouchableWithoutFeedback onPress={onClose}>
-        <Animated.View style={[styles.backdrop, rBackdropStyle]} />
-      </TouchableWithoutFeedback>
+    <Animated.View style={[styles.bottomSheet, animatedSheetStyle, { height: sheetHeight }]}>
       <GestureDetector gesture={gesture}>
-        <Animated.View style={[styles.bottomSheetContainer, { height: SCREEN_HEIGHT, top: SCREEN_HEIGHT }, rBottomSheetStyle]}>
-          <View style={styles.dragHandle} />
-          {children}
-        </Animated.View>
+        <View style={styles.dragArea}>
+          <View style={styles.handleBar} />
+          {headerContent}
+        </View>
       </GestureDetector>
-    </>
+      <View style={styles.contentContainer}>{children}</View>
+    </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000000',
-    zIndex: 999,
+  bottomSheet: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: -SPACING.md, 
+    backgroundColor: COLORS.white,
+    zIndex: 100,
+    ...SHADOWS.high,
   },
-  bottomSheetContainer: {
-    width: '100%',
-    backgroundColor: 'white',
-    position: 'absolute',
-    // top: SCREEN_HEIGHT will be applied dynamically
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    zIndex: 1000,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.1, shadowRadius: 10 },
-      android: { elevation: 20 },
-    }),
+  dragArea: { 
+    paddingHorizontal: SPACING.lg, 
+    paddingTop: SPACING.sm,
+    paddingBottom: SPACING.xs,
   },
-  dragHandle: {
+  handleBar: {
     width: 40,
     height: 4,
-    backgroundColor: '#D1D5DB',
-    alignSelf: 'center',
-    marginVertical: 12,
-    borderRadius: 2,
+    backgroundColor: COLORS.border,
+    borderRadius: RADII.xs,
+    alignSelf: "center",
+    marginBottom: SPACING.sm,
   },
+  contentContainer: {
+    flex: 1,
+  }
 });

@@ -10,12 +10,14 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  StatusBar,
   useWindowDimensions,
   Alert,
+  StatusBar,
+  Platform,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { WebView } from "react-native-webview";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Screen } from "../../components/layout/Screen";
+import { GoogleMap, GoogleMapRef } from "../../components/ui/GoogleMap";
 import { FlashList } from "@shopify/flash-list";
 import * as Location from "expo-location";
 import { useFocusEffect } from "@react-navigation/native";
@@ -33,22 +35,36 @@ import Animated, {
 import { useAppStore } from "../../store/useAppStore";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../services/firebase";
-import { EliteBottomSheet } from "../../components/layout/EliteBottomSheet";
-import { MainHeader } from "../../components/layout/MainHeader";
+import { BottomSheet } from "../../components/layout/BottomSheet";
+import { MainHeader } from "../../components/layout/Header";
 import { ANIMATIONS } from "../../core/theme";
+import rawStops from "../../../assets/stops.json";
 
-const SHEET_MIN_HEIGHT = 210;
+const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const dLat = lat1 - lat2;
+  const dLon = lon1 - lon2;
+  return Math.sqrt(dLat * dLat + dLon * dLon);
+};
+
+const SHEET_MIN_HEIGHT = 180;
 
 export const MapScreen = ({ navigation }: any) => {
+  const insets = useSafeAreaInsets();
   const { width, height: SCREEN_HEIGHT } = useWindowDimensions();
 
   const SHEET_FULL_HEIGHT = SCREEN_HEIGHT * 0.85;
-  const SHEET_HALF_HEIGHT = SHEET_FULL_HEIGHT * 0.65;
-  const SNAP_TOP = 0;
+  const SHEET_HALF_HEIGHT = SHEET_FULL_HEIGHT * 0.62;
+  const sheetHeight = SCREEN_HEIGHT * 0.95;
+
+  const statusBarHeight =
+    Platform.OS === "android"
+      ? StatusBar.currentHeight || 24
+      : insets.top || 44;
+  const SNAP_TOP = statusBarHeight - 6;
   const SNAP_MID = SHEET_FULL_HEIGHT - SHEET_HALF_HEIGHT + 250;
   const SNAP_BOTTOM = SHEET_FULL_HEIGHT - SHEET_MIN_HEIGHT + 250;
 
-  const webViewRef = useRef<WebView>(null);
+  const webViewRef = useRef<GoogleMapRef>(null);
   const [location, setLocation] = useState<Location.LocationObject | null>(
     null,
   );
@@ -75,19 +91,17 @@ export const MapScreen = ({ navigation }: any) => {
         if (canScroll) runOnJS(setCanScroll)(false);
       }
     },
-    [canScroll],
+    [canScroll, SNAP_TOP],
   );
 
   const updateMapRegion = useCallback((loc: Location.LocationObject) => {
-    webViewRef.current?.injectJavaScript(
-      `centerMap(${loc.coords.latitude}, ${loc.coords.longitude});`,
-    );
+    webViewRef.current?.centerMap(loc.coords.latitude, loc.coords.longitude, 16);
   }, []);
 
   useFocusEffect(
     useCallback(() => {
       translateY.value = withSpring(SNAP_MID, ANIMATIONS.fastSpring);
-    }, []),
+    }, [SNAP_MID]),
   );
 
   useEffect(() => {
@@ -119,9 +133,7 @@ export const MapScreen = ({ navigation }: any) => {
 
   const centerOnUser = () => {
     if (location) {
-      webViewRef.current?.injectJavaScript(
-        `centerMap(${location.coords.latitude}, ${location.coords.longitude});`,
-      );
+      webViewRef.current?.centerMap(location.coords.latitude, location.coords.longitude, 16);
     }
   };
 
@@ -149,95 +161,69 @@ export const MapScreen = ({ navigation }: any) => {
   });
 
   const animatedMapControlsStyle = useAnimatedStyle(() => {
-    const visibleHeight = Math.max(
-      0,
-      SHEET_FULL_HEIGHT + 35 - translateY.value,
+    const visibleHeight = Math.max(0, SCREEN_HEIGHT - translateY.value);
+
+    // Controls fade out completely when fully opened (SNAP_TOP)
+    const opacity = interpolate(
+      translateY.value,
+      [SNAP_TOP, SNAP_MID],
+      [0, 1],
+      Extrapolate.CLAMP,
     );
-    return { bottom: visibleHeight + 10, zIndex: 110 };
+
+    // जब शीट आधी खुली (SNAP_MID) हो तो बटन्स को ऊपर खिसकाकर 30px का स्पेस देंगे, और पूरी बंद (SNAP_BOTTOM) होने पर 10px का स्पेस!
+    const extraOffset = interpolate(
+      translateY.value,
+      [SNAP_MID, SNAP_BOTTOM],
+      [-35, 5],
+      Extrapolate.CLAMP,
+    );
+
+    return {
+      bottom: visibleHeight + extraOffset,
+      zIndex: 110,
+      opacity: opacity,
+      transform: [{ scale: opacity }],
+    };
   });
 
-  const mapHtml = useMemo(
-    () => `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-      <style>
-        body { margin: 0; padding: 0; }
-        #map { height: 100vh; width: 100vw; background: #f1f5f9; }
-        .stop-marker { width: 10px; height: 10px; background: #ef4444; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.2); }
-        .user-marker { width: 14px; height: 14px; background: #3b82f6; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
-      </style>
-    </head>
-    <body>
-      <div id="map"></div>
-      <script>
-        var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([28.6139, 77.2090], 14);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
-        var userMarker = L.marker([28.6139, 77.2090], {
-          icon: L.divIcon({ className: '', html: '<div class="user-marker"></div>', iconSize: [14, 14] })
-        }).addTo(map);
-        window.centerMap = function(lat, lng) {
-          map.flyTo([lat, lng], 16, { duration: 1.5 });
-          userMarker.setLatLng([lat, lng]);
-        };
-        var stopMarkers = L.layerGroup().addTo(map);
-        var stopIcon = L.divIcon({ className: '', html: '<div class="stop-marker"></div>', iconSize: [12, 12] });
-        window.updateStops = function(stopsJson) {
-          stopMarkers.clearLayers();
-          JSON.parse(stopsJson).forEach(function(s) {
-            L.marker([s.lat, s.lng], { icon: stopIcon }).bindPopup(s.name).addTo(stopMarkers);
-          });
-        };
-      </script>
-    </body>
-    </html>
-  `,
-    [],
-  );
+  // mapHtml removed since we now use the unified GoogleMap component
 
   useEffect(() => {
-    const fetchStops = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "routes"));
-        const allStops: any[] = [];
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          const stops = data.directions?.up?.stops || data.stops;
-          const coords =
-            data.directions?.up?.stop_coordinates ||
-            data.stop_coordinates ||
-            [];
-          if (stops && Array.isArray(stops)) {
-            stops.slice(0, 10).forEach((name, idx) => {
-              allStops.push({
-                id: `${doc.id}-${idx}`,
-                name,
-                lat:
-                  coords[idx]?.latitude ||
-                  28.6139 + (Math.random() - 0.5) * 0.1,
-                lng:
-                  coords[idx]?.longitude ||
-                  77.209 + (Math.random() - 0.5) * 0.1,
-              });
-            });
-          }
-        });
-        setStopsToShow(allStops.slice(0, 30));
-      } catch (e) {
-        console.error(e);
+    const lat = location?.coords.latitude || 28.6139;
+    const lng = location?.coords.longitude || 77.2090;
+
+    const sortedStops = (rawStops as any[])
+      .map((stop) => ({
+        id: stop.stop_id,
+        name: stop.stop_name,
+        lat: stop.stop_lat,
+        lng: stop.stop_lon,
+        distance: getDistance(lat, lng, stop.stop_lat, stop.stop_lon),
+      }))
+      .sort((a, b) => a.distance - b.distance);
+
+    const seenNames = new Set<string>();
+    const uniqueSortedStops: any[] = [];
+
+    for (let i = 0; i < sortedStops.length; i++) {
+      const stop = sortedStops[i];
+      const cleanName = stop.name.toLowerCase().trim();
+      if (!seenNames.has(cleanName)) {
+        seenNames.add(cleanName);
+        uniqueSortedStops.push(stop);
+        if (uniqueSortedStops.length === 5) {
+          break;
+        }
       }
-    };
-    fetchStops();
-  }, []);
+    }
+
+    setStopsToShow(uniqueSortedStops);
+  }, [location]);
 
   useEffect(() => {
     if (stopsToShow.length > 0 && mapLoaded) {
-      webViewRef.current?.injectJavaScript(
-        `updateStops('${JSON.stringify(stopsToShow)}');`,
-      );
+      webViewRef.current?.updateNearbyStops(stopsToShow);
     }
   }, [stopsToShow, mapLoaded]);
 
@@ -260,13 +246,7 @@ export const MapScreen = ({ navigation }: any) => {
   );
 
   return (
-    <View style={styles.container}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor="yellow"
-        translucent
-      />
-
+    <Screen noPadding ignoreTopSafe style={styles.container}>
       <MainHeader
         style={styles.headerArea}
         showSearch={true}
@@ -295,11 +275,11 @@ export const MapScreen = ({ navigation }: any) => {
       />
 
       <View style={styles.mapBody}>
-        <WebView
+        <GoogleMap
           ref={webViewRef}
-          source={{ html: mapHtml }}
+          userLocation={location}
+          onMapLoaded={() => setMapLoaded(true)}
           style={styles.mapWeb}
-          onLoadEnd={() => setMapLoaded(true)}
         />
         <Animated.View
           style={[styles.redArrowBtn, animatedRedArrowStyle, { left: 20 }]}
@@ -331,10 +311,10 @@ export const MapScreen = ({ navigation }: any) => {
         </Animated.View>
       </View>
 
-      <EliteBottomSheet
+      <BottomSheet
         translateY={translateY}
         snapPoints={[SNAP_TOP, SNAP_MID, SNAP_BOTTOM]}
-        sheetHeight={SHEET_FULL_HEIGHT + 50}
+        sheetHeight={sheetHeight}
         headerContent={
           <View style={styles.tabBar}>
             <TouchableOpacity style={[styles.tabBtn, styles.activeTabBtn]}>
@@ -350,18 +330,18 @@ export const MapScreen = ({ navigation }: any) => {
           data={stopsToShow}
           renderItem={renderStopItem}
           keyExtractor={(item) => item.id}
-          estimatedItemSize={70}
+          estimatedItemSize={58}
           scrollEnabled={canScroll}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
         />
-      </EliteBottomSheet>
-    </View>
+      </BottomSheet>
+    </Screen>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF" },
   headerArea: {
-    height: 160,
     overflow: "hidden",
     borderBottomLeftRadius: 40,
     borderBottomRightRadius: 40,
@@ -417,19 +397,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: 8,
     paddingHorizontal: 20,
   },
   stopDetails: { flex: 1 },
-  stopMain: { fontSize: 17, fontWeight: "700", color: "#000" },
-  stopDir: { fontSize: 13, color: "#666", marginTop: 2 },
+  stopMain: { fontSize: 16, fontWeight: "700", color: "#000" },
+  stopDir: { fontSize: 12, color: "#666", marginTop: 1.5 },
   greenBtn: {
     borderWidth: 1.1,
     borderColor: "#10B981",
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 15,
   },
-  greenBtnText: { color: "#10B981", fontWeight: "700", fontSize: 12 },
+  greenBtnText: { color: "#10B981", fontWeight: "700", fontSize: 11.5 },
   divider: { height: 1, backgroundColor: "#F3F4F6", marginHorizontal: 20 },
 });

@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, ScrollView, Platform, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView, Platform, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Screen } from '../../components/layout/Screen';
+import { Header } from '../../components/layout/Header';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppStore } from '../../store/useAppStore';
 import { updateProfile, signOut } from 'firebase/auth';
@@ -77,31 +80,42 @@ export const SettingsScreen = ({ navigation }: any) => {
     { icon: <MaterialCommunityIcons name="qrcode-scan" size={22} color="#C0392B" />, label: "Validate Pass/Ticket" },
   ];
 
-  return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="yellow" translucent />
-      
-      <View style={styles.header}>
-        <SafeAreaView>
-          <View style={styles.headerContent}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-              <MaterialCommunityIcons name="arrow-left" size={26} color="#333" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Settings</Text>
-            {isEditing || (user && name !== user.displayName) ? (
-              <TouchableOpacity onPress={handleSave} disabled={loading} style={styles.saveBtn}>
-                {loading ? <ActivityIndicator size="small" color="#C0392B" /> : <Text style={styles.saveText}>Save</Text>}
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity onPress={handleLogout} style={styles.saveBtn}>
-                <MaterialCommunityIcons name="logout" size={26} color="#C0392B" />
-              </TouchableOpacity>
-            )}
-          </View>
-        </SafeAreaView>
-      </View>
+  const insets = useSafeAreaInsets();
 
-      <ScrollView style={styles.mainContent} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
+  return (
+    <Screen 
+      noPadding 
+      ignoreTopSafe 
+      style={{ backgroundColor: '#FFF' }} 
+      keyboardSafe
+    >
+      <Header
+        title="Settings"
+        centerTitle={true}
+        onBackPress={() => navigation.goBack()}
+        backgroundColor="#FFFFFF"
+        textColor="#000000"
+        height={50}
+        titleStyle={{ fontSize: 22 }}
+        showShadow={true}
+        rightElement={
+          isEditing || (user && name !== user.displayName) ? (
+            <TouchableOpacity onPress={handleSave} disabled={loading} style={styles.saveBtn}>
+              {loading ? <ActivityIndicator size="small" color="#A51F38" /> : <Text style={styles.saveText}>Save</Text>}
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={handleLogout} style={styles.saveBtn}>
+              <MaterialCommunityIcons name="logout" size={24} color="#C0392B" />
+            </TouchableOpacity>
+          )
+        }
+      />
+
+      <ScrollView 
+        style={styles.mainContent} 
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: insets.bottom + 20 }} 
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Basic Information</Text>
           <View style={styles.infoBox}>
@@ -157,20 +171,15 @@ export const SettingsScreen = ({ navigation }: any) => {
            <Text style={styles.versionNumber}>2.0.1</Text>
         </View>
       </ScrollView>
-    </View>
-
+    </Screen>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF' },
-  header: { backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight || 30 : 0 },
-  headerContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, height: 60 },
-  backBtn: { width: 50, height: 44, justifyContent: 'center', alignItems: 'flex-start' },
-  headerTitle: { color: '#333', fontSize: 26, fontWeight: '400', flex: 1, textAlign: 'center' },
   saveBtn: { width: 50, height: 44, justifyContent: 'center', alignItems: 'flex-end' },
-  saveText: { color: '#C0392B', fontWeight: '700', fontSize: 16 },
-  mainContent: { flex: 1, paddingHorizontal: 20 },
+  saveText: { color: '#A51F38', fontWeight: '700', fontSize: 16 },
+  mainContent: { flex: 1, paddingHorizontal: 16 },
   section: { marginTop: 15 },
   sectionTitle: { fontSize: 18, color: '#C0392B', fontWeight: '500', marginBottom: 12 },
   infoBox: { gap: 14 },

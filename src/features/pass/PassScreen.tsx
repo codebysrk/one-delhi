@@ -6,12 +6,13 @@ import {
   TouchableOpacity, 
   TextInput, 
   ScrollView, 
-  SafeAreaView,
-  StatusBar,
   Modal,
   FlatList,
   Platform
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScreenContainer } from '../../components/layout/Screen';
+import { Header } from '../../components/layout/Header';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppStore } from '../../store/useAppStore';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -57,16 +58,17 @@ export const PassScreen = ({ navigation }: any) => {
     }
   };
 
+  const insets = useSafeAreaInsets();
+
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="yellow" translucent />
+    <ScreenContainer noPadding ignoreTopSafe style={styles.container}>
       
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <MaterialCommunityIcons name="chevron-left" color="#000" size={28} />
-        </TouchableOpacity>
-      </View>
+      <Header
+        title="Apply Pass"
+        onBackPress={() => navigation.goBack()}
+        backIconName="chevron-left"
+      />
 
       <View style={styles.staticContent}>
         {/* Pass Details Card */}
@@ -156,7 +158,7 @@ export const PassScreen = ({ navigation }: any) => {
             <Text style={styles.label}>Verification Document</Text>
             <View style={styles.row}>
               <TouchableOpacity style={[styles.pickerContainer, { flex: 1.2, marginRight: 10 }]}>
-                <Text style={styles.pickerText} placeholderTextColor="#CCC">Select ID</Text>
+                <Text style={styles.pickerText}>Select ID</Text>
                 <MaterialCommunityIcons name="chevron-down" color="#CCC" size={18} />
               </TouchableOpacity>
               <TextInput 
@@ -203,7 +205,7 @@ export const PassScreen = ({ navigation }: any) => {
       </Modal>
 
       {/* Footer Button */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <TouchableOpacity 
           style={styles.nextBtn}
           onPress={() => navigation.navigate('Payment', { 
@@ -219,7 +221,7 @@ export const PassScreen = ({ navigation }: any) => {
           <Text style={styles.nextBtnText}>Next Step</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </ScreenContainer>
   );
 };
 
@@ -230,9 +232,16 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#F8F9FA',
-    marginTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0
+    height: 60,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'green',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: 'white',
+    marginLeft: 12,
   },
   backBtn: {
     width: 40,

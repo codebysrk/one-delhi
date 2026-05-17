@@ -10,10 +10,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { MainHeader } from '../../components/layout/MainHeader';
+import { MainHeader } from '../../components/layout/Header';
 
 export const TripPlanScreen = ({ navigation }: any) => {
-  const [sourceText, setSourceText] = useState('Tandoori Wok');
+  const [sourceText, setSourceText] = useState('');
   const [destText, setDestText] = useState('');
 
   const handleSwap = () => {
@@ -23,13 +23,13 @@ export const TripPlanScreen = ({ navigation }: any) => {
   };
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="yellow" translucent />
+      <StatusBar barStyle="light-content" backgroundColor="#A51F38" translucent />
       
       {/* Shared Premium Header */}
       <MainHeader 
         style={styles.headerArea}
         showSearch={false}
-        imageStyle={{ resizeMode: 'stretch', opacity: 1, transform: [{ translateY: 86 }, { scaleX: 1 }, { scaleY: 2.1 }] }}
+        imageOpacity={0.9}
         rightElement={
           <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
             <MaterialCommunityIcons name="cog" size={26} color="white" />
@@ -99,7 +99,7 @@ export const TripPlanScreen = ({ navigation }: any) => {
             </View>
 
             <TouchableOpacity style={styles.clockBtn} activeOpacity={0.8}>
-              <MaterialCommunityIcons name="clock-outline" size={24} color="#374151" />
+              <MaterialCommunityIcons name="clock" size={24} color="#374151" />
             </TouchableOpacity>
           </View>
         </View>
@@ -125,12 +125,12 @@ export const TripPlanScreen = ({ navigation }: any) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'white' },
-  headerArea: { height: 90, overflow: 'hidden' },
+  headerArea: { overflow: 'hidden' },
   headerBg: { flex: 1 },
   headerOverlay: { flex: 1, backgroundColor: 'rgba(168, 28, 20, 0.7)' },
   topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', height: 60, paddingHorizontal: 15 },
   headerLogo: { width: 100, height: 40 },
-  content: { flex: 1, padding: 15, marginTop: 5 },
+  content: { flex: 1, padding: 16, marginTop: 5 },
   planCard: { 
     backgroundColor: 'white', 
     borderRadius: 16, 
@@ -212,18 +212,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 15,
+    paddingHorizontal: 16,
     paddingVertical: 10,
     marginTop: 40
   },
   filterText: { fontSize: 16, color: '#333' },
   recentHeader: { 
     backgroundColor: '#f0f0f0', 
-    paddingHorizontal: 15, 
+    paddingHorizontal: 16, 
     paddingVertical: 8, 
     marginTop: 18,
-    marginLeft: -15,
-    marginRight: -15,
+    marginLeft: -16,
+    marginRight: -16,
   },
   recentTitle: { fontSize: 14, color: '#666' },
   recentList: { flex: 1 }

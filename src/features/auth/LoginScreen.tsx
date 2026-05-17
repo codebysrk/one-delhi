@@ -11,6 +11,9 @@ import { logAction } from '../../services/logService';
 import { doc, getDoc, setDoc, updateDoc, getDocFromServer } from 'firebase/firestore';
 import { registerDevice, clearForceLogout } from '../../services/deviceService';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScreenContainer } from '../../components/layout/Screen';
+
 import { COLORS, TYPOGRAPHY, SPACING, RADII } from '../../core/theme';
 
 // Premium UI Components
@@ -188,9 +191,10 @@ export const LoginScreen = ({ navigation }: any) => {
     }
   };
 
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="yellow" translucent />
+    <ScreenContainer noPadding ignoreTopSafe style={styles.container}>
       <PremiumHeader 
         title="One Delhi" 
         subtitle="Sign in to your account to continue" 
@@ -202,7 +206,7 @@ export const LoginScreen = ({ navigation }: any) => {
         style={styles.flex}
       >
         <ScrollView 
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + SPACING.xxl }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -261,7 +265,7 @@ export const LoginScreen = ({ navigation }: any) => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </ScreenContainer>
   );
 };
 
@@ -323,7 +327,7 @@ const styles = StyleSheet.create({
   footerText: {
     color: COLORS.textSecondary,
     ...TYPOGRAPHY.bodySmall,
-  },
+  } as any,
   signupText: {
     color: COLORS.primary,
     ...TYPOGRAPHY.bodyMedium,

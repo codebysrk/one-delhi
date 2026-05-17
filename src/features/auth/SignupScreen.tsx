@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScreenContainer } from '../../components/layout/Screen';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -24,7 +26,7 @@ const signupSchema = z.object({
   email: z.string().email('Please enter a valid email address').trim().toLowerCase(),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   confirmPassword: z.string().min(6, 'Please confirm your password'),
-  gender: z.enum(['male', 'female', 'other'], { errorMap: () => ({ message: 'Please select gender' }) }),
+  gender: z.string().min(1, 'Please select gender') as z.ZodType<any>,
   terms: z.boolean().refine(val => val === true, { message: 'You must agree to the terms' }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
@@ -127,9 +129,10 @@ export const SignupScreen = ({ navigation }: any) => {
     }
   };
 
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="yellow" translucent />
+    <ScreenContainer noPadding ignoreTopSafe style={styles.container}>
       <PremiumHeader 
         title="Create Account" 
         subtitle="Sign up to get started" 
@@ -141,7 +144,7 @@ export const SignupScreen = ({ navigation }: any) => {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flex}
       >
-        <View style={styles.formContainer}>
+        <View style={[styles.formContainer, { paddingBottom: insets.bottom + 20 }]}>
           <View style={styles.form}>
             <Controller
               control={control}
@@ -189,7 +192,7 @@ export const SignupScreen = ({ navigation }: any) => {
                     error={errors.password?.message}
                     secureTextEntry
                     icon={<MaterialCommunityIcons name="lock-outline" size={18} color="#666" />}
-                    style={[styles.compactInput, { flex: 1, marginRight: 8 }]}
+                    style={StyleSheet.flatten([styles.compactInput, { flex: 1, marginRight: 8 }])}
                   />
                 )}
               />
@@ -206,7 +209,7 @@ export const SignupScreen = ({ navigation }: any) => {
                     error={errors.confirmPassword?.message}
                     secureTextEntry
                     icon={<MaterialCommunityIcons name="lock-outline" size={18} color="#666" />}
-                    style={[styles.compactInput, { flex: 1 }]}
+                    style={StyleSheet.flatten([styles.compactInput, { flex: 1 }])}
                   />
                 )}
               />
@@ -220,7 +223,7 @@ export const SignupScreen = ({ navigation }: any) => {
                   <GenderSelector value={value} onChange={onChange} />
                 )}
               />
-              {errors.gender && <Text style={styles.errorText}>{errors.gender.message}</Text>}
+              {errors.gender && <Text style={styles.errorText}>{errors.gender.message as any}</Text>}
             </View>
 
             <View style={styles.compactSection}>
@@ -250,7 +253,7 @@ export const SignupScreen = ({ navigation }: any) => {
           </View>
         </View>
       </KeyboardAvoidingView>
-    </View>
+    </ScreenContainer>
   );
 };
 

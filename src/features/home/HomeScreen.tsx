@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#E3F2FD",
   },
   illustrationImg: { width: "100%", height: "100%" },
-  mainContent: { paddingHorizontal: 15, marginTop: 0 },
+  mainContent: { paddingHorizontal: 16, marginTop: 0 },
   gridContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
   viewAll: { fontSize: 17, color: "#888" },
 
   topEmptyCard: {
-   backgroundColor: "#F9FAFB",
+    backgroundColor: "#F9FAFB",
     height: 190,
     justifyContent: "center",
     alignItems: "center",
@@ -242,6 +242,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 10,
     elevation: 2,
+    borderRadius: 5,
   },
   topEmptyText: { color: "#000000ff", fontSize: 18, fontWeight: "400" },
 
@@ -252,11 +253,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#E5E7EB",
-  shadowColor: "#000",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
     elevation: 2,
+    borderRadius: 5,
   },
   bottomEmptyText: { color: "#000000ff", fontSize: 18, fontWeight: "400" },
 });

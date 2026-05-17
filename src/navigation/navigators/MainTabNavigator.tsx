@@ -14,6 +14,7 @@ import { SearchScreen } from '../../features/home/SearchScreen';
 import { TripPlanIcon } from '../../components/icons/TripPlanIcon';
 import { useAppStore } from '../../store/useAppStore';
 import { COLORS, TYPOGRAPHY, LAYOUT, ANIMATIONS } from '../../core/theme';
+import { BrandingFooter } from '../../components/ui/BrandingFooter';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -121,14 +122,7 @@ export const MainTabNavigator = () => {
         />
       </Tab.Navigator>
       
-      {showFooter && (
-        <View style={styles.footerContainer}>
-          <View style={styles.footerShadow} />
-          <View style={styles.globalFooter}>
-            <Text style={styles.footerText}>Powered by IIIT-Delhi</Text>
-          </View>
-        </View>
-      )}
+      {showFooter && <BrandingFooter variant="tab" />}
     </View>
   );
 };
@@ -158,28 +152,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     top: -8,
-  },
-  footerContainer: {
-    backgroundColor: '#FFF',
-  },
-  footerShadow: {
-    height: 1,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 8,
-  },
-  globalFooter: { 
-    backgroundColor: '#b01a1aff',
-    paddingVertical: 2, 
-    alignItems: 'center', 
-    justifyContent: 'center',
-  },
-  footerText: { 
-    color: 'white', 
-    fontSize: 10, 
-    fontWeight: '500' 
   },
 });

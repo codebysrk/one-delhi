@@ -7,16 +7,16 @@ import {
   ImageBackground,
   useWindowDimensions,
   Dimensions,
-  StatusBar,
   ScrollView,
   TextInput,
 } from "react-native";
-import { WebView } from "react-native-webview";
+import { GoogleMap, GoogleMapRef } from "../../components/ui/GoogleMap";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Screen } from "../../components/layout/Screen";
 import { Image } from "expo-image";
 import * as Location from "expo-location";
-import { MainHeader } from "../../components/layout/MainHeader";
+import { MainHeader } from "../../components/layout/Header";
 
 const EV_STATIONS = [
   {
@@ -43,11 +43,12 @@ const EV_STATIONS = [
 
 export const EVScreen = ({ navigation }: any) => {
   const { width } = useWindowDimensions();
-  const webViewRef = useRef<WebView>(null);
+  const webViewRef = useRef<GoogleMapRef>(null);
   const [activeTab, setActiveTab] = useState<"EV" | "Parking">("EV");
   const [location, setLocation] = useState<Location.LocationObject | null>(
     null,
   );
+  const [mapLoaded, setMapLoaded] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -58,72 +59,30 @@ export const EVScreen = ({ navigation }: any) => {
     })();
   }, []);
 
-  const mapHtml = useMemo(() => {
-    return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-      <style>
-        body { margin: 0; padding: 0; }
-        #map { height: 100vh; width: 100vw; background: #f1f5f9; }
-        .ev-marker { 
-          width: 32px; height: 32px; background: #10B981; 
-          border: 2.5px solid white; border-radius: 50% 50% 50% 0; 
-          transform: rotate(-45deg);
-          display: flex; justify-content: center; alignItems: center;
-          box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-        }
-        .ev-marker i { 
-          transform: rotate(45deg); color: #000; font-size: 16px; 
-          font-family: Arial; font-style: normal; font-weight: bold;
-        }
-      </style>
-    </head>
-    <body>
-      <div id="map"></div>
-      <script>
-        var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([28.6139, 77.2090], 12);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-          maxZoom: 20
-        }).addTo(map);
+  useEffect(() => {
+    if (mapLoaded) {
+      const stations = EV_STATIONS.map((s) => ({
+        lat: s.lat,
+        lng: s.lng,
+        name: s.name,
+      }));
+      webViewRef.current?.drawEVStations(stations);
+    }
+  }, [mapLoaded]);
 
-        var evIcon = L.divIcon({
-          className: '',
-          html: '<div class="ev-marker"><i>⚡</i></div>',
-          iconSize: [32, 32],
-          iconAnchor: [16, 32]
-        });
+  // mapHtml removed since we now use the unified GoogleMap component
 
-        const stations = ${JSON.stringify(EV_STATIONS)};
-        stations.forEach(s => {
-          L.marker([s.lat, s.lng], { icon: evIcon }).addTo(map);
-        });
-
-        window.centerMap = function(lat, lng) {
-          map.flyTo([lat, lng], 14, { duration: 1.5 });
-        };
-      </script>
-    </body>
-    </html>
-    `;
-  }, []);
+  const insets = useSafeAreaInsets();
 
   return (
-    <View style={styles.container}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor="yellow"
-        translucent
-      />
+    <Screen noPadding ignoreTopSafe style={styles.container}>
 
       {/* Full Screen Map as Base Layer */}
       <View style={styles.fullScreenMap}>
-        <WebView
+        <GoogleMap
           ref={webViewRef}
-          source={{ html: mapHtml }}
+          userLocation={location}
+          onMapLoaded={() => setMapLoaded(true)}
           style={{ flex: 1 }}
         />
       </View>
@@ -151,9 +110,7 @@ export const EVScreen = ({ navigation }: any) => {
             style={[styles.fab, { marginTop: 15 }]}
             onPress={() =>
               location &&
-              webViewRef.current?.injectJavaScript(
-                `centerMap(${location.coords.latitude}, ${location.coords.longitude})`,
-              )
+              webViewRef.current?.centerMap(location.coords.latitude, location.coords.longitude, 14)
             }
           >
             <MaterialCommunityIcons
@@ -165,7 +122,7 @@ export const EVScreen = ({ navigation }: any) => {
         </View>
 
         {/* The White Sheet at bottom */}
-        <View style={styles.bottomSheet}>
+        <View style={[styles.bottomSheet, { paddingBottom: insets.bottom + 10 }]}>
           <View style={styles.tabBar}>
             <TouchableOpacity
               style={[
@@ -240,7 +197,7 @@ export const EVScreen = ({ navigation }: any) => {
           </ScrollView>
         </View>
       </View>
-    </View>
+    </Screen>
   );
 };
 
@@ -255,7 +212,6 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 160,
     zIndex: 10,
     borderBottomLeftRadius: 40,
     borderBottomRightRadius: 40,
@@ -272,14 +228,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     height: 60,
-    paddingHorizontal: 15,
+    paddingHorizontal: 16,
   },
   headerLogo: { width: 100, height: 40 },
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "rgba(0,0,0,0.25)",
-    marginHorizontal: 15,
+    marginHorizontal: 16,
     height: 52,
     borderRadius: 26,
     marginTop: 5,

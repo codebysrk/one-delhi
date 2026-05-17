@@ -4,12 +4,14 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
   Platform,
   RefreshControl,
   ActivityIndicator,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Screen } from "../../components/layout/Screen";
+import { Header } from "../../components/layout/Header";
 import { FlashList } from "@shopify/flash-list";
 import {
   collection,
@@ -88,19 +90,21 @@ export const HistoryScreen = ({ navigation }: any) => {
     [navigation],
   );
 
+  const insets = useSafeAreaInsets();
+
   if (loading) {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <SafeAreaView>
-            <View style={styles.headerContent}>
-              <View style={styles.backBtn}>
-                <Skeleton width={28} height={28} borderRadius={14} />
-              </View>
-              <Skeleton width={150} height={24} />
-            </View>
-          </SafeAreaView>
-        </View>
+      <Screen 
+        noPadding 
+        ignoreTopSafe
+        style={{ backgroundColor: '#FFF' }}
+      >
+        <Header
+          backgroundColor="#FFFFFF"
+          textColor="#000000"
+          height={50}
+          showShadow={true}
+        />
         <View style={styles.listContent}>
           {[1, 2, 3, 4, 5].map((i) => (
             <View key={i} style={styles.cardWrapper}>
@@ -108,38 +112,30 @@ export const HistoryScreen = ({ navigation }: any) => {
             </View>
           ))}
         </View>
-      </View>
+      </Screen>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="yellow" translucent />
-
-      <View style={styles.header}>
-        <SafeAreaView>
-          <View style={styles.headerContent}>
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={styles.backBtn}
-            >
-              <MaterialCommunityIcons
-                name="arrow-left"
-                size={28}
-                color="#333"
-              />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Ticket History</Text>
-          </View>
-        </SafeAreaView>
-      </View>
+    <Screen 
+      noPadding 
+      ignoreTopSafe 
+      style={{ backgroundColor: '#FFF' }}
+    >
+      <Header
+        onBackPress={() => navigation.goBack()}
+        backgroundColor="#FFFFFF"
+        textColor="#000000"
+        height={50}
+        showShadow={true}
+      />
 
       {cachedTickets.length > 0 ? (
         <FlashList
           data={cachedTickets}
           renderItem={renderTicketItem}
           keyExtractor={(item) => item.id || item.tid}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={StyleSheet.flatten([styles.listContent, { paddingBottom: insets.bottom + 20 }])}
           showsVerticalScrollIndicator={false}
           estimatedItemSize={160}
           refreshControl={
@@ -151,7 +147,7 @@ export const HistoryScreen = ({ navigation }: any) => {
           }
         />
       ) : (
-        <View style={styles.emptyContainer}>
+        <View style={[styles.emptyContainer, { paddingBottom: insets.bottom + 20 }]}>
           <MaterialCommunityIcons
             name="ticket-outline"
             size={100}
@@ -166,30 +162,12 @@ export const HistoryScreen = ({ navigation }: any) => {
           </TouchableOpacity>
         </View>
       )}
-    </View>
+    </Screen>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF" },
-  header: {
-    backgroundColor: "#FFF",
-    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    zIndex: 10,
-  },
-  headerContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    height: 56,
-  },
-  backBtn: { padding: 4, marginRight: 8 },
-  headerTitle: { fontSize: 20, fontWeight: "700", color: "#111" },
   cardWrapper: {
     paddingHorizontal: 16,
     paddingVertical: 10,

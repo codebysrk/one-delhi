@@ -1,54 +1,99 @@
 import React from 'react';
-import { StatusBar, View, ScrollView, Platform, StyleSheet, ViewStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { 
+  StatusBar, 
+  View, 
+  ScrollView, 
+  Platform, 
+  StyleSheet, 
+  ViewStyle, 
+  KeyboardAvoidingView,
+  KeyboardAvoidingViewProps
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, SHADOWS, SPACING, LAYOUT } from '../../core/theme';
 
-interface ScreenProps {
+export interface ScreenContainerProps {
   children: React.ReactNode;
   header?: React.ReactNode;
   scrollable?: boolean;
   backgroundColor?: string;
   noPadding?: boolean;
   style?: ViewStyle;
+  contentContainerStyle?: ViewStyle;
+  keyboardSafe?: boolean;
+  keyboardBehavior?: KeyboardAvoidingViewProps['behavior'];
+  ignoreTopSafe?: boolean;
+  ignoreBottomSafe?: boolean;
+  statusBarBarStyle?: 'light-content' | 'dark-content';
+  statusBarBgColor?: string;
 }
 
-export const Screen: React.FC<ScreenProps> = ({
+export const ScreenContainer: React.FC<ScreenContainerProps> = ({
   children,
   header,
   scrollable = false,
   backgroundColor = COLORS.background,
   noPadding = false,
   style,
+  contentContainerStyle,
+  keyboardSafe = false,
+  keyboardBehavior = Platform.OS === 'ios' ? 'padding' : undefined,
+  ignoreTopSafe = false,
+  ignoreBottomSafe = false,
+  statusBarBarStyle = 'light-content',
+  statusBarBgColor = '#A51F38',
 }) => {
+  const insets = useSafeAreaInsets();
+  
+  const paddingTop = ignoreTopSafe ? 0 : insets.top;
+  const paddingBottom = ignoreBottomSafe ? 0 : insets.bottom;
+
   const Container = scrollable ? ScrollView : View;
+  
+  const innerContent = (
+    <Container
+      style={styles.container}
+      contentContainerStyle={[
+        scrollable ? styles.scrollContent : undefined,
+        scrollable ? { paddingBottom: paddingBottom + (noPadding ? 0 : SPACING.lg) } : undefined,
+        contentContainerStyle
+      ]}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
+      <View style={[
+        styles.inner,
+        !noPadding && { paddingHorizontal: LAYOUT.screenPadding, paddingTop: SPACING.md },
+        !scrollable && { paddingBottom: paddingBottom }
+      ]}>
+        {children}
+      </View>
+    </Container>
+  );
 
   return (
-    <SafeAreaView 
-      style={[{ flex: 1, backgroundColor }, style]} 
-      edges={['right', 'left', 'top']}
-    >
+    <View style={[{ flex: 1, backgroundColor, paddingTop }, style]}>
       <StatusBar 
-        barStyle="dark-content"
-        backgroundColor="yellow"
+        barStyle={statusBarBarStyle}
+        backgroundColor={statusBarBgColor}
         translucent
       />
       {header && <View style={styles.fixedHeader}>{header}</View>}
-      <Container
-        style={styles.container}
-        contentContainerStyle={scrollable ? styles.scrollContent : undefined}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={[
-          styles.inner, 
-          !noPadding && { paddingHorizontal: LAYOUT.screenPadding, paddingTop: SPACING.md }
-        ]}>
-          {children}
-        </View>
-      </Container>
-    </SafeAreaView>
+      {keyboardSafe ? (
+        <KeyboardAvoidingView 
+          behavior={keyboardBehavior} 
+          style={{ flex: 1 }}
+        >
+          {innerContent}
+        </KeyboardAvoidingView>
+      ) : (
+        innerContent
+      )}
+    </View>
   );
 };
+
+export const Screen = ScreenContainer;
 
 const styles = StyleSheet.create({
   container: {
@@ -64,7 +109,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 0, 
   },
   inner: {
     flex: 1,

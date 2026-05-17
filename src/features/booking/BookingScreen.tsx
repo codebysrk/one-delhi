@@ -10,8 +10,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
   Alert,
   TextInput,
   Dimensions,
@@ -24,6 +22,9 @@ import {
   KeyboardAvoidingView,
   FlatList,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Screen } from "../../components/layout/Screen";
+import { Header } from "../../components/layout/Header";
 import { FlashList } from "@shopify/flash-list";
 const AnyFlashList = FlashList as any;
 import { useAppStore } from "../../store/useAppStore";
@@ -71,26 +72,37 @@ const RouteItem = React.memo(
       >
         <View style={styles.routeItemContent}>
           <View style={styles.routeIconHeader}>
-            <MaterialCommunityIcons
-              name="bus"
-              size={22}
-              color="#000000ff"
-              style={{ marginLeft: -5 }}
-            />
+            <View style={styles.routeCircleWrapper}>
+              <MaterialCommunityIcons
+                name="bus"
+                size={22}
+                color="#000000ff"
+              />
+            </View>
             <Text style={styles.routeNumberText}>
               {item.id?.replace(/UP$|DOWN$/, "")}
             </Text>
           </View>
-          <View style={styles.routeVisualPath}>
-            <View style={styles.routePathVisualizer}>
-              <View style={[styles.routeCircle, styles.routeCircleTop]} />
-              <View style={styles.routeLine} />
-              <View style={[styles.routeCircle, styles.routeCircleBottom]} />
-            </View>
-            <View style={styles.routeLabels}>
+          <View style={styles.routePathContainer}>
+            <View style={styles.routeStopRow}>
+              <View style={styles.routeCircleWrapper}>
+                <View style={styles.routeCircle} />
+              </View>
               <Text style={styles.routeTerminalLabel} numberOfLines={1}>
                 {item.stops?.[0]}
               </Text>
+            </View>
+
+            <View style={styles.routeLineRow}>
+              <View style={styles.routeCircleWrapper}>
+                <View style={styles.routeLine} />
+              </View>
+            </View>
+
+            <View style={styles.routeStopRow}>
+              <View style={styles.routeCircleWrapper}>
+                <View style={styles.routeCircle} />
+              </View>
               <Text style={styles.routeTerminalLabel} numberOfLines={1}>
                 {item.stops?.[item.stops.length - 1]}
               </Text>
@@ -256,6 +268,7 @@ const BusTypeSelector = React.memo(
             key={type}
             style={[
               styles.typeBtn,
+              type === "AC" && { paddingHorizontal: moderateScale(10), minWidth: moderateScale(40) },
               busType === type &&
                 (type === "AC"
                   ? styles.typeBtnActive
@@ -320,34 +333,46 @@ const FareDisplay = React.memo(
     onBlur: () => void;
   }) => (
     <View style={styles.fareRow}>
-      <View>
+      <View style={{ flex: 1 }}>
         <Text style={styles.bottomLabel}>Amount Payable</Text>
-        <View style={[styles.priceRow, { opacity: showDiscount ? 1 : 0 }]}>
-          <Text style={styles.oldPrice}>₹{finalFare.originalTotal}</Text>
-          <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-            {isEditing ? (
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Text style={styles.newPrice}>₹</Text>
-                <TextInput
-                  style={[styles.newPrice, { minWidth: 40, padding: 0 }]}
-                  value={manualTotal}
-                  onChangeText={onManualChange}
-                  onBlur={onBlur}
-                  onSubmitEditing={onBlur}
-                  keyboardType="numeric"
-                  autoFocus
-                  selectTextOnFocus
-                />
-              </View>
-            ) : (
-              <Text style={styles.newPrice}>₹{finalFare.total}</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+        {showDiscount ? (
+          <Animated.View
+            entering={FadeIn.duration(350)}
+            exiting={FadeOut.duration(200)}
+            style={styles.priceRow}
+          >
+            <Text style={styles.oldPrice}>₹{finalFare.originalTotal}</Text>
+            <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+              {isEditing ? (
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <Text style={styles.newPrice}>₹</Text>
+                  <TextInput
+                    style={[styles.newPrice, { minWidth: 40, padding: 0 }]}
+                    value={manualTotal}
+                    onChangeText={onManualChange}
+                    onBlur={onBlur}
+                    onSubmitEditing={onBlur}
+                    keyboardType="numeric"
+                    autoFocus
+                    selectTextOnFocus
+                  />
+                </View>
+              ) : (
+                <Text style={styles.newPrice}>₹{finalFare.total}</Text>
+              )}
+            </TouchableOpacity>
+          </Animated.View>
+        ) : null}
       </View>
-      <View style={[styles.discountBadge, { opacity: showDiscount ? 1 : 0 }]}>
-        <Text style={styles.discountText}>10.0% off</Text>
-      </View>
+      {showDiscount ? (
+        <Animated.View
+          entering={FadeIn.duration(350)}
+          exiting={FadeOut.duration(200)}
+          style={styles.discountBadge}
+        >
+          <Text style={styles.discountText}>10.0% off</Text>
+        </Animated.View>
+      ) : null}
     </View>
   ),
 );
@@ -707,7 +732,10 @@ export const BookingScreen = ({ navigation }: any) => {
     };
 
     setTimeout(() => {
-      navigation.navigate("Payment", { ticketData });
+      navigation.navigate("Payment", { 
+        ticketData,
+        timeLeft: Math.floor(timeLeft.value)
+      });
     }, 2000);
   }, [
     routeSearch,
@@ -722,16 +750,19 @@ export const BookingScreen = ({ navigation }: any) => {
 
   const filteredRoutes = useMemo(() => {
     if (activeInput !== "route") return [];
-    if (!routeSearch) return dbRoutes;
+    
+    // 1. Initial empty search or clearing input: show top 10 routes only to keep rendering load extremely low
+    if (!routeSearch) return dbRoutes.slice(0, 10);
 
-    // If the search text is exactly the selected route, show all routes so user can change it
+    // If the search text is exactly the selected route, show top 10 routes so user can change it
     const isFullSelection = dbRoutes.some(
       (r) =>
         `${r.id?.replace(/UP$|DOWN$/, "")}-${r.stops?.[r.stops.length - 1]}` ===
         routeSearch,
     );
-    if (isFullSelection) return dbRoutes;
+    if (isFullSelection) return dbRoutes.slice(0, 10);
 
+    // 2. Active search: filter base routes dynamically
     const normalizeRoute = (str: string) => {
       return str.toUpperCase().replace(/[\s-]/g, '');
     };
@@ -960,28 +991,19 @@ export const BookingScreen = ({ navigation }: any) => {
     [activeInput, handleSelect],
   );
 
-  return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="yellow" translucent />
+  const insets = useSafeAreaInsets();
 
+  return (
+    <Screen noPadding ignoreTopSafe style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <SafeAreaView>
-          <View style={styles.headerRow}>
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={styles.backBtn}
-            >
-              <MaterialCommunityIcons
-                name="arrow-left"
-                size={26}
-                color="#FFF"
-              />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Buy tickets</Text>
-            <View style={styles.backBtn} />
-          </View>
-        </SafeAreaView>
+      <Header
+        title="Buy tickets"
+        centerTitle={true}
+        onBackPress={() => navigation.goBack()}
+        titleStyle={{ fontSize: 22 }}
+      />
+
+      <View style={[styles.container, { flex: 0 }]}>
         <TimerPill timeLeft={timeLeft} />
       </View>
 
@@ -1107,7 +1129,7 @@ export const BookingScreen = ({ navigation }: any) => {
         </ScrollView>
 
         {/* Bottom Section */}
-        <View style={styles.bottom}>
+        <View style={[styles.bottom, { paddingBottom: insets.bottom + moderateScale(16) }]}>
           <QuantitySelector qty={qty} onQtyChange={setQty} />
 
           <FareDisplay
@@ -1201,7 +1223,7 @@ export const BookingScreen = ({ navigation }: any) => {
           <Text style={styles.toastText}>Session expired</Text>
         </Animated.View>
       )}
-    </View>
+    </Screen>
   );
 };
 
@@ -1210,44 +1232,27 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#D32F2F",
   },
-  header: {
-    backgroundColor: "#A51F38",
-    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight || 0 : 0,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: moderateScale(16),
-    height: moderateScale(56),
-  },
-  backBtn: {
-    width: moderateScale(40),
-    height: moderateScale(40),
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerTitle: {
-    color: "#FFF",
-    fontSize: responsiveFontSize(22),
-    fontWeight: "400",
-  },
   timerContainer: {
     alignItems: "center",
-    paddingBottom: moderateScale(16),
+    paddingBottom: moderateScale(12),
   },
   timerPill: {
-    backgroundColor: "#FFF",
-    paddingHorizontal: moderateScale(18),
-    paddingVertical: moderateScale(6),
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: moderateScale(8),
+    paddingVertical: moderateScale(4),
     borderRadius: moderateScale(8),
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   timerText: {
     fontSize: responsiveFontSize(16),
-    color: "#000",
+    color: "#000000",
   },
   timerBold: {
-    fontWeight: "normal",
+    fontWeight: "600",
   },
   content: {
     flex: 1,
@@ -1359,7 +1364,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF",
     paddingHorizontal: moderateScale(16),
     paddingTop: moderateScale(16),
-    paddingBottom: Platform.OS === "ios" ? moderateScale(32) : moderateScale(16),
     borderTopWidth: 1,
     borderTopColor: "#E5E7EB",
   },
@@ -1400,7 +1404,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
-    marginBottom: moderateScale(16),
+    marginBottom: moderateScale(14),
   },
   priceRow: {
     flexDirection: "row",
@@ -1408,12 +1412,12 @@ const styles = StyleSheet.create({
     gap: moderateScale(10),
   },
   oldPrice: {
-    fontSize: responsiveFontSize(24),
+    fontSize: responsiveFontSize(28),
     color: "#9CA3AF",
     textDecorationLine: "line-through",
   },
   newPrice: {
-    fontSize: responsiveFontSize(24),
+    fontSize: responsiveFontSize(28),
     color: "#D32F2F",
     fontWeight: "normal",
   },
@@ -1425,21 +1429,20 @@ const styles = StyleSheet.create({
   },
   discountText: {
     color: "#FFF",
-    fontSize: responsiveFontSize(16),
+    fontSize: responsiveFontSize(18),
     fontWeight: "normal",
   },
   buyBtn: {
     backgroundColor: "#D32F2F",
-    paddingVertical: moderateScale(14),
+    paddingVertical: moderateScale(12),
     alignItems: "center",
-    borderRadius: moderateScale(8),
   },
   buyBtnDisabled: {
     backgroundColor: "#9CA3AF",
   },
   buyText: {
     color: "#FFF",
-    fontSize: responsiveFontSize(18),
+    fontSize: responsiveFontSize(20),
     fontWeight: "normal",
     letterSpacing: 1,
   },
@@ -1476,11 +1479,9 @@ const styles = StyleSheet.create({
     borderColor: "#E5E7EB",
   },
   routeItem: {
-    height: moderateScale(85),
+    paddingVertical: moderateScale(10),
     paddingHorizontal: moderateScale(14),
     justifyContent: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
   },
   routeItemContent: { flex: 1 },
   routeIconHeader: {
@@ -1490,52 +1491,48 @@ const styles = StyleSheet.create({
     marginBottom: moderateScale(6),
   },
   routeNumberText: {
-    fontSize: responsiveFontSize(16),
+    fontSize: responsiveFontSize(18),
     fontWeight: "500",
     color: "#000",
   },
-  routeVisualPath: {
+  routePathContainer: {
+    flexDirection: "column",
+    gap: 0,
+  },
+  routeStopRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingLeft: 0,
+    gap: moderateScale(10),
   },
-  routePathVisualizer: {
+  routeLineRow: {
+    flexDirection: "row",
     alignItems: "center",
-    width: moderateScale(12),
-    marginRight: moderateScale(15),
-    paddingTop: moderateScale(4),
+    height: moderateScale(6),
+  },
+  routeCircleWrapper: {
+    width: 24,
+    alignItems: "center",
+    justifyContent: "center",
   },
   routeCircle: {
-    width: moderateScale(10),
-    height: moderateScale(10),
-    borderRadius: moderateScale(5),
-    borderWidth: 1.5,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 1,
     borderColor: "#D32F2F",
     backgroundColor: "#FFF",
   },
-  routeCircleTop: {
-    backgroundColor: "#D32F2F",
-  },
-  routeCircleBottom: {
-    backgroundColor: "#FFF",
-  },
   routeLine: {
-    width: 1.5,
-    height: moderateScale(18),
+    width: 2,
+    height: "100%",
     backgroundColor: "#D32F2F",
-    marginVertical: -1,
-  },
-  routeLabels: {
-    flex: 1,
-    gap: moderateScale(10),
-    justifyContent: "space-between",
-    paddingTop: 0,
   },
   routeTerminalLabel: {
-    fontSize: responsiveFontSize(13),
+    fontSize: responsiveFontSize(15),
     color: "#6B7280",
     fontWeight: "400",
-    lineHeight: responsiveFontSize(14),
+    lineHeight: responsiveFontSize(16),
+    flex: 1,
   },
   stopItem: {
     height: moderateScale(48),
@@ -1551,7 +1548,7 @@ const styles = StyleSheet.create({
     gap: moderateScale(10),
   },
   stopItemText: {
-    fontSize: responsiveFontSize(14),
+    fontSize: responsiveFontSize(16),
     color: "#000",
     fontWeight: "400",
   },

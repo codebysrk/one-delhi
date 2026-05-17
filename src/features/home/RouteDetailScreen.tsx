@@ -6,18 +6,21 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
   ActivityIndicator,
   Platform,
   useWindowDimensions,
   Dimensions,
 } from "react-native";
-import { WebView } from "react-native-webview";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Screen } from "../../components/layout/Screen";
+import { Header } from "../../components/layout/Header";
+import { GoogleMap, GoogleMapRef } from "../../components/ui/GoogleMap";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../services/firebase";
-import { EliteBottomSheet } from "../../components/layout/EliteBottomSheet";
+import * as Location from "expo-location";
+import { BottomSheet } from "../../components/layout/BottomSheet";
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -28,6 +31,158 @@ import Animated, {
 } from "react-native-reanimated";
 import { FlashList } from "@shopify/flash-list";
 import { ANIMATIONS } from "../../core/theme";
+import rawStops from "../../../assets/stops.json";
+
+const findCoordinatesForStops = (stopNames: string[]) => {
+  const coords: { latitude: number; longitude: number }[] = [];
+  let lastValid = { latitude: 28.6139, longitude: 77.2090 };
+  let hasValidAnchor = false;
+
+  // Geographic distance utility (Euclidean)
+  const getDist = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const dy = lat1 - lat2;
+    const dx = lon1 - lon2;
+    return Math.sqrt(dy * dy + dx * dx);
+  };
+
+  // Maximum degree difference (~3.8 km) to filter out wild cross-city jumps
+  const MAX_DEGREE_JUMP = 0.035; 
+
+  for (let i = 0; i < stopNames.length; i++) {
+    const name = stopNames[i];
+    
+    // 1. Exact matching
+    const exactMatches = rawStops.filter(
+      (s) => s.stop_name.toLowerCase().trim() === name.toLowerCase().trim()
+    );
+
+    let bestMatch: any = null;
+
+    if (exactMatches.length > 0) {
+      if (hasValidAnchor) {
+        // Tie-breaker: choose the exact match closest to our last valid position
+        let minDist = Infinity;
+        exactMatches.forEach((match) => {
+          const d = getDist(lastValid.latitude, lastValid.longitude, match.stop_lat, match.stop_lon);
+          if (d < minDist) {
+            minDist = d;
+            bestMatch = match;
+          }
+        });
+        
+        // If the closest exact match is still an impossible jump, discard
+        if (minDist > MAX_DEGREE_JUMP) {
+          bestMatch = null;
+        }
+      } else {
+        bestMatch = exactMatches[0];
+      }
+    }
+
+    // 2. Fuzzy matching if no valid exact match
+    if (!bestMatch) {
+      const cleanName = name.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').trim();
+      const tokens = cleanName.split(/\s+/).filter(t => t.length > 2);
+
+      let maxOverlap = 0;
+      let minDist = Infinity;
+
+      if (tokens.length > 0) {
+        for (let j = 0; j < rawStops.length; j++) {
+          const stop = rawStops[j];
+          
+          // Apply geo-filter to fuzzy match candidates to prevent cross-city matches
+          if (hasValidAnchor) {
+            const d = getDist(lastValid.latitude, lastValid.longitude, stop.stop_lat, stop.stop_lon);
+            if (d > MAX_DEGREE_JUMP) continue;
+          }
+
+          const sClean = stop.stop_name.toLowerCase().replace(/[^a-z0-9\s]/g, ' ');
+          let overlap = 0;
+          for (let k = 0; k < tokens.length; k++) {
+            if (sClean.includes(tokens[k])) {
+              overlap++;
+            }
+          }
+
+          if (overlap > maxOverlap) {
+            maxOverlap = overlap;
+            bestMatch = stop;
+            if (hasValidAnchor) {
+              minDist = getDist(lastValid.latitude, lastValid.longitude, stop.stop_lat, stop.stop_lon);
+            }
+          } else if (overlap === maxOverlap && overlap > 0 && hasValidAnchor) {
+            const d = getDist(lastValid.latitude, lastValid.longitude, stop.stop_lat, stop.stop_lon);
+            if (d < minDist) {
+              minDist = d;
+              bestMatch = stop;
+            }
+          }
+        }
+      }
+    }
+
+    if (bestMatch) {
+      const coord = {
+        latitude: bestMatch.stop_lat,
+        longitude: bestMatch.stop_lon,
+      };
+      coords.push(coord);
+      lastValid = coord;
+      hasValidAnchor = true;
+    } else {
+      coords.push({ latitude: 0, longitude: 0 });
+    }
+  }
+
+  // 3. Linear interpolation to backfill and interpolate missing stops
+  let firstValidIdx = -1;
+  for (let i = 0; i < coords.length; i++) {
+    if (coords[i].latitude !== 0) {
+      firstValidIdx = i;
+      break;
+    }
+  }
+
+  if (firstValidIdx === -1) {
+    // If no valid anchor found at all, return default spread
+    return stopNames.map((_, idx) => ({
+      latitude: 28.6139 + idx * 0.001,
+      longitude: 77.2090 + idx * 0.001,
+    }));
+  }
+
+  // Backfill initial missing stops from the first valid stop
+  const firstValid = coords[firstValidIdx];
+  for (let i = 0; i < firstValidIdx; i++) {
+    coords[i] = { ...firstValid };
+  }
+
+  lastValid = firstValid;
+  for (let i = firstValidIdx + 1; i < coords.length; i++) {
+    if (coords[i].latitude === 0) {
+      let nextValid = lastValid;
+      let steps = 1;
+      
+      for (let j = i + 1; j < coords.length; j++) {
+        if (coords[j].latitude !== 0) {
+          nextValid = coords[j];
+          steps = j - i + 1;
+          break;
+        }
+      }
+      
+      const t = 1 / steps;
+      coords[i] = {
+        latitude: lastValid.latitude + (nextValid.latitude - lastValid.latitude) * t,
+        longitude: lastValid.longitude + (nextValid.longitude - lastValid.longitude) * t,
+      };
+    }
+    lastValid = coords[i];
+  }
+
+  return coords;
+};
 
 // --- Interfaces ---
 interface RouteData {
@@ -48,35 +203,11 @@ const DEFAULT_REGION = {
   longitudeDelta: 0.15,
 };
 
-const SHEET_MIN_HEIGHT = 210;
-const { height: SCREEN_HEIGHT_DIM } = Dimensions.get("window");
-const SHEET_FULL_HEIGHT = SCREEN_HEIGHT_DIM * 0.85;
-const SHEET_HALF_HEIGHT = SHEET_FULL_HEIGHT * 0.65;
 
-// Snap points in translateY values (MapScreen logic)
-const SNAP_TOP = 0;
-const SNAP_MID = SHEET_FULL_HEIGHT - SHEET_HALF_HEIGHT + 300;
-const SNAP_BOTTOM = SHEET_FULL_HEIGHT - SHEET_MIN_HEIGHT + 350;
 
 // --- Modular Components ---
 
-const RouteHeader = memo(({ 
-  routeNumber, 
-  busCount, 
-  onBack 
-}: { 
-  routeNumber: string; 
-  busCount: number; 
-  onBack: () => void;
-}) => (
-  <View style={styles.header}>
-    <TouchableOpacity onPress={onBack} style={styles.backBtn} activeOpacity={0.7}>
-      <MaterialCommunityIcons name="arrow-left" size={24} color="#111" />
-    </TouchableOpacity>
-    <Text style={styles.routeNumberTitle}>{routeNumber}</Text>
-    <Text style={styles.busCountText}>{busCount} bus</Text>
-  </View>
-));
+
 
 const RouteInfo = memo(({ origin, destination }: { origin: string; destination: string }) => (
   <View style={styles.routeInfoBox}>
@@ -110,12 +241,12 @@ const StopTimelineItem = memo(({
     style={styles.stopRow}
   >
     <View style={styles.visualColumn}>
-      {index === 0 ? (
+      {!isLast && <View style={styles.connector} />}
+      {(index === 0 || isLast) ? (
         <View style={styles.solidNode} />
       ) : (
         <View style={styles.hollowNode} />
       )}
-      {!isLast && <View style={styles.connector} />}
     </View>
     <View style={styles.textColumn}>
       <Text style={styles.stopName} numberOfLines={1} ellipsizeMode="tail">
@@ -133,12 +264,25 @@ export const RouteDetailScreen = ({ route, navigation }: any) => {
   const [routeData, setRouteData] = useState<RouteData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userLoc, setUserLoc] = useState<Location.LocationObject | null>(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
 
-  const webViewRef = useRef<WebView>(null);
+  const webViewRef = useRef<GoogleMapRef>(null);
   const { height: SCREEN_HEIGHT } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  
+  const SHEET_MIN_HEIGHT = 240;
+const SHEET_FULL_HEIGHT = SCREEN_HEIGHT * 0.98;
+  const SHEET_HALF_HEIGHT = SHEET_FULL_HEIGHT * 0.79;
+  const sheetHeight = SCREEN_HEIGHT * 1;
+
+  const statusBarHeight = Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : (insets.top || 44);
+  const SNAP_TOP = statusBarHeight - 48 - SCREEN_HEIGHT + sheetHeight;
+  const SNAP_MID = SHEET_FULL_HEIGHT - SHEET_HALF_HEIGHT + 360;
+  const SNAP_BOTTOM = SHEET_FULL_HEIGHT - SHEET_MIN_HEIGHT + 350;
   
   // --- BOTTOM SHEET CONFIGURATION (बॉटम शीट की सेटिंग्स - MapScreen के समान) ---
-  const snapPoints = useMemo(() => [SNAP_TOP, SNAP_MID, SNAP_BOTTOM], []);
+  const snapPoints = useMemo(() => [SNAP_TOP, SNAP_MID, SNAP_BOTTOM], [SNAP_TOP, SNAP_MID, SNAP_BOTTOM]);
 
   // translateY: यह वैल्यू तय करती है कि शीट ऊपर-नीचे कहाँ रहेगी।
   // इसकी शुरुआती वैल्यू SNAP_MID है ताकि स्क्रीन खुलते ही शीट आधी खुली दिखे।
@@ -187,6 +331,10 @@ export const RouteDetailScreen = ({ route, navigation }: any) => {
         let formattedData: RouteData;
         
         if (data.stops && Array.isArray(data.stops)) {
+          const coords = data.polylineCoordinates && data.polylineCoordinates.length > 0
+            ? data.polylineCoordinates
+            : findCoordinatesForStops(data.stops);
+
           formattedData = {
             routeNumber: data.routeNumber || routeId,
             origin: data.origin || data.stops[0] || "Unknown",
@@ -194,12 +342,17 @@ export const RouteDetailScreen = ({ route, navigation }: any) => {
             totalBuses: data.totalBuses || 11,
             totalStops: data.totalStops || data.stops.length,
             direction: data.direction,
-            polylineCoordinates: data.polylineCoordinates || [],
+            polylineCoordinates: coords,
             stops: data.stops,
           };
         } else if (data.directions) {
           const activeDirection = direction || (data.directions.up ? "UP" : "DOWN");
           const dirData = activeDirection === "UP" ? data.directions.up : (data.directions.down || data.directions.up);
+          const stopNames = dirData?.stops || [];
+          const coords = dirData?.stop_coordinates && dirData.stop_coordinates.length > 0
+            ? dirData.stop_coordinates
+            : findCoordinatesForStops(stopNames);
+
           formattedData = {
             routeNumber: data.route || routeId.replace(/UP|DOWN/g, ''),
             origin: dirData?.from || dirData?.stops?.[0] || "Origin",
@@ -207,8 +360,8 @@ export const RouteDetailScreen = ({ route, navigation }: any) => {
             totalBuses: 11, 
             totalStops: dirData?.totalStops || dirData?.stops?.length || 0,
             direction: activeDirection,
-            polylineCoordinates: [],
-            stops: dirData?.stops || [],
+            polylineCoordinates: coords,
+            stops: stopNames,
           };
         } else {
            formattedData = {
@@ -237,127 +390,65 @@ export const RouteDetailScreen = ({ route, navigation }: any) => {
     return () => unsubscribe();
   }, [routeId]);
 
+  useEffect(() => {
+    const getUserLocation = async () => {
+      try {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === "granted") {
+          let loc = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          setUserLoc(loc);
+        }
+      } catch (error) {
+        console.log("Error getting user location in RouteDetailScreen:", error);
+      }
+    };
+    getUserLocation();
+  }, []);
+
   const centerMap = useCallback(() => {
-    if (webViewRef.current && routeData) {
-      const coords = routeData.polylineCoordinates && routeData.polylineCoordinates.length > 0 
-        ? routeData.polylineCoordinates 
-        : [
-            { latitude: 28.6300, longitude: 77.1600 },
-          ];
-      if (coords.length > 0) {
-        const js = `centerMap(${coords[0].latitude}, ${coords[0].longitude}); true;`;
-        webViewRef.current.injectJavaScript(js);
+    if (webViewRef.current) {
+      if (userLoc) {
+        webViewRef.current.centerMap(userLoc.coords.latitude, userLoc.coords.longitude, 16);
+      } else if (routeData && routeData.polylineCoordinates.length > 0) {
+        const firstStop = routeData.polylineCoordinates[0];
+        webViewRef.current.centerMap(firstStop.latitude, firstStop.longitude, 14);
       }
     }
-  }, [routeData]);
+  }, [userLoc, routeData]);
 
-  const mapHtml = useMemo(() => {
-    if (!routeData) return '';
-    const coords = routeData.polylineCoordinates.length > 0 
-      ? routeData.polylineCoordinates 
-      : [
-          { latitude: 28.6300, longitude: 77.1600 },
-          { latitude: 28.6250, longitude: 77.1650 },
-          { latitude: 28.6100, longitude: 77.1800 },
-          { latitude: 28.5950, longitude: 77.1900 },
-          { latitude: 28.5900, longitude: 77.2000 },
-          { latitude: 28.5500, longitude: 77.1950 },
-          { latitude: 28.5300, longitude: 77.1900 },
-        ];
-    
-    const latlngsStr = JSON.stringify(coords.map(c => [c.latitude, c.longitude]));
-    const centerLat = coords.length > 0 ? coords[0].latitude : 28.6273;
-    const centerLng = coords.length > 0 ? coords[0].longitude : 77.2183;
-    const midPoint = coords.length > 0 ? coords[Math.floor(coords.length / 2)] : null;
+  useEffect(() => {
+    if (mapLoaded && routeData && routeData.polylineCoordinates.length > 0) {
+      webViewRef.current?.drawRoute(routeData.polylineCoordinates, routeData.routeNumber);
+    }
+  }, [routeData, mapLoaded]);
 
-    return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-      <style>
-        body { margin: 0; padding: 0; }
-        #map { height: 100vh; width: 100vw; background: #eef2f3; }
-        .stop-marker { 
-          width: 14px; 
-          height: 14px; 
-          background: #666666; 
-          border: 2px solid white; 
-          border-radius: 50%; 
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
-        .stop-marker-inner {
-          width: 4px;
-          height: 4px;
-          background: white;
-          border-radius: 50%;
-        }
-        .bus-marker {
-          background: #F7931E;
-          color: white;
-          padding: 4px 8px;
-          border-radius: 12px;
-          border: 1.5px solid white;
-          font-size: 12px;
-          font-weight: bold;
-          white-space: nowrap;
-          text-align: center;
-          font-family: sans-serif;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-      </style>
-    </head>
-    <body>
-      <div id="map"></div>
-      <script>
-        var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([${centerLat}, ${centerLng}], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          maxZoom: 19,
-          keepBuffer: 2
-        }).addTo(map);
-
-        var latlngs = ${latlngsStr};
-        var polyline = L.polyline(latlngs, {color: '#1DA1F2', weight: 4}).addTo(map);
-        
-        map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
-
-        var stopIcon = L.divIcon({ 
-          className: 'stop-icon-wrapper',
-          html: '<div class="stop-marker"><div class="stop-marker-inner"></div></div>',
-          iconSize: [14, 14],
-          iconAnchor: [7, 7]
-        });
-
-        latlngs.forEach(function(ll) {
-          L.marker(ll, {icon: stopIcon}).addTo(map);
-        });
-
-        ${midPoint ? `
-        var busIcon = L.divIcon({
-          className: 'bus-icon-wrapper',
-          html: '<div class="bus-marker">🚌 ${routeData?.routeNumber || 'Bus'}</div>',
-          iconSize: [60, 24],
-          iconAnchor: [30, 12]
-        });
-        L.marker([${midPoint.latitude}, ${midPoint.longitude}], {icon: busIcon}).addTo(map);
-        ` : ''}
-
-        function centerMap(lat, lng) { map.setView([lat, lng], 14); }
-      </script>
-    </body>
-    </html>
-    `;
-  }, [routeData]);
+  // mapHtml removed since we now use the unified GoogleMap component
 
   const animatedControlStyle = useAnimatedStyle(() => {
-    // शीट के बिल्कुल ऊपरी किनारे को ट्रैक करने के लिए सटीक फॉर्मूला
     const visibleHeight = Math.max(0, SCREEN_HEIGHT - translateY.value);
+    
+    // GPS बटन तभी दिखेगा जब शीट आधी या पूरी बंद हो। जैसे ही शीट पूरी ऊपर जाएगी, यह धीरे से गायब हो जाएगा।
+    const opacity = interpolate(
+      translateY.value,
+      [SNAP_TOP, SNAP_MID],
+      [0, 1],
+      Extrapolate.CLAMP
+    );
+
+    // जब शीट आधी खुली (SNAP_MID) हो तो बटन बिल्कुल शीट से सटाकर (5px) रखेंगे, और पूरी बंद (SNAP_BOTTOM) होने पर 20px ऊपर!
+    const extraOffset = interpolate(
+      translateY.value,
+      [SNAP_MID, SNAP_BOTTOM],
+      [5, 20],
+      Extrapolate.CLAMP
+    );
+
     return {
-      bottom: visibleHeight + 20, // मैप कंट्रोल्स (GPS बटन) को शीट से 20px ऊपर रखना
+      bottom: visibleHeight + extraOffset,
+      opacity: opacity,
+      transform: [{ scale: opacity }]
     };
   });
 
@@ -382,13 +473,20 @@ export const RouteDetailScreen = ({ route, navigation }: any) => {
 
   if (loading) {
     return (
-      <View style={[styles.centerBox, { backgroundColor: '#F8F9FA' }]}>
-        <StatusBar barStyle="dark-content" backgroundColor="yellow" translucent />
-        {/* Skeleton Header */}
-        <View style={styles.skeletonHeader}>
-          <View style={styles.skeletonCircle} />
-          <View style={styles.skeletonBarShort} />
-        </View>
+      <Screen 
+        noPadding 
+        ignoreTopSafe 
+        style={StyleSheet.flatten([styles.centerBox, { backgroundColor: '#F8F9FA' }])}
+      >
+        {/* Reusable Header */}
+        <Header
+          title="Loading..."
+          onBackPress={() => navigation.goBack()}
+          backgroundColor="#FFFFFF"
+          textColor="#000000"
+          height={50}
+          titleStyle={{ fontSize: 18 }}
+        />
         {/* Skeleton Stops */}
         <View style={{ padding: 20 }}>
           {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -398,29 +496,53 @@ export const RouteDetailScreen = ({ route, navigation }: any) => {
             </View>
           ))}
         </View>
-      </View>
+      </Screen>
     );
   }
 
   if (error || !routeData) {
     return (
-      <View style={styles.centerBox}>
-        <Text style={styles.errorText}>{error || "An error occurred"}</Text>
-        <TouchableOpacity style={styles.backBtnError} onPress={() => navigation.goBack()}>
-          <Text style={{color: '#FFF', fontWeight: 'bold'}}>Go Back</Text>
-        </TouchableOpacity>
-      </View>
+      <Screen 
+        noPadding
+        ignoreTopSafe 
+        style={styles.centerBox}
+      >
+        <Header
+          title="Error"
+          onBackPress={() => navigation.goBack()}
+          backgroundColor="#FFFFFF"
+          textColor="#000000"
+          height={50}
+          titleStyle={{ fontSize: 18 }}
+        />
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 20 }}>
+          <Text style={styles.errorText}>{error || "An error occurred"}</Text>
+          <TouchableOpacity style={styles.backBtnError} onPress={() => navigation.goBack()}>
+            <Text style={{color: '#FFF', fontWeight: 'bold'}}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </Screen>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="yellow" translucent />
-      
-      <RouteHeader 
-        routeNumber={routeData.routeNumber} 
-        busCount={routeData.totalBuses} 
-        onBack={() => navigation.goBack()} 
+    <Screen 
+      noPadding 
+      ignoreTopSafe 
+      style={{ backgroundColor: '#FFFFFF' }}
+    >
+      <Header
+        title={routeData.routeNumber}
+        onBackPress={() => navigation.goBack()}
+        backgroundColor="#FFFFFF"
+        textColor="#000000"
+        height={50}
+        titleStyle={{ fontSize: 18 }}
+        rightElement={
+          <Text style={{ color: "#333", fontSize: 16, fontWeight: "600" }}>
+            {routeData.totalBuses} bus
+          </Text>
+        }
       />
 
       <RouteInfo 
@@ -428,13 +550,11 @@ export const RouteDetailScreen = ({ route, navigation }: any) => {
         destination={routeData.destination} 
       />
       <View style={styles.mapContainer}>
-        <WebView
+        <GoogleMap
           ref={webViewRef}
-          source={{ html: mapHtml }}
+          userLocation={userLoc}
+          onMapLoaded={() => setMapLoaded(true)}
           style={styles.map}
-          scrollEnabled={false}
-          showsVerticalScrollIndicator={false}
-          showsHorizontalScrollIndicator={false}
         />
         
         <Animated.View style={[styles.floatingDirectionBtn, animatedRedArrowStyle, { left: 20 }]}>
@@ -450,11 +570,10 @@ export const RouteDetailScreen = ({ route, navigation }: any) => {
         </Animated.View>
       </View>
 
-      <EliteBottomSheet
+      <BottomSheet
         translateY={translateY}
         snapPoints={snapPoints}
-        sheetHeight={SHEET_FULL_HEIGHT + 140}
-        scrollOffset={scrollY}
+        sheetHeight={sheetHeight}
         headerContent={
           <View style={styles.sheetHeader}>
             <Text style={styles.totalStopsText}>{routeData.totalStops} stops</Text>
@@ -478,8 +597,8 @@ export const RouteDetailScreen = ({ route, navigation }: any) => {
           scrollEventThrottle={16}
           scrollEnabled={canScroll}
         />
-      </EliteBottomSheet>
-    </SafeAreaView>
+      </BottomSheet>
+    </Screen>
   );
 };
 
@@ -488,7 +607,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
-    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
   },
   centerBox: {
     flex: 1,
@@ -550,30 +668,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
-    backgroundColor: "#FFFFFF",
-  },
-  backBtn: {
-    marginRight: 16,
-  },
-  routeNumberTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#000",
-    flex: 1,
-  },
-  busCountText: {
-    fontSize: 16,
-    color: "#444",
-    fontWeight: "400",
-  },
-
   // Route Info
   routeInfoBox: {
     paddingHorizontal: 16,
@@ -683,24 +777,25 @@ const styles = StyleSheet.create({
   },
   stopsListContent: {
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 5, // Reduced from 40 to decrease gap below the last stop
   },
 
   // Stop Item
   stopRow: {
     flexDirection: "row",
-    minHeight: 40,
+    minHeight: 34, // Slightly reduced to bring stops closer together
   },
   visualColumn: {
-    width: 30,
+    width: 20,
     alignItems: "center",
+    marginLeft: -3, // Shifts the entire timeline (line & circles) to the left
   },
   solidNode: {
     width: 14,
     height: 14,
     borderRadius: 7,
     backgroundColor: "#D32F2F",
-    marginTop: 6,
+    marginTop: 3, // Reduced from 6 to perfectly center vertically with the first line of text
     zIndex: 2,
   },
   hollowNode: {
@@ -710,23 +805,23 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#D32F2F",
     backgroundColor: "#FFFFFF",
-    marginTop: 6,
+    marginTop: 3, // Reduced from 6 to perfectly center vertically with the first line of text
     zIndex: 2,
   },
   connector: {
     position: "absolute",
-    top: 20,
+    top: 17, // Changed from 20 to start exactly at the bottom of the node (3 + 14 = 17)
+    bottom: -8, // Seamless overlap inside the next node without sticking out
     width: 2,
-    height: "100%",
     backgroundColor: "#D32F2F",
     zIndex: 1,
   },
   textColumn: {
     flex: 1,
-    marginLeft: 16,
+    marginLeft: 8, // Reduced from 16 to bring text closer to the circles
     justifyContent: "flex-start",
     paddingTop: 1,
-    paddingBottom: 8,
+    paddingBottom: 4, // Reduced to make row spacing tighter
   },
   stopName: {
     fontSize: 16,

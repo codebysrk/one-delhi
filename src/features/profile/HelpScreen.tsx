@@ -1,10 +1,12 @@
 import React, { useState, useMemo, useCallback, memo } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Platform, ImageBackground, ScrollView, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, StatusBar, Platform, ImageBackground, ScrollView, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Screen } from "../../components/layout/Screen";
 import { Image } from "expo-image";
 import { useAppStore } from "../../store/useAppStore";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { FlashList } from "@shopify/flash-list";
-import { MainHeader } from "../../components/layout/MainHeader";
+import { MainHeader } from "../../components/layout/Header";
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, interpolate } from 'react-native-reanimated';
 
 export const HelpScreen = ({ navigation }: any) => {
@@ -359,18 +361,14 @@ export const HelpScreen = ({ navigation }: any) => {
     return null;
   }, [expandedId, toggleExpand]);
 
-  return (
-    <View style={styles.container}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor="yellow"
-        translucent
-      />
+  const insets = useSafeAreaInsets();
 
+  return (
+    <Screen noPadding ignoreTopSafe style={styles.container}>
       <MainHeader
         style={styles.headerArea}
         showSearch={false}
-        imageStyle={{ resizeMode: 'stretch', opacity: 1, transform: [{ translateY: 86 }, { scaleX: 1 }, { scaleY: 2.1 }] }}
+        imageOpacity={0.9}
         rightElement={
           <TouchableOpacity onPress={() => navigation.navigate("Settings")}>
             <MaterialCommunityIcons name="cog" size={26} color="white" />
@@ -427,7 +425,7 @@ export const HelpScreen = ({ navigation }: any) => {
               renderItem={renderItem}
               estimatedItemSize={60}
               stickyHeaderIndices={[0]}
-              contentContainerStyle={styles.scrollPadding}
+              contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
               showsVerticalScrollIndicator={false}
               extraData={expandedId}
             />
@@ -438,14 +436,14 @@ export const HelpScreen = ({ navigation }: any) => {
               renderItem={renderItem}
               estimatedItemSize={60}
               stickyHeaderIndices={[0]}
-              contentContainerStyle={styles.scrollPadding}
+              contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
               showsVerticalScrollIndicator={false}
               scrollEnabled={false}
             />
           </View>
         </ScrollView>
 
-        <View style={styles.stickyActionArea}>
+        <View style={[styles.stickyActionArea, { paddingBottom: insets.bottom + 15 }]}>
           <Text style={styles.actionHint}>
             Can't find what you're looking for?
           </Text>
@@ -454,14 +452,13 @@ export const HelpScreen = ({ navigation }: any) => {
           </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </Screen>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFFFF" },
   headerArea: {
-    height: 90,
     overflow: "hidden",
   },
   tabSection: {
@@ -554,8 +551,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 20,
     paddingTop: 15,
-    paddingBottom: Platform.OS === "ios" ? 35 : 20,
-   
   },
   actionHint: {
     fontSize: 14,

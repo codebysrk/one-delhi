@@ -1,39 +1,91 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, StatusBar, Platform, Modal, ActivityIndicator, ToastAndroid, Alert } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS } from '../../core/theme';
-import { useAppStore } from '../../store/useAppStore';
-import { generateTicketId, getRouteNumberOnly } from '../../utils/ticketHelper';
-import { db, auth } from '../../services/firebase';
-import { collection, addDoc, Timestamp, setDoc, doc } from 'firebase/firestore';
-import { PaytmIcon, PhonePeIcon, GPayIcon, AmazonPayIcon } from '../../components/icons/PaymentIcons';
-import { sanitizePayload } from '../../utils/firebaseUtils';
-import { logAction } from '../../services/logService';
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  StatusBar,
+  Platform,
+  Modal,
+  ActivityIndicator,
+  ToastAndroid,
+  Alert,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Screen } from "../../components/layout/Screen";
+import { Header } from "../../components/layout/Header";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { COLORS } from "../../core/theme";
+import { useAppStore } from "../../store/useAppStore";
+import { generateTicketId, getRouteNumberOnly } from "../../utils/ticketHelper";
+import { db, auth } from "../../services/firebase";
+import { collection, addDoc, Timestamp, setDoc, doc } from "firebase/firestore";
+import {
+  PaytmIcon,
+  PhonePeIcon,
+  GPayIcon,
+  AmazonPayIcon,
+} from "../../components/icons/PaymentIcons";
+import { sanitizePayload } from "../../utils/firebaseUtils";
+import { logAction } from "../../services/logService";
+import { moderateScale, responsiveFontSize, scale } from "../../core/responsive";
 
 export const PaymentScreen = ({ navigation, route }: any) => {
-  const { ticketData = {} } = route.params || {};
+  const { ticketData = {}, timeLeft: initialTimeLeft = 180 } = route.params || {};
   const { addTicket } = useAppStore();
   const now = new Date();
-  const dateStr = `${now.getDate().toString().padStart(2, '0')} ${now.toLocaleString('en-GB', { month: 'short' })}, ${now.getFullYear()}`;
-  const summaryTime = dateStr + ' | ' + now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-  const [timeLeft, setTimeLeft] = useState(138);
-  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success'>('idle');
+  const dateStr = `${now.getDate().toString().padStart(2, "0")} ${now.toLocaleString("en-GB", { month: "short" })}, ${now.getFullYear()}`;
+  const summaryTime =
+    dateStr +
+    " | " +
+    now.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  const [timeLeft, setTimeLeft] = useState(initialTimeLeft);
+  const [paymentStatus, setPaymentStatus] = useState<
+    "idle" | "processing" | "success"
+  >("idle");
 
   useEffect(() => {
-    const timer = setInterval(() => setTimeLeft((p) => (p > 0 ? p - 1 : 0)), 1000);
+    const timer = setInterval(
+      () => setTimeLeft((p) => (p > 0 ? p - 1 : 0)),
+      1000,
+    );
     return () => clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    if (timeLeft === 0) {
+      Alert.alert(
+        "Session Expired",
+        "Your payment session has expired. Please try again.",
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              navigation.navigate("Main");
+            },
+          },
+        ],
+      );
+    }
+  }, [timeLeft, navigation]);
+
   const formatTime = (s: number) => {
-    const min = Math.floor(s / 60).toString().padStart(2, '0');
-    const sec = (s % 60).toString().padStart(2, '0');
+    const min = Math.floor(s / 60)
+      .toString()
+      .padStart(2, "0");
+    const sec = (s % 60).toString().padStart(2, "0");
     return `${min}:${sec}`;
   };
 
   const startSimulation = () => {
-    setPaymentStatus('processing');
+    setPaymentStatus("processing");
     setTimeout(() => {
-      setPaymentStatus('success');
+      setPaymentStatus("success");
       setTimeout(handleFinalize, 1500);
     }, 2000);
   };
@@ -41,10 +93,14 @@ export const PaymentScreen = ({ navigation, route }: any) => {
   const handleFinalize = async () => {
     try {
       const now = new Date();
-      const dateStr = `${now.getDate().toString().padStart(2, '0')} ${now.toLocaleString('en-GB', { month: 'short' })}, ${now.getFullYear()}`;
-      const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      const dateStr = `${now.getDate().toString().padStart(2, "0")} ${now.toLocaleString("en-GB", { month: "short" })}, ${now.getFullYear()}`;
+      const timeStr = now.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
       const tid = generateTicketId();
-      
+
       const finalTicket = {
         ...ticketData,
         baseFare: ticketData.baseFare || 10,
@@ -53,70 +109,84 @@ export const PaymentScreen = ({ navigation, route }: any) => {
         timestamp: Timestamp.now(),
         userId: auth.currentUser?.uid,
         deviceId: useAppStore.getState().deviceId, // ADD DEVICE ID
-        status: 'Active',
-        tid: tid
+        status: "Active",
+        tid: tid,
       };
 
       // OFFLINE-FIRST LOGIC:
       // 1. Add to Local Store Immediately (User sees the ticket instantly)
-      addTicket({ 
-        ...finalTicket, 
+      addTicket({
+        ...finalTicket,
         timestamp: finalTicket.timestamp.toMillis(),
-        fare: ticketData.total, 
-        status: 'Active' as any,
-        tid: tid
+        fare: ticketData.total,
+        status: "Active" as any,
+        tid: tid,
       });
 
       // 2. Save to Firestore in background (Firestore handles the sync when online)
-      setDoc(doc(db, 'tickets', tid), sanitizePayload(finalTicket))
+      setDoc(doc(db, "tickets", tid), sanitizePayload(finalTicket))
         .then(() => {
-          console.log('[PaymentScreen] Ticket synced online successfully.');
+          console.log("[PaymentScreen] Ticket synced online successfully.");
         })
         .catch((err: any) => {
-          console.log('[OfflineSync] Offline mode active. Ticket saved locally and will sync when online.');
-          if (Platform.OS === 'android') {
-            ToastAndroid.show('Ticket booked locally (Offline Mode) 🎫', ToastAndroid.LONG);
+          console.log(
+            "[OfflineSync] Offline mode active. Ticket saved locally and will sync when online.",
+          );
+          if (Platform.OS === "android") {
+            ToastAndroid.show(
+              "Ticket booked locally (Offline Mode) 🎫",
+              ToastAndroid.LONG,
+            );
           } else {
-            Alert.alert('Offline Ticket', 'Your ticket has been booked locally and is valid for travel! It will sync when internet is restored.');
+            Alert.alert(
+              "Offline Ticket",
+              "Your ticket has been booked locally and is valid for travel! It will sync when internet is restored.",
+            );
           }
         });
 
       // 3. Log Action (Background)
       logAction({
-        userId: auth.currentUser?.uid || 'anonymous',
-        userName: useAppStore.getState().userProfile?.name || 'User',
-        userEmail: auth.currentUser?.email || '',
-        action: 'BUY_TICKET',
+        userId: auth.currentUser?.uid || "anonymous",
+        userName: useAppStore.getState().userProfile?.name || "User",
+        userEmail: auth.currentUser?.email || "",
+        action: "BUY_TICKET",
         details: `Ticket purchased for route ${ticketData.route}: ₹${ticketData.total}`,
-        type: 'USER',
-        targetType: 'TICKET',
+        type: "USER",
+        targetType: "TICKET",
         targetId: tid,
-        deviceId: useAppStore.getState().deviceId || undefined
+        deviceId: useAppStore.getState().deviceId || undefined,
       }).catch(() => {});
 
-      navigation.navigate('Ticket', { ticket: { ...finalTicket, timestamp: finalTicket.timestamp.toMillis(), fare: ticketData.total, tid } });
+      navigation.navigate("Ticket", {
+        ticket: {
+          ...finalTicket,
+          timestamp: finalTicket.timestamp.toMillis(),
+          fare: ticketData.total,
+          tid,
+        },
+      });
     } catch (error) {
       console.error(error);
-      setPaymentStatus('idle');
+      setPaymentStatus("idle");
     }
   };
 
-  return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="yellow" translucent />
-      
-      <View style={styles.header}>
-        <SafeAreaView>
-          <View style={styles.headerContent}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-              <MaterialCommunityIcons name="arrow-left" size={26} color="white" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Complete Payment</Text>
-          </View>
-        </SafeAreaView>
-      </View>
+  const insets = useSafeAreaInsets();
 
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+  return (
+    <Screen noPadding ignoreTopSafe style={{ backgroundColor: "#FFFFFF" }}>
+      <Header
+        title="Complete Payment"
+        centerTitle={true}
+        onBackPress={() => navigation.goBack()}
+        titleStyle={{ fontSize: responsiveFontSize(22) }}
+      />
+
+      <ScrollView
+        style={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.summaryCard}>
           <View style={styles.summaryHeader}>
             <Text style={styles.summaryDateText}>{summaryTime}</Text>
@@ -128,19 +198,28 @@ export const PaymentScreen = ({ navigation, route }: any) => {
                 <Text style={styles.busRouteText}>{ticketData.route}</Text>
               </View>
               <Text style={styles.fareCalcText}>
-                ₹{Number(ticketData.baseFare).toFixed(1)} x {ticketData.qty} = <Text style={styles.fareGreen}>₹{ticketData.total}</Text>
+                ₹{Number(ticketData.baseFare).toFixed(1)} x {ticketData.qty} ={" "}
+                <Text style={styles.fareGreen}>₹{ticketData.total}</Text>
               </Text>
             </View>
-            
+
             <View style={styles.pathRow}>
               <View style={styles.stopWrapper}>
-                <Text style={styles.stopText} numberOfLines={2}>{ticketData.source}</Text>
+                <Text style={styles.stopText} numberOfLines={2}>
+                  {ticketData.source}
+                </Text>
               </View>
               <View style={styles.arrowWrapper}>
-                <MaterialCommunityIcons name="arrow-right" size={24} color="#333" />
+                <MaterialCommunityIcons
+                  name="arrow-right"
+                  size={24}
+                  color="#333"
+                />
               </View>
               <View style={styles.stopWrapper}>
-                <Text style={styles.stopText} numberOfLines={2}>{ticketData.dest}</Text>
+                <Text style={styles.stopText} numberOfLines={2}>
+                  {ticketData.dest}
+                </Text>
               </View>
             </View>
           </View>
@@ -175,7 +254,11 @@ export const PaymentScreen = ({ navigation, route }: any) => {
 
         <TouchableOpacity style={styles.othersRow} onPress={startSimulation}>
           <View style={styles.othersLeft}>
-            <MaterialCommunityIcons name="credit-card" size={28} color="#D32F2F" />
+            <MaterialCommunityIcons
+              name="credit-card"
+              size={28}
+              color="#D32F2F"
+            />
             <Text style={styles.othersText}>Wallet, Cards or Net banking</Text>
           </View>
           <MaterialCommunityIcons name="chevron-right" size={26} color="#666" />
@@ -184,18 +267,23 @@ export const PaymentScreen = ({ navigation, route }: any) => {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      <View style={styles.footerContainer}>
-        <TouchableOpacity style={styles.timerPill} onPress={startSimulation}>
+      <View style={[styles.footerContainer, { bottom: insets.bottom +10 }]}>
+        <View style={styles.timerPill}>
           <Text style={styles.timerText}>
-            Pay within <Text style={styles.timerBold}>{formatTime(timeLeft)}</Text>
+            Pay within{" "}
+            <Text style={styles.timerBold}>{formatTime(timeLeft)}</Text>
           </Text>
-        </TouchableOpacity>
+        </View>
       </View>
 
-      <Modal visible={paymentStatus !== 'idle'} transparent animationType="fade">
+      <Modal
+        visible={paymentStatus !== "idle"}
+        transparent
+        animationType="fade"
+      >
         <View style={styles.overlay}>
           <View style={styles.simulationBox}>
-            {paymentStatus === 'processing' ? (
+            {paymentStatus === "processing" ? (
               <>
                 <ActivityIndicator size="large" color="#D32F2F" />
                 <Text style={styles.modalHeading}>Verifying payment...</Text>
@@ -204,95 +292,182 @@ export const PaymentScreen = ({ navigation, route }: any) => {
             ) : (
               <>
                 <View style={styles.successIconBg}>
-                  <MaterialCommunityIcons name="check" size={50} color="white" />
+                  <MaterialCommunityIcons
+                    name="check"
+                    size={50}
+                    color="white"
+                  />
                 </View>
                 <Text style={styles.successHeading}>Success!</Text>
-                <Text style={styles.modalSub}>Ticket generated successfully</Text>
+                <Text style={styles.modalSub}>
+                  Ticket generated successfully
+                </Text>
               </>
             )}
           </View>
         </View>
       </Modal>
-    </View>
+    </Screen>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  header: { 
-    backgroundColor: '#A51F38', 
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
-    paddingBottom: 5
+  container: { flex: 1, backgroundColor: "#FFFFFF" },
+  header: {
+    backgroundColor: "#A51F38",
+    paddingBottom: moderateScale(5),
   },
-  headerContent: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    paddingHorizontal: 16, 
-    height: 56,
-    position: 'relative'
+  headerContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: moderateScale(16),
+    height: moderateScale(60),
+    position: "relative",
   },
-  backBtn: { padding: 4, zIndex: 10 },
-  headerTitle: { color: 'white', fontSize: 20, fontWeight: '600', marginLeft: 20 },
+  backBtn: { padding: moderateScale(4), zIndex: 10 },
+  headerTitle: {
+    color: "white",
+    fontSize: responsiveFontSize(20),
+    fontWeight: "600",
+    marginLeft: moderateScale(20),
+  },
   scrollContainer: { flex: 1 },
-  
-  summaryCard: { margin: 12, borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB', overflow: 'hidden', backgroundColor: 'white' },
-  summaryHeader: { backgroundColor: '#808080', paddingVertical: 10, paddingHorizontal: 15 },
-  summaryDateText: { color: 'white', fontSize: 14, fontWeight: '500' },
-  summaryBody: { padding: 16 },
-  summaryTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  busInfo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  busRouteText: { fontSize: 18, fontWeight: 'bold', color: '#000' },
-  fareCalcText: { fontSize: 15, color: '#333' },
-  fareGreen: { color: '#4CAF50', fontWeight: 'bold' },
-  
-  pathRow: { flexDirection: 'row', alignItems: 'center', marginTop: 20 },
+
+  summaryCard: {
+    marginHorizontal: moderateScale(16),
+    marginTop: moderateScale(12),
+    marginBottom: moderateScale(12),
+    borderRadius: moderateScale(8),
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    overflow: "hidden",
+    backgroundColor: "white",
+  },
+  summaryHeader: {
+    backgroundColor: "#808080",
+    paddingVertical: moderateScale(10),
+    paddingHorizontal: moderateScale(16),
+  },
+  summaryDateText: { color: "white", fontSize: responsiveFontSize(14), fontWeight: "500" },
+  summaryBody: { padding: moderateScale(16) },
+  summaryTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  busInfo: { flexDirection: "row", alignItems: "center", gap: moderateScale(10) },
+  busRouteText: { fontSize: responsiveFontSize(18), fontWeight: "bold", color: "#000" },
+  fareCalcText: { fontSize: responsiveFontSize(15), color: "#333" },
+  fareGreen: { color: "#4CAF50", fontWeight: "bold" },
+
+  pathRow: { flexDirection: "row", alignItems: "center", marginTop: moderateScale(20) },
   stopWrapper: { flex: 1 },
-  arrowWrapper: { paddingHorizontal: 10 },
-  stopText: { fontSize: 14, color: '#333', fontWeight: '400', textAlign: 'center' },
-  
-  sectionHeader: { backgroundColor: '#F3F4F6', paddingVertical: 10, paddingHorizontal: 16 },
-  sectionTitle: { fontSize: 14, color: '#666', fontWeight: '500' },
-  
-  upiGrid: { flexDirection: 'row', padding: 12, justifyContent: 'space-between' },
-  upiCard: { 
-    backgroundColor: 'white', 
-    borderRadius: 12, 
-    borderWidth: 1, 
-    borderColor: '#F3F4F6', 
-    padding: 12, 
-    alignItems: 'center', 
-    width: '23%',
+  arrowWrapper: { paddingHorizontal: moderateScale(10) },
+  stopText: {
+    fontSize: responsiveFontSize(14),
+    color: "#333",
+    fontWeight: "400",
+    textAlign: "center",
+  },
+
+  sectionHeader: {
+    backgroundColor: "#F3F4F6",
+    paddingVertical: moderateScale(10),
+    paddingHorizontal: moderateScale(16),
+  },
+  sectionTitle: { fontSize: responsiveFontSize(14), color: "#666", fontWeight: "500" },
+
+  upiGrid: {
+    flexDirection: "row",
+    paddingHorizontal: moderateScale(16),
+    paddingVertical: moderateScale(12),
+    justifyContent: "space-between",
+  },
+  upiCard: {
+    backgroundColor: "white",
+    borderRadius: moderateScale(12),
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
+    padding: moderateScale(12),
+    alignItems: "center",
+    width: "23%",
     elevation: 3,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 4
+    shadowRadius: moderateScale(4),
   },
-  upiLabel: { marginTop: 8, fontSize: 12, color: '#4B5563', fontWeight: '500' },
-  
-  othersRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, backgroundColor: 'white' },
-  othersLeft: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  othersText: { fontSize: 15, color: '#1F2937' },
-  
-  footerContainer: { position: 'absolute', bottom: 30, left: 0, right: 0, alignItems: 'center' },
-  timerPill: { 
-    backgroundColor: '#D32F2F', 
-    paddingHorizontal: 20, 
-    paddingVertical: 10, 
-    borderRadius: 8,
+  upiLabel: { marginTop: moderateScale(8), fontSize: responsiveFontSize(12), color: "#4B5563", fontWeight: "500" },
+
+  othersRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: moderateScale(16),
+    paddingVertical: moderateScale(16),
+    backgroundColor: "white",
+  },
+  othersLeft: { flexDirection: "row", alignItems: "center", gap: moderateScale(16) },
+  othersText: { fontSize: responsiveFontSize(15), color: "#1F2937" },
+
+  footerContainer: {
+    position: "absolute",
+    bottom: moderateScale(30),
+    left: 0,
+    right: 0,
+    alignItems: "center",
+  },
+  timerPill: {
+    backgroundColor: "#D32F2F",
+    paddingHorizontal: moderateScale(8),
+    paddingVertical: moderateScale(4),
+    borderRadius: moderateScale(8),
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
-    shadowRadius: 4
+    shadowRadius: 4,
   },
-  timerText: { color: 'white', fontSize: 14 },
-  timerBold: { fontWeight: 'bold' },
+  timerText: { color: "white", fontSize: responsiveFontSize(16) },
+  timerBold: { fontWeight: "600" },
 
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', alignItems: 'center' },
-  simulationBox: { backgroundColor: 'white', padding: 40, borderRadius: 24, alignItems: 'center', width: '85%' },
-  modalHeading: { fontSize: 20, fontWeight: 'bold', marginTop: 15, color: '#1F2937' },
-  modalSub: { fontSize: 14, color: '#6B7280', marginTop: 8, textAlign: 'center' },
-  successIconBg: { backgroundColor: '#4CAF50', width: 80, height: 80, borderRadius: 40, justifyContent: 'center', alignItems: 'center' },
-  successHeading: { fontSize: 22, fontWeight: 'bold', marginTop: 20, color: '#4CAF50' }
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.75)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  simulationBox: {
+    backgroundColor: "white",
+    padding: 40,
+    borderRadius: 24,
+    alignItems: "center",
+    width: "85%",
+  },
+  modalHeading: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginTop: 15,
+    color: "#1F2937",
+  },
+  modalSub: {
+    fontSize: 14,
+    color: "#6B7280",
+    marginTop: 8,
+    textAlign: "center",
+  },
+  successIconBg: {
+    backgroundColor: "#4CAF50",
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  successHeading: {
+    fontSize: 22,
+    fontWeight: "bold",
+    marginTop: 20,
+    color: "#4CAF50",
+  },
 });
