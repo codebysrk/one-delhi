@@ -96,7 +96,7 @@ export const TicketCard = React.memo(({ ticket, onPress, showTimer, largeText, s
           <InvalidStamp 
             text="INVALID" 
             color={stampColor}
-            style={[styles.stampOverlay, fullStampOpacity && { opacity: 0.95 }, compact && { left: '26%', top: '42%' }]}
+            style={[styles.stampOverlay, fullStampOpacity && { opacity: 0.85 }, compact && { left: '26%', top: '42%' }]}
             size={compact ? 30 : 35}
             rotation={compact ? "-10deg" : "-12deg"}
           />
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
   tidText: { 
     ...TYPOGRAPHY.bodySmall,
     fontSize: 13,
-    color: COLORS.textMuted,
+    color: '#424242ff',
     letterSpacing: 1,
   },
   timerMini: {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, useWindowDimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, useWindowDimensions, Platform, StatusBar } from 'react-native';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthNavigator } from './navigators/AuthNavigator';
@@ -30,6 +30,7 @@ const Stack = createNativeStackNavigator();
 
 export const ComingSoon = ({ navigation }: any) => (
   <View style={{ flex: 1, backgroundColor: '#FFF', justifyContent: 'center', alignItems: 'center', paddingBottom: 100 }}>
+    <StatusBar barStyle="dark-content" backgroundColor="yellow" translucent />
     <View style={{ width: 120, height: 120, borderRadius: 60, backgroundColor: '#FEF2F2', justifyContent: 'center', alignItems: 'center', marginBottom: 25 }}>
       <MaterialCommunityIcons name="rocket-launch" size={60} color="#D32F2F" />
     </View>
@@ -53,8 +54,13 @@ export const RootNavigator = () => {
       if (docSnap.exists()) {
         setUserProfile(docSnap.data());
       }
-    } catch (error) {
-      console.error("Error fetching user profile:", error);
+    } catch (error: any) {
+      const isOffline = error.message?.includes('offline') || error.code === 'unavailable';
+      if (isOffline) {
+        console.log("[RootNavigator] Client is offline during profile fetch.");
+      } else {
+        console.error("Error fetching user profile:", error);
+      }
     }
   }, [setUserProfile]);
 
@@ -244,14 +250,21 @@ export const RootNavigator = () => {
               setIsAuthReady(true);
             }
           } catch (error: any) {
-            console.error("[RootNavigator] Profile fetch error during auth change:", error);
-            // If it's a permission error, it's likely a BANNED user
-            // We set the user anyway so the LoginScreen/Security check can handle it
-            if (error.code === 'permission-denied') {
+            const isOffline = error.message?.includes('offline') || error.code === 'unavailable';
+            if (isOffline) {
+              console.log("[RootNavigator] Client is offline. Resuming session using cache.");
               setUser(firebaseUser);
+              setIsAuthReady(true);
             } else {
-              // For other errors like network, we can keep the user but maybe don't set auth ready
-              setUser(firebaseUser);
+              console.error("[RootNavigator] Profile fetch error during auth change:", error);
+              // If it's a permission error, it's likely a BANNED user
+              // We set the user anyway so the LoginScreen/Security check can handle it
+              if (error.code === 'permission-denied') {
+                setUser(firebaseUser);
+              } else {
+                // For other errors like network, we can keep the user but maybe don't set auth ready
+                setUser(firebaseUser);
+              }
             }
           }
         } else {

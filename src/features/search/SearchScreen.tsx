@@ -12,9 +12,14 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
 import { db } from '../../services/firebase';
-import { getRouteNumberOnly, formatStopName } from '../../utils/ticketHelper';
+import { getRouteNumberOnly } from '../../utils/ticketHelper';
 import { useTranslation } from 'react-i18next';
 import { collection, query, orderBy, startAt, endAt, getDocs, limit } from 'firebase/firestore';
+
+const formatStopName = (name: string): string => {
+  if (!name) return '';
+  return name.trim();
+};
 
 interface SearchResult {
   id: string;
@@ -42,31 +47,36 @@ export const SearchScreen = ({ navigation }: any) => {
       // Search in Firebase (Prefix Search)
       const filteredResults: SearchResult[] = [];
       try {
-        // 1. Search Routes
-        const qRoutes = query(
-          collection(db, "routes"), 
-          orderBy("id"),
-          startAt(searchQuery.toUpperCase()),
-          endAt(searchQuery.toUpperCase() + '\uf8ff'),
-          limit(10)
-        );
-        
-        const routeSnap = await getDocs(qRoutes);
+        // 1. Search Routes with robust hyphen and space normalization
+        const normalizeRoute = (str: string) => {
+          return str.toUpperCase().replace(/[\s-]/g, '');
+        };
+        const normalizedQuery = normalizeRoute(searchQuery);
+
+        const routeSnap = await getDocs(collection(db, "routes"));
+        let matchedRouteCount = 0;
+
         routeSnap.forEach(doc => {
+          if (matchedRouteCount >= 10) return; // Keep limit of 10 routes
           const data = doc.data();
-          if (data && (data.id || data.routeNumber) && !uniqueIds.has(`route-${data.id || data.routeNumber}`)) {
-            const stops = Array.isArray(data.stopSequence) ? data.stopSequence : (Array.isArray(data.stops) ? data.stops : []);
+          if (data && (data.id || data.routeNumber)) {
             const routeId = data.id || data.routeNumber;
-            uniqueIds.add(`route-${routeId}`);
-            filteredResults.push({
-              id: `route-${routeId}`,
-              type: 'route',
-              title: routeId,
-              startStop: formatStopName(data.origin || (stops.length > 0 ? stops[0] : 'N/A')),
-              endStop: formatStopName(data.destination || (stops.length > 0 ? stops[stops.length - 1] : 'N/A')),
-              stops: stops,
-              direction: data.direction || (routeId && typeof routeId === 'string' && routeId.endsWith('UP') ? 'UP' : (routeId && typeof routeId === 'string' && routeId.endsWith('DOWN') ? 'DOWN' : ''))
-            } as any);
+            const normalizedRouteId = normalizeRoute(routeId);
+
+            if (normalizedRouteId.includes(normalizedQuery) && !uniqueIds.has(`route-${routeId}`)) {
+              const stops = Array.isArray(data.stopSequence) ? data.stopSequence : (Array.isArray(data.stops) ? data.stops : []);
+              uniqueIds.add(`route-${routeId}`);
+              filteredResults.push({
+                id: `route-${routeId}`,
+                type: 'route',
+                title: routeId,
+                startStop: formatStopName(data.origin || (stops.length > 0 ? stops[0] : 'N/A')),
+                endStop: formatStopName(data.destination || (stops.length > 0 ? stops[stops.length - 1] : 'N/A')),
+                stops: stops,
+                direction: data.direction || (routeId && typeof routeId === 'string' && routeId.endsWith('UP') ? 'UP' : (routeId && typeof routeId === 'string' && routeId.endsWith('DOWN') ? 'DOWN' : ''))
+              } as any);
+              matchedRouteCount++;
+            }
           }
         });
 
@@ -274,5 +284,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#777',
     fontWeight: '400',
+  },
+  stopsWrapper: {
+    marginTop: 4,
   },
 });

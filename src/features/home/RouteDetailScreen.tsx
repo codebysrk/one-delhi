@@ -128,7 +128,7 @@ const StopTimelineItem = memo(({
 // --- Main Screen ---
 
 export const RouteDetailScreen = ({ route, navigation }: any) => {
-  const { routeId } = route.params;
+  const { routeId, direction } = route.params || {};
   
   const [routeData, setRouteData] = useState<RouteData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -198,14 +198,15 @@ export const RouteDetailScreen = ({ route, navigation }: any) => {
             stops: data.stops,
           };
         } else if (data.directions) {
-          const dirData = data.directions.up || data.directions.down;
+          const activeDirection = direction || (data.directions.up ? "UP" : "DOWN");
+          const dirData = activeDirection === "UP" ? data.directions.up : (data.directions.down || data.directions.up);
           formattedData = {
             routeNumber: data.route || routeId.replace(/UP|DOWN/g, ''),
             origin: dirData?.from || dirData?.stops?.[0] || "Origin",
             destination: dirData?.to || dirData?.stops?.[dirData?.stops.length - 1] || "Destination",
             totalBuses: 11, 
             totalStops: dirData?.totalStops || dirData?.stops?.length || 0,
-            direction: data.directions.up ? "UP" : "DOWN",
+            direction: activeDirection,
             polylineCoordinates: [],
             stops: dirData?.stops || [],
           };
@@ -382,7 +383,7 @@ export const RouteDetailScreen = ({ route, navigation }: any) => {
   if (loading) {
     return (
       <View style={[styles.centerBox, { backgroundColor: '#F8F9FA' }]}>
-        <StatusBar barStyle="dark-content" />
+        <StatusBar barStyle="dark-content" backgroundColor="yellow" translucent />
         {/* Skeleton Header */}
         <View style={styles.skeletonHeader}>
           <View style={styles.skeletonCircle} />
@@ -414,7 +415,7 @@ export const RouteDetailScreen = ({ route, navigation }: any) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor="yellow" translucent />
       
       <RouteHeader 
         routeNumber={routeData.routeNumber} 

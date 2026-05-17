@@ -10,6 +10,27 @@ export const scale = (size: number) => (SCREEN_WIDTH / guidelineBaseWidth) * siz
 export const verticalScale = (size: number) => (SCREEN_HEIGHT / guidelineBaseHeight) * size;
 export const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
 
+export const responsiveWidth = (percent: number) => {
+  return (percent * SCREEN_WIDTH) / 100;
+};
+
+export const responsiveHeight = (percent: number) => {
+  return (percent * SCREEN_HEIGHT) / 100;
+};
+
+export const moderateVerticalScale = (size: number, factor = 0.5) => {
+  return size + (verticalScale(size) - size) * factor;
+};
+
+export const responsiveFontSize = (size: number) => {
+  const newSize = scale(size);
+  const rounded = Math.round(PixelRatio.roundToNearestPixel(newSize));
+  // Limit extreme scaling to ensure readability and fit
+  const minSize = size * 0.85;
+  const maxSize = size * 1.35;
+  return Math.min(Math.max(rounded, minSize), maxSize);
+};
+
 export const isTablet = () => {
   const pixelDensity = PixelRatio.get();
   const adjustedWidth = SCREEN_WIDTH * pixelDensity;

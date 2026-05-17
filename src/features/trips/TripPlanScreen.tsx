@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   Text, 
@@ -13,15 +13,23 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { MainHeader } from '../../components/layout/MainHeader';
 
 export const TripPlanScreen = ({ navigation }: any) => {
+  const [sourceText, setSourceText] = useState('Tandoori Wok');
+  const [destText, setDestText] = useState('');
+
+  const handleSwap = () => {
+    const temp = sourceText;
+    setSourceText(destText);
+    setDestText(temp);
+  };
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      <StatusBar barStyle="dark-content" backgroundColor="yellow" translucent />
       
       {/* Shared Premium Header */}
       <MainHeader 
         style={styles.headerArea}
         showSearch={false}
-        imageStyle={{ resizeMode: 'stretch', opacity: 1, transform: [{ translateY: 85 }, { scaleX: 1 }, { scaleY: 2.2 }] }}
+        imageStyle={{ resizeMode: 'stretch', opacity: 1, transform: [{ translateY: 86 }, { scaleX: 1 }, { scaleY: 2.1 }] }}
         rightElement={
           <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
             <MaterialCommunityIcons name="cog" size={26} color="white" />
@@ -34,43 +42,71 @@ export const TripPlanScreen = ({ navigation }: any) => {
         <View style={styles.planCard}>
           <View style={styles.inputRow}>
             <View style={styles.iconColumn}>
-              <MaterialCommunityIcons name="circle-outline" size={20} color="#ccc" />
+              <MaterialCommunityIcons name="circle-outline" size={22} color="#E57373" />
               <View style={styles.verticalLine} />
-              <MaterialCommunityIcons name="map-marker-outline" size={20} color="#e74c3c" />
+              <MaterialCommunityIcons name="map-marker-outline" size={22} color="#D1D5DB" />
             </View>
             
             <View style={styles.fieldsColumn}>
               <View style={styles.inputWrapper}>
                 <TextInput 
-                  placeholder="Source"
-                  placeholderTextColor="#999"
+                  placeholder="My Location"
+                  placeholderTextColor="#9CA3AF"
                   style={styles.input}
+                  value={sourceText}
+                  onChangeText={setSourceText}
                 />
+                {sourceText.length > 0 && (
+                  <TouchableOpacity 
+                    style={styles.clearBtn} 
+                    activeOpacity={0.6}
+                    onPress={() => setSourceText('')}
+                  >
+                    <MaterialCommunityIcons name="close" size={20} color="#9CA3AF" />
+                  </TouchableOpacity>
+                )}
               </View>
-              <View style={styles.divider} />
+              
+              <View style={styles.dividerContainer}>
+                <View style={styles.divider} />
+                <TouchableOpacity 
+                  style={styles.swapBtn} 
+                  activeOpacity={0.8}
+                  onPress={handleSwap}
+                >
+                  <MaterialCommunityIcons name="swap-vertical" size={20} color="#374151" />
+                </TouchableOpacity>
+              </View>
+
               <View style={styles.inputWrapper}>
                 <TextInput 
                   placeholder="Destination Stop"
-                  placeholderTextColor="#999"
+                  placeholderTextColor="#9CA3AF"
                   style={styles.input}
+                  value={destText}
+                  onChangeText={setDestText}
                 />
+                {destText.length > 0 && (
+                  <TouchableOpacity 
+                    style={styles.clearBtn} 
+                    activeOpacity={0.6}
+                    onPress={() => setDestText('')}
+                  >
+                    <MaterialCommunityIcons name="close" size={20} color="#9CA3AF" />
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
 
-            <View style={styles.actionColumn}>
-               <TouchableOpacity style={styles.swapBtn}>
-                  <MaterialCommunityIcons name="swap-vertical" size={24} color="#333" />
-               </TouchableOpacity>
-               <TouchableOpacity style={styles.clockBtn}>
-                  <MaterialCommunityIcons name="clock-outline" size={24} color="#666" />
-               </TouchableOpacity>
-            </View>
+            <TouchableOpacity style={styles.clockBtn} activeOpacity={0.8}>
+              <MaterialCommunityIcons name="clock-outline" size={24} color="#374151" />
+            </TouchableOpacity>
           </View>
         </View>
 
         {/* Filter Bar */}
         <View style={styles.filterCard}>
-          <Text style={styles.filterText}>Filter: <Text style={{fontWeight: '700'}}>Bus + Metro + Auto</Text></Text>
+          <Text style={styles.filterText}>Filter: <Text>Bus + Metro + Auto</Text></Text>
           <MaterialCommunityIcons name="filter" size={24} color="#333" />
         </View>
 
@@ -97,26 +133,79 @@ const styles = StyleSheet.create({
   content: { flex: 1, padding: 15, marginTop: 5 },
   planCard: { 
     backgroundColor: 'white', 
-    borderRadius: 15, 
-    padding: 15,
+    borderRadius: 16, 
+    padding: 16,
     borderWidth: 1,
-    borderColor: '#eee',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8
+    borderColor: '#e5e7ebc8',
+   
   },
-  inputRow: { flexDirection: 'row' },
-  iconColumn: { alignItems: 'center', paddingVertical: 10, marginRight: 15 },
-  verticalLine: { width: 1, height: 35, backgroundColor: '#ccc', marginVertical: 4 },
-  fieldsColumn: { flex: 1, justifyContent: 'space-between' },
-  inputWrapper: { height: 45, justifyContent: 'center' },
-  input: { fontSize: 18, color: '#333' },
-  divider: { height: 1, backgroundColor: '#f0f0f0' },
-  actionColumn: { justifyContent: 'space-between', alignItems: 'center', paddingVertical: 5, paddingLeft: 10 },
-  swapBtn: { padding: 8 },
-  clockBtn: { padding: 8 },
+  inputRow: { 
+    flexDirection: 'row', 
+    position: 'relative',
+    alignItems: 'center'
+  },
+  iconColumn: { 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    marginRight: 12 
+  },
+  verticalLine: { 
+    width: 2, 
+    height: 24, 
+    backgroundColor: '#E5E7EB', 
+    marginVertical: 4 
+  },
+  fieldsColumn: { 
+    flex: 1, 
+    marginRight: 44 
+  },
+  inputWrapper: { 
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 40 
+  },
+  input: { 
+    flex: 1,
+    fontSize: 16, 
+    color: '#1F2937', 
+    padding: 0
+  },
+  clearBtn: {
+    padding: 4
+  },
+  dividerContainer: {
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 4,
+    height: 1,
+  },
+  divider: { 
+    width: '100%',
+    height: 1, 
+    backgroundColor: '#F3F4F6',
+  },
+  swapBtn: { 
+    position: 'absolute',
+    width: 28,
+    height: 28,
+    borderRadius: 10,
+    backgroundColor: '#f5f5f5ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10
+  },
+  clockBtn: { 
+    position: 'absolute',
+    right: 0,
+    top: '50%',
+    marginTop: -16,
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
   filterCard: {
     backgroundColor: '#f5f5f5',
     borderRadius: 10,
@@ -124,11 +213,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 15,
-    paddingVertical: 18,
-    marginTop: 20
+    paddingVertical: 10,
+    marginTop: 40
   },
   filterText: { fontSize: 16, color: '#333' },
-  recentHeader: { backgroundColor: '#f0f0f0', paddingHorizontal: 15, paddingVertical: 10, marginTop: 25 },
-  recentTitle: { fontSize: 14, color: '#666', fontWeight: '600' },
+  recentHeader: { 
+    backgroundColor: '#f0f0f0', 
+    paddingHorizontal: 15, 
+    paddingVertical: 8, 
+    marginTop: 18,
+    marginLeft: -15,
+    marginRight: -15,
+  },
+  recentTitle: { fontSize: 14, color: '#666' },
   recentList: { flex: 1 }
 });

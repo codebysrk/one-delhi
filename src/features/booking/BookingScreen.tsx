@@ -20,8 +20,12 @@ import {
   useWindowDimensions,
   BackHandler,
   Platform,
+  ScrollView,
+  KeyboardAvoidingView,
+  FlatList,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
+const AnyFlashList = FlashList as any;
 import { useAppStore } from "../../store/useAppStore";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
@@ -37,6 +41,14 @@ import { getDocs, collection } from "firebase/firestore";
 import { db } from "../../services/firebase";
 import { AppState, AppStateStatus } from "react-native";
 import { ANIMATIONS } from "../../core/theme";
+import {
+  scale,
+  verticalScale,
+  moderateScale,
+  responsiveFontSize,
+  responsiveWidth,
+  responsiveHeight,
+} from "../../core/responsive";
 
 // --- 1. Separate Memoized Item Components for Peak Performance ---
 
@@ -199,16 +211,6 @@ const validateManualFare = (
 
 const TimerPill = React.memo(
   ({ timeLeft }: { timeLeft: Animated.SharedValue<number> }) => {
-    const animatedProps = useAnimatedStyle(() => {
-      const seconds = Math.floor(timeLeft.value);
-      const mins = Math.floor(seconds / 60);
-      const secs = seconds % 60;
-      const timeStr = `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-      return {
-        text: `Pay within ${timeStr}`,
-      };
-    });
-
     // Alternative for text display in Reanimated without frequent re-renders
     const [displayTime, setDisplayTime] = useState("03:00");
 
@@ -730,12 +732,16 @@ export const BookingScreen = ({ navigation }: any) => {
     );
     if (isFullSelection) return dbRoutes;
 
-    const searchLower = routeSearch.toLowerCase();
-    return dbRoutes.filter(
-      (r) =>
-        r.id?.toLowerCase().startsWith(searchLower) ||
-        r.name?.toLowerCase().startsWith(searchLower),
-    );
+    const normalizeRoute = (str: string) => {
+      return str.toUpperCase().replace(/[\s-]/g, '');
+    };
+    const normalizedQuery = normalizeRoute(routeSearch);
+
+    return dbRoutes.filter((r) => {
+      const normalizedId = normalizeRoute(r.id || '');
+      const normalizedName = normalizeRoute(r.name || '');
+      return normalizedId.includes(normalizedQuery) || normalizedName.includes(normalizedQuery);
+    });
   }, [routeSearch, activeInput, dbRoutes]);
 
   const currentRouteStops = useMemo(() => {
@@ -956,7 +962,7 @@ export const BookingScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#D32F2F" />
+      <StatusBar barStyle="dark-content" backgroundColor="yellow" translucent />
 
       {/* Header */}
       <View style={styles.header}>
@@ -979,169 +985,175 @@ export const BookingScreen = ({ navigation }: any) => {
         <TimerPill timeLeft={timeLeft} />
       </View>
 
-      {/* Content */}
-      <View style={styles.content}>
-        <View style={styles.card}>
-          {/* Route Input */}
-          <View style={styles.inputSection}>
-            <Text style={styles.inputLabel}>Route Info</Text>
-            <View
-              style={[
-                styles.inputBox,
-                activeInput === "route" && styles.inputBoxFocused,
-              ]}
-            >
-              <View style={styles.inputIcon}>
-                <MaterialIcons name="route" size={24} color="#000" />
-              </View>
-              <TextInput
-                ref={routeInputRef}
-                style={styles.input}
-                placeholder="Current Route"
-                placeholderTextColor="#9CA3AF"
-                value={routeSearch}
-                onChangeText={setRouteSearch}
-                onFocus={() => handleFocus("route")}
-                autoCorrect={false}
-                autoCapitalize="characters"
-                multiline={false}
-                scrollEnabled
-                selection={routeSelection}
-              />
-            </View>
-          </View>
-
-          {/* Source/Destination */}
-          <View style={styles.inputSection}>
-            <Text style={styles.inputLabel}>From - To</Text>
-            <View
-              style={[
-                styles.inputBox,
-                activeInput === "source" && styles.inputBoxFocused,
-                !selectedFullRouteId && styles.inputBoxDisabled,
-              ]}
-            >
-              <View style={styles.inputIcon}>
-                <View style={styles.stopDot} />
-              </View>
-              <TextInput
-                ref={sourceInputRef}
-                style={styles.input}
-                placeholder="Source Stop"
-                placeholderTextColor="#9CA3AF"
-                value={sourceSearch}
-                onChangeText={setSourceSearch}
-                onFocus={() => handleFocus("source")}
-                editable={!!selectedFullRouteId}
-                multiline={false}
-                scrollEnabled
-                selection={sourceSelection}
-              />
-            </View>
-
-            <View
-              style={[
-                styles.inputBox,
-                activeInput === "dest" && styles.inputBoxFocused,
-                (!selectedFullRouteId || !sourceSearch) &&
-                  styles.inputBoxDisabled,
-              ]}
-            >
-              <View style={styles.inputIcon}>
-                <MaterialCommunityIcons
-                  name="map-marker"
-                  size={20}
-                  color="#000"
+      {/* Content Scroll Wrapper */}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView
+          style={styles.contentScroll}
+          contentContainerStyle={styles.contentScrollContainer}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          scrollEventThrottle={16}
+          onScroll={() => {
+            if (activeInput) {
+              setActiveInput(null);
+              routeInputRef.current?.blur();
+              sourceInputRef.current?.blur();
+              destInputRef.current?.blur();
+            }
+          }}
+        >
+          <View style={styles.card}>
+            {/* Route Input */}
+            <View style={styles.inputSection}>
+              <Text style={styles.inputLabel}>Route Info</Text>
+              <View
+                style={[
+                  styles.inputBox,
+                  activeInput === "route" && styles.inputBoxFocused,
+                ]}
+              >
+                <View style={styles.inputIcon}>
+                  <MaterialIcons name="route" size={24} color="#000" />
+                </View>
+                <TextInput
+                  ref={routeInputRef}
+                  style={styles.input}
+                  placeholder="Current Route"
+                  placeholderTextColor="#9CA3AF"
+                  value={routeSearch}
+                  onChangeText={setRouteSearch}
+                  onFocus={() => handleFocus("route")}
+                  autoCorrect={false}
+                  autoCapitalize="characters"
+                  multiline={false}
+                  scrollEnabled
+                  selection={routeSelection}
                 />
               </View>
-              <TextInput
-                ref={destInputRef}
-                style={styles.input}
-                placeholder="Destination Stop"
-                placeholderTextColor="#9CA3AF"
-                value={destSearch}
-                onChangeText={setDestSearch}
-                onFocus={() => handleFocus("dest")}
-                editable={!!selectedFullRouteId && !!sourceSearch}
-                multiline={false}
-                scrollEnabled
-                selection={destSelection}
-              />
             </View>
+
+            {/* Source/Destination */}
+            <View style={styles.inputSection}>
+              <Text style={styles.inputLabel}>From - To</Text>
+              <View
+                style={[
+                  styles.inputBox,
+                  activeInput === "source" && styles.inputBoxFocused,
+                  !selectedFullRouteId && styles.inputBoxDisabled,
+                ]}
+              >
+                <View style={styles.inputIcon}>
+                  <View style={styles.stopDot} />
+                </View>
+                <TextInput
+                  ref={sourceInputRef}
+                  style={styles.input}
+                  placeholder="Source Stop"
+                  placeholderTextColor="#9CA3AF"
+                  value={sourceSearch}
+                  onChangeText={setSourceSearch}
+                  onFocus={() => handleFocus("source")}
+                  editable={!!selectedFullRouteId}
+                  multiline={false}
+                  scrollEnabled
+                  selection={sourceSelection}
+                />
+              </View>
+
+              <View
+                style={[
+                  styles.inputBox,
+                  activeInput === "dest" && styles.inputBoxFocused,
+                  (!selectedFullRouteId || !sourceSearch) &&
+                    styles.inputBoxDisabled,
+                ]}
+              >
+                <View style={styles.inputIcon}>
+                  <MaterialCommunityIcons
+                    name="map-marker"
+                    size={20}
+                    color="#000"
+                  />
+                </View>
+                <TextInput
+                  ref={destInputRef}
+                  style={styles.input}
+                  placeholder="Destination Stop"
+                  placeholderTextColor="#9CA3AF"
+                  value={destSearch}
+                  onChangeText={setDestSearch}
+                  onFocus={() => handleFocus("dest")}
+                  editable={!!selectedFullRouteId && !!sourceSearch}
+                  multiline={false}
+                  scrollEnabled
+                  selection={destSelection}
+                />
+              </View>
+            </View>
+
+            {/* Bus Type */}
+            <BusTypeSelector
+              busType={busType}
+              onTypeChange={(type) => {
+                setBusType(type);
+                setIsManualFare(false);
+                setManualTotal("");
+              }}
+            />
           </View>
+        </ScrollView>
 
-          {/* Bus Type */}
-          <BusTypeSelector
-            busType={busType}
-            onTypeChange={(type) => {
-              setBusType(type);
-              setIsManualFare(false);
-              setManualTotal("");
+        {/* Bottom Section */}
+        <View style={styles.bottom}>
+          <QuantitySelector qty={qty} onQtyChange={setQty} />
+
+          <FareDisplay
+            finalFare={getFinalFare()}
+            showDiscount={!!(routeSearch && sourceSearch && destSearch)}
+            isEditing={isEditingFare}
+            onPress={handleFarePress}
+            manualTotal={manualTotal}
+            onManualChange={(val) => {
+              setIsManualFare(true);
+              setManualTotal(val);
             }}
+            onBlur={() => setIsEditingFare(false)}
           />
+
+          <TouchableOpacity
+            style={styles.buyBtn}
+            onPress={handleBuy}
+            disabled={false}
+          >
+            <Text style={styles.buyText}>BUY</Text>
+          </TouchableOpacity>
         </View>
-      </View>
-
-      {/* Bottom Section */}
-      <View style={styles.bottom}>
-        <QuantitySelector qty={qty} onQtyChange={setQty} />
-
-        <FareDisplay
-          finalFare={getFinalFare()}
-          showDiscount={!!(routeSearch && sourceSearch && destSearch)}
-          isEditing={isEditingFare}
-          onPress={handleFarePress}
-          manualTotal={manualTotal}
-          onManualChange={(val) => {
-            setIsManualFare(true);
-            setManualTotal(val);
-          }}
-          onBlur={() => setIsEditingFare(false)}
-        />
-
-        <TouchableOpacity
-          style={[
-            styles.buyBtn,
-            (!routeSearch ||
-              !sourceSearch ||
-              !destSearch ||
-              validationStatus !== "VALID") &&
-              styles.buyBtnDisabled,
-          ]}
-          onPress={handleBuy}
-          disabled={
-            !routeSearch ||
-            !sourceSearch ||
-            !destSearch ||
-            validationStatus !== "VALID"
-          }
-        >
-          <Text style={styles.buyText}>BUY</Text>
-        </TouchableOpacity>
-      </View>
+      </KeyboardAvoidingView>
 
       {/* Dropdown List */}
       {activeInput && dropdownPlacement && measuredPos.width > 0 && (
         <Animated.View
-          entering={FadeInUp.duration(150)}
-          exiting={FadeOutDown.duration(100)}
+          entering={FadeIn.duration(150)}
+          exiting={FadeOut.duration(100)}
           style={[
             activeInput === "route"
               ? styles.routeDropdown
               : styles.stopDropdown,
             {
               position: "absolute",
-              left: measuredPos.x + 60,
-              width: measuredPos.width - 40,
+              left: measuredPos.x + scale(55),
+              width: measuredPos.width - scale(45),
               zIndex: 1000,
               elevation: 100,
               ...dropdownPlacement.positionStyle,
             },
           ]}
         >
-          <FlashList
-            estimatedItemSize={60}
-            showsVerticalScrollIndicator={false}
+          <FlatList
+            showsVerticalScrollIndicator={true}
             data={
               activeInput === "route"
                 ? filteredRoutes
@@ -1157,17 +1169,11 @@ export const BookingScreen = ({ navigation }: any) => {
                 : `${activeInput}-${selectedFullRouteId ?? "noroute"}-${index}-${String(item)}`
             }
             keyboardShouldPersistTaps="always"
-            nestedScrollEnabled
-            removeClippedSubviews={true}
-            getItemLayout={(data, index) => ({
-              length: activeInput === "route" ? 85 : 48,
-              offset: (activeInput === "route" ? 85 : 48) * index,
-              index,
-            })}
-            initialNumToRender={8}
-            maxToRenderPerBatch={5}
-            windowSize={3}
-            updateCellsBatchingPeriod={50}
+            nestedScrollEnabled={true}
+            removeClippedSubviews={Platform.OS === "android"}
+            initialNumToRender={10}
+            maxToRenderPerBatch={10}
+            windowSize={5}
             ListEmptyComponent={
               <View style={styles.emptyItem}>
                 <Text style={styles.emptyItemText}>
@@ -1205,78 +1211,86 @@ const styles = StyleSheet.create({
     backgroundColor: "#D32F2F",
   },
   header: {
-    backgroundColor: "#D32F2F",
+    backgroundColor: "#A51F38",
     paddingTop: Platform.OS === "android" ? StatusBar.currentHeight || 0 : 0,
   },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    height: 56,
+    paddingHorizontal: moderateScale(16),
+    height: moderateScale(56),
   },
   backBtn: {
-    width: 40,
-    height: 40,
+    width: moderateScale(40),
+    height: moderateScale(40),
     justifyContent: "center",
     alignItems: "center",
   },
   headerTitle: {
     color: "#FFF",
-    fontSize: 20,
-    fontWeight: "600",
+    fontSize: responsiveFontSize(22),
+    fontWeight: "400",
   },
   timerContainer: {
     alignItems: "center",
-    paddingBottom: 16,
+    paddingBottom: moderateScale(16),
   },
   timerPill: {
     backgroundColor: "#FFF",
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: moderateScale(18),
+    paddingVertical: moderateScale(6),
+    borderRadius: moderateScale(8),
   },
   timerText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(16),
     color: "#000",
   },
   timerBold: {
-    fontWeight: "700",
+    fontWeight: "normal",
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingHorizontal: moderateScale(16),
+    paddingTop: moderateScale(16),
+  },
+  contentScroll: {
+    flex: 1,
+  },
+  contentScrollContainer: {
+    paddingHorizontal: moderateScale(16),
+    paddingTop: moderateScale(16),
+    paddingBottom: moderateScale(24),
   },
   card: {
     backgroundColor: "#FFF",
-    borderRadius: 12,
-    paddingVertical: 24,
-    paddingHorizontal: 16,
+    borderRadius: moderateScale(12),
+    paddingVertical: moderateScale(24),
+    paddingHorizontal: moderateScale(16),
     elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: moderateScale(4),
   },
   inputSection: {
-    marginBottom: 10,
+    marginBottom: moderateScale(10),
   },
   inputLabel: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: responsiveFontSize(16),
+    fontWeight: "normal",
     color: "#111",
-    marginBottom: 4,
+    marginBottom: moderateScale(4),
   },
   inputBox: {
     backgroundColor: "#F3F4F6",
-    borderRadius: 8,
+    borderRadius: moderateScale(8),
     flexDirection: "row",
     alignItems: "center",
-    paddingLeft: 6, // Shifted icon further left
-    paddingRight: 12,
-    height: 46,
-    marginBottom: 8,
+    paddingLeft: moderateScale(6),
+    paddingRight: moderateScale(12),
+    height: moderateScale(54),
+    marginBottom: moderateScale(8),
     borderWidth: 1,
     borderColor: "transparent",
   },
@@ -1289,40 +1303,41 @@ const styles = StyleSheet.create({
     backgroundColor: "#E5E7EB",
   },
   inputIcon: {
-    width: 30, // Increased slightly for larger icon
+    width: moderateScale(30),
     alignItems: "center",
     justifyContent: "center",
   },
   input: {
     flex: 1,
     height: "100%",
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     color: "#000",
     fontWeight: "400",
-    paddingLeft: 4,
+    paddingLeft: moderateScale(4),
     paddingVertical: 0,
     textAlign: "left",
     minWidth: 0,
   },
   stopDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: moderateScale(12),
+    height: moderateScale(12),
+    borderRadius: moderateScale(6),
     backgroundColor: "#000",
   },
   typeRow: {
     flexDirection: "row",
-    gap: 12,
+    gap: moderateScale(12),
   },
   typeBtn: {
-    paddingHorizontal: 10,
-    height: 40,
-    borderRadius: 8,
+    paddingHorizontal: moderateScale(16),
+    height: moderateScale(38),
+    borderRadius: moderateScale(8),
     borderWidth: 1,
     borderColor: "#E5E7EB",
     backgroundColor: "#FFF",
     justifyContent: "center",
     alignItems: "center",
+    minWidth: moderateScale(75),
   },
   typeBtnActive: {
     backgroundColor: "#D32F2F",
@@ -1333,7 +1348,7 @@ const styles = StyleSheet.create({
     borderColor: "#11C76A",
   },
   typeBtnText: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(17),
     fontWeight: "500",
     color: "#333",
   },
@@ -1342,27 +1357,27 @@ const styles = StyleSheet.create({
   },
   bottom: {
     backgroundColor: "#FFF",
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: Platform.OS === "ios" ? 32 : 16,
+    paddingHorizontal: moderateScale(16),
+    paddingTop: moderateScale(16),
+    paddingBottom: Platform.OS === "ios" ? moderateScale(32) : moderateScale(16),
     borderTopWidth: 1,
     borderTopColor: "#E5E7EB",
   },
   bottomLabel: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: responsiveFontSize(16),
+    fontWeight: "normal",
     color: "#111",
-    marginBottom: 8,
+    marginBottom: moderateScale(8),
   },
   qtyRow: {
     flexDirection: "row",
-    gap: 12,
-    marginBottom: 16,
+    gap: moderateScale(12),
+    marginBottom: moderateScale(16),
   },
   qtyBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
+    width: moderateScale(43),
+    height: moderateScale(43),
+    borderRadius: moderateScale(8),
     borderWidth: 1,
     borderColor: "#DDD",
     backgroundColor: "#FFF",
@@ -1374,7 +1389,7 @@ const styles = StyleSheet.create({
     borderColor: "#D32F2F",
   },
   qtyBtnText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(18),
     fontWeight: "500",
     color: "#333",
   },
@@ -1385,46 +1400,47 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
-    marginBottom: 16,
+    marginBottom: moderateScale(16),
   },
   priceRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: moderateScale(10),
   },
   oldPrice: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     color: "#9CA3AF",
     textDecorationLine: "line-through",
   },
   newPrice: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     color: "#D32F2F",
-    fontWeight: "700",
+    fontWeight: "normal",
   },
   discountBadge: {
     backgroundColor: "#11C76A",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: moderateScale(6),
+    borderRadius: moderateScale(6),
   },
   discountText: {
     color: "#FFF",
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: responsiveFontSize(16),
+    fontWeight: "normal",
   },
   buyBtn: {
     backgroundColor: "#D32F2F",
-    paddingVertical: 14,
+    paddingVertical: moderateScale(14),
     alignItems: "center",
+    borderRadius: moderateScale(8),
   },
   buyBtnDisabled: {
     backgroundColor: "#9CA3AF",
   },
   buyText: {
     color: "#FFF",
-    fontSize: 16,
-    fontWeight: "700",
+    fontSize: responsiveFontSize(18),
+    fontWeight: "normal",
     letterSpacing: 1,
   },
   backdrop: {
@@ -1437,33 +1453,31 @@ const styles = StyleSheet.create({
   },
   routeDropdown: {
     backgroundColor: "#FFF",
-    borderRadius: 0,
+    borderRadius: moderateScale(4),
     elevation: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
-    shadowRadius: 8,
-    height: 400,
+    shadowRadius: moderateScale(8),
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "#DDD",
   },
   stopDropdown: {
     backgroundColor: "#FFF",
-    borderRadius: 0,
+    borderRadius: moderateScale(4),
     elevation: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
-    shadowRadius: 8,
-    height: 400,
+    shadowRadius: moderateScale(8),
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
   routeItem: {
-    height: 85,
-    paddingHorizontal: 14,
+    height: moderateScale(85),
+    paddingHorizontal: moderateScale(14),
     justifyContent: "center",
     borderBottomWidth: 1,
     borderBottomColor: "#F0F0F0",
@@ -1472,11 +1486,11 @@ const styles = StyleSheet.create({
   routeIconHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    marginBottom: 6,
+    gap: moderateScale(10),
+    marginBottom: moderateScale(6),
   },
   routeNumberText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: "500",
     color: "#000",
   },
@@ -1487,14 +1501,14 @@ const styles = StyleSheet.create({
   },
   routePathVisualizer: {
     alignItems: "center",
-    width: 12,
-    marginRight: 15,
-    paddingTop: 4,
+    width: moderateScale(12),
+    marginRight: moderateScale(15),
+    paddingTop: moderateScale(4),
   },
   routeCircle: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: moderateScale(10),
+    height: moderateScale(10),
+    borderRadius: moderateScale(5),
     borderWidth: 1.5,
     borderColor: "#D32F2F",
     backgroundColor: "#FFF",
@@ -1507,25 +1521,25 @@ const styles = StyleSheet.create({
   },
   routeLine: {
     width: 1.5,
-    height: 18,
+    height: moderateScale(18),
     backgroundColor: "#D32F2F",
     marginVertical: -1,
   },
   routeLabels: {
     flex: 1,
-    gap: 10,
+    gap: moderateScale(10),
     justifyContent: "space-between",
     paddingTop: 0,
   },
   routeTerminalLabel: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     color: "#6B7280",
     fontWeight: "400",
-    lineHeight: 14,
+    lineHeight: responsiveFontSize(14),
   },
   stopItem: {
-    height: 48,
-    paddingHorizontal: 16,
+    height: moderateScale(48),
+    paddingHorizontal: moderateScale(16),
     justifyContent: "center",
     borderBottomWidth: 1,
     borderBottomColor: "#F0F0F0",
@@ -1534,20 +1548,20 @@ const styles = StyleSheet.create({
   stopItemRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: moderateScale(10),
   },
   stopItemText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     color: "#000",
     fontWeight: "400",
   },
   emptyItem: {
-    padding: 30,
+    padding: moderateScale(30),
     alignItems: "center",
   },
   emptyItemText: {
     color: "#9CA3AF",
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontWeight: "500",
   },
   toast: {
@@ -1555,13 +1569,13 @@ const styles = StyleSheet.create({
     top: "50%",
     alignSelf: "center",
     backgroundColor: "rgba(0,0,0,0.8)",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
+    paddingHorizontal: moderateScale(20),
+    paddingVertical: moderateScale(10),
+    borderRadius: moderateScale(20),
   },
   toastText: {
     color: "#FFF",
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontWeight: "500",
   },
 });

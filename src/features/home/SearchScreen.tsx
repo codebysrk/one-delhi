@@ -61,11 +61,96 @@ export const SearchScreen = ({ navigation }: any) => {
     fetchRoutes();
   }, []);
 
-  const filteredRoutes = routes.filter((r) =>
-    r.route.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const allDirectionRoutes = React.useMemo(() => {
+    const list: any[] = [];
+    routes.forEach((r: any) => {
+      // Format 1: Has directions.up and directions.down
+      if (r.directions) {
+        if (r.directions.up) {
+          list.push({
+            route: r.route || r.id || r.routeNumber,
+            id: `${r.route || r.id || r.routeNumber}-UP`,
+            directionType: 'UP',
+            from: r.directions.up.from || r.directions.up.stops?.[0] || 'Origin',
+            to: r.directions.up.to || r.directions.up.stops?.[r.directions.up.stops.length - 1] || 'Destination',
+            originalRoute: r,
+          });
+        }
+        if (r.directions.down) {
+          list.push({
+            route: r.route || r.id || r.routeNumber,
+            id: `${r.route || r.id || r.routeNumber}-DOWN`,
+            directionType: 'DOWN',
+            from: r.directions.down.from || r.directions.down.stops?.[0] || 'Origin',
+            to: r.directions.down.to || r.directions.down.stops?.[r.directions.down.stops.length - 1] || 'Destination',
+            originalRoute: r,
+          });
+        }
+      } 
+      // Format 2: Flat route with stops
+      else {
+        const routeName = r.route || r.id || r.routeNumber;
+        list.push({
+          route: routeName,
+          id: `${routeName}-UP`,
+          directionType: 'UP',
+          from: r.origin || r.stops?.[0] || 'Origin',
+          to: r.destination || r.stops?.[r.stops.length - 1] || 'Destination',
+          originalRoute: r,
+        });
+      }
+    });
+    return list;
+  }, [routes]);
 
-  const renderRouteItem = useCallback(({ item }: { item: Route }) => (
+  const filteredRoutes = React.useMemo(() => {
+    const queryLower = searchQuery.toLowerCase().replace(/[\s-]/g, '');
+    return allDirectionRoutes.filter((item) => {
+      const normalizedRoute = item.route.toLowerCase().replace(/[\s-]/g, '');
+      return normalizedRoute.includes(queryLower);
+    });
+  }, [allDirectionRoutes, searchQuery]);
+
+  const mappedRecentRoutes = React.useMemo(() => {
+    const list: any[] = [];
+    recentRoutes.forEach((r: any) => {
+      if (r.directions) {
+        if (r.directions.up) {
+          list.push({
+            route: r.route || r.id || r.routeNumber,
+            id: `${r.route || r.id || r.routeNumber}-UP`,
+            directionType: 'UP',
+            from: r.directions.up.from || r.directions.up.stops?.[0] || 'Origin',
+            to: r.directions.up.to || r.directions.up.stops?.[r.directions.up.stops.length - 1] || 'Destination',
+            originalRoute: r,
+          });
+        }
+        if (r.directions.down) {
+          list.push({
+            route: r.route || r.id || r.routeNumber,
+            id: `${r.route || r.id || r.routeNumber}-DOWN`,
+            directionType: 'DOWN',
+            from: r.directions.down.from || r.directions.down.stops?.[0] || 'Origin',
+            to: r.directions.down.to || r.directions.down.stops?.[r.directions.down.stops.length - 1] || 'Destination',
+            originalRoute: r,
+          });
+        }
+      } else {
+        const routeName = r.route || r.id || r.routeNumber;
+        list.push({
+          route: routeName,
+          id: `${routeName}-UP`,
+          directionType: 'UP',
+          from: r.origin || r.stops?.[0] || 'Origin',
+          to: r.destination || r.stops?.[r.stops.length - 1] || 'Destination',
+          originalRoute: r,
+        });
+      }
+    });
+    return list;
+  }, [recentRoutes]);
+
+  const renderRouteItem = useCallback(({ item }: { item: any }) => (
     <TouchableOpacity 
       style={styles.routeCard} 
       activeOpacity={0.7}
@@ -76,15 +161,15 @@ export const SearchScreen = ({ navigation }: any) => {
             userName: auth.currentUser?.displayName || 'Delhi Traveler',
             userEmail: auth.currentUser?.email || '',
             action: 'SEARCH_ROUTE',
-            details: `User viewed details for Route ${item.route}`,
+            details: `User viewed details for Route ${item.route} (${item.directionType})`,
             type: 'USER',
             targetType: 'ROUTE',
             targetId: item.route,
             deviceId: useAppStore.getState().deviceId || undefined
           });
         } catch {}
-        addRecentRoute(item);
-        navigation.navigate("RouteDetail", { routeId: item.route });
+        addRecentRoute(item.originalRoute);
+        navigation.navigate("RouteDetail", { routeId: item.route, direction: item.directionType });
       }}
     >
       <View style={styles.leftCol}>
@@ -102,15 +187,15 @@ export const SearchScreen = ({ navigation }: any) => {
         <Text style={styles.routeNumber}>{item.route}</Text>
         <View style={styles.textPath}>
           <Text style={styles.terminalName} numberOfLines={1}>
-            {item.directions.up.from}
+            {item.from}
           </Text>
           <Text style={styles.terminalName} numberOfLines={1}>
-            {item.directions.up.to}
+            {item.to}
           </Text>
         </View>
       </View>
     </TouchableOpacity>
-  ), [navigation]);
+  ), [navigation, addRecentRoute]);
 
   const renderRecentRouteItem = useCallback(({ item }: { item: Route }) => {
     const renderRightActions = (
@@ -154,7 +239,7 @@ export const SearchScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
+      <StatusBar barStyle="dark-content" backgroundColor="yellow" translucent />
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
           <TouchableOpacity 
@@ -189,7 +274,7 @@ export const SearchScreen = ({ navigation }: any) => {
             <FlashList
               data={filteredRoutes}
               renderItem={renderRouteItem}
-              keyExtractor={(item) => item.route}
+              keyExtractor={(item) => item.id}
               estimatedItemSize={80}
               ItemSeparatorComponent={renderSeparator}
               contentContainerStyle={styles.listContent}
@@ -201,12 +286,12 @@ export const SearchScreen = ({ navigation }: any) => {
             />
           )
         ) : (
-          recentRoutes.length > 0 && (
+          mappedRecentRoutes.length > 0 && (
             <View style={{ flex: 1 }}>
               <FlashList
-                data={recentRoutes}
+                data={mappedRecentRoutes}
                 renderItem={renderRecentRouteItem}
-                keyExtractor={(item) => `recent-${item.route}`}
+                keyExtractor={(item) => `recent-${item.id}`}
                 estimatedItemSize={80}
                 ItemSeparatorComponent={renderSeparator}
                 contentContainerStyle={styles.listContent}
@@ -359,6 +444,17 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#EEE",
     marginHorizontal: 0,
+  },
+  directionBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 10,
+    alignSelf: 'center',
+  },
+  directionText: {
+    fontSize: 10,
+    fontWeight: '800',
   },
 });
 

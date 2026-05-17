@@ -114,9 +114,9 @@ export const EVScreen = ({ navigation }: any) => {
   return (
     <View style={styles.container}>
       <StatusBar
-        barStyle="light-content"
+        barStyle="dark-content"
+        backgroundColor="yellow"
         translucent
-        backgroundColor="transparent"
       />
 
       {/* Full Screen Map as Base Layer */}

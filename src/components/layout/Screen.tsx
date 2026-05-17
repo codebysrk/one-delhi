@@ -28,8 +28,8 @@ export const Screen: React.FC<ScreenProps> = ({
       edges={['right', 'left', 'top']}
     >
       <StatusBar 
-        barStyle="dark-content" 
-        backgroundColor="transparent"
+        barStyle="dark-content"
+        backgroundColor="yellow"
         translucent
       />
       {header && <View style={styles.fixedHeader}>{header}</View>}

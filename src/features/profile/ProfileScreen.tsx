@@ -48,7 +48,7 @@ export const ProfileScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      <StatusBar barStyle="dark-content" backgroundColor="yellow" translucent />
       
       {/* Red Background Top Part */}
       <View style={styles.headerBg} />
@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     left: 0, 
     right: 0, 
     height: 160, 
-    backgroundColor: '#D32F2F' 
+    backgroundColor: '#A51F38' 
   },
   safeArea: { flex: 1 },
   headerBar: { 
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between', 
     paddingHorizontal: 16,
     height: 56,
-    marginTop: Platform.OS === 'android' ? 30 : 0
+    marginTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   backBtn: { padding: 4 },
   headerTitle: { color: 'white', fontSize: 20, fontWeight: '600' },

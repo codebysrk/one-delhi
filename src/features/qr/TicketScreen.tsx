@@ -81,7 +81,7 @@ export const TicketScreen = ({ navigation, route }: any) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#D32F2F" />
+      <StatusBar barStyle="dark-content" backgroundColor="yellow" translucent />
       
       <SafeAreaView style={styles.safeArea}>
         {/* PIXEL-PERFECT HEADER */}
@@ -287,8 +287,8 @@ const styles = StyleSheet.create({
   stopText: { color: '#000', fontSize: 17, fontWeight: '400', lineHeight: 20 },
   
   tidLabel: { 
-    color: '#888', 
-    fontSize: 12, 
+    color: '#424242ff', 
+    fontSize: 13, 
     textAlign: 'center', 
     marginTop: 10, 
     marginBottom: 10,
@@ -342,7 +342,8 @@ const styles = StyleSheet.create({
     zIndex: 100,
     elevation: 100,
     // Add transform to scale the stamp up like in image
-    transform: [{ scale: 1.4 }]
+    transform: [{ scale: 1.35 }],
+    opacity: 0.85, // 👈 स्टैम्प की ओपेसिटी एडजस्ट करने के लिए
   },
   errorContainer: { flex: 1, backgroundColor: '#A00E0E', justifyContent: 'center', alignItems: 'center', padding: 20 },
   errorText: { color: 'white', fontSize: 18, fontWeight: 'bold', marginBottom: 20 },

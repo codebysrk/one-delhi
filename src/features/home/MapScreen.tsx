@@ -262,9 +262,9 @@ export const MapScreen = ({ navigation }: any) => {
   return (
     <View style={styles.container}>
       <StatusBar
-        barStyle="light-content"
+        barStyle="dark-content"
+        backgroundColor="yellow"
         translucent
-        backgroundColor="transparent"
       />
 
       <MainHeader

@@ -59,7 +59,7 @@ export const PassScreen = ({ navigation }: any) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8F9FA" />
+      <StatusBar barStyle="dark-content" backgroundColor="yellow" translucent />
       
       {/* Header */}
       <View style={styles.header}>

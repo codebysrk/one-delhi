@@ -362,15 +362,15 @@ export const HelpScreen = ({ navigation }: any) => {
   return (
     <View style={styles.container}>
       <StatusBar
-        barStyle="light-content"
+        barStyle="dark-content"
+        backgroundColor="yellow"
         translucent
-        backgroundColor="transparent"
       />
 
       <MainHeader
         style={styles.headerArea}
         showSearch={false}
-        imageStyle={{ resizeMode: 'stretch', opacity: 1, transform: [{ translateY:85 }, { scaleX: 1 }, { scaleY: 2.2 }] }}
+        imageStyle={{ resizeMode: 'stretch', opacity: 1, transform: [{ translateY: 86 }, { scaleX: 1 }, { scaleY: 2.1 }] }}
         rightElement={
           <TouchableOpacity onPress={() => navigation.navigate("Settings")}>
             <MaterialCommunityIcons name="cog" size={26} color="white" />

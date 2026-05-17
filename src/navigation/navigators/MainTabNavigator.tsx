@@ -51,7 +51,11 @@ const TabButton = (props: any) => {
 const BusStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="Map" component={MapScreen} />
-    <Stack.Screen name="Search" component={SearchScreen} />
+    <Stack.Screen 
+      name="Search" 
+      component={SearchScreen} 
+      options={{ animation: 'none' }}
+    />
   </Stack.Navigator>
 );
 
@@ -148,10 +152,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    top: 8,
   },
   tabButtonInner: {
     alignItems: 'center',
     justifyContent: 'center',
+    top: -8,
   },
   footerContainer: {
     backgroundColor: '#FFF',
@@ -166,7 +172,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   globalFooter: { 
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#b01a1aff',
     paddingVertical: 2, 
     alignItems: 'center', 
     justifyContent: 'center',

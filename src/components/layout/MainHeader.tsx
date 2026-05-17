@@ -9,7 +9,7 @@ import {
   ViewStyle,
   ImageBackground
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, SPACING, LAYOUT } from '../../core/theme';
@@ -22,6 +22,7 @@ interface MainHeaderProps {
   searchRightElement?: React.ReactNode;
   style?: ViewStyle;
   imageStyle?: any;
+  customHeight?: number;
 }
 
 export const MainHeader: React.FC<MainHeaderProps> = ({
@@ -31,14 +32,18 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
   rightElement,
   searchRightElement,
   style,
-  imageStyle
+  imageStyle,
+  customHeight
 }) => {
+  const insets = useSafeAreaInsets();
+  const calculatedHeight = customHeight ?? ((showSearch ? 120 : 50) + insets.top);
+
   return (
-    <View style={[styles.headerArea, style]}>
+    <View style={[styles.headerArea, style, { height: calculatedHeight }]}>
       <ImageBackground
         source={require("../../../assets/images/map-header.webp")}
         style={styles.headerBg}
-        imageStyle={[{ opacity: .9, resizeMode: 'stretch', transform: [{ translateY: 55},{ scaleX: 1 }, { scaleY: 1.3 }] }, imageStyle]}
+        imageStyle={[{ opacity: .9, resizeMode: 'stretch', transform: [{ translateY: 52},{ scaleX: 1 }, { scaleY: 1.2 }] }, imageStyle]}
       >
         <View style={styles.darkOverlay}>
           <SafeAreaView style={styles.safeHeader} edges={["top", "left", "right"]}>
@@ -103,9 +108,12 @@ const styles = StyleSheet.create({
   darkOverlay: { 
     flex: 1, 
     /* TIP: ADJUST '0.12' FOR BLENDING (0.0 to 1.0) OR USE 'transparent' TO REMOVE */
-    backgroundColor: "rgba(167, 167, 167, 0)" 
+    backgroundColor: "rgba(176, 34, 34, 0.04)" 
   },
-  safeHeader: { flex: 1 },
+  safeHeader: { 
+    flex: 1,
+    marginTop: -8,
+  },
   topBar: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -135,7 +143,7 @@ const styles = StyleSheet.create({
     paddingLeft: 16,
     paddingRight: 16,
     alignItems: "center",
-    marginTop: 12,
+    marginTop: 6,
   },
   searchPill: {
     /* SEARCH BAR SHAPE AND HEIGHT */

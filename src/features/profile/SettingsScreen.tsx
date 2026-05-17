@@ -79,7 +79,7 @@ export const SettingsScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
+      <StatusBar barStyle="dark-content" backgroundColor="yellow" translucent />
       
       <View style={styles.header}>
         <SafeAreaView>
@@ -164,7 +164,7 @@ export const SettingsScreen = ({ navigation }: any) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF' },
-  header: { backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0', paddingTop: Platform.OS === 'android' ? 30 : 0 },
+  header: { backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight || 30 : 0 },
   headerContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, height: 60 },
   backBtn: { width: 50, height: 44, justifyContent: 'center', alignItems: 'flex-start' },
   headerTitle: { color: '#333', fontSize: 26, fontWeight: '400', flex: 1, textAlign: 'center' },

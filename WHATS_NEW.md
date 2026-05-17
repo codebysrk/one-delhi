@@ -1,22 +1,22 @@
 # What's New in One Delhi v2.0.1 🚀
 
-नमस्ते दिल्ली! हम आपके सफर को और भी बेहतर बनाने के लिए लेकर आए हैं एक बड़ा अपडेट। यहाँ बताया गया है कि इस वर्जन में क्या खास है:
+We've brought some major improvements to make your commute even smoother. Here's what's new:
 
-### ⚡ सुपर-फास्ट परफॉरमेंस
-- **तेज़ सर्च:** अब बस रूट्स और स्टॉप्स सर्च करना पहले से कहीं ज्यादा तेज़ है। जैसे ही आप टाइप करेंगे, रिजल्ट्स तुरंत आपके सामने होंगे।
-- **स्मूथ हिस्ट्री:** आपकी टिकट हिस्ट्री अब बिना किसी रुकावट (lag) के बिजली की रफ़्तार से लोड होगी।
+### ⚡ Super-Fast Performance
+- **Snappy Search:** Searching for bus routes and stops is now significantly faster. Results appear instantly as you type.
+- **Fluid History:** Access your ticket history with lightning speed, optimized with high-performance list rendering.
 
-### 🔋 बेहतर बैटरी लाइफ और स्टेबिलिटी
-- **स्मार्ट टाइमर:** टिकट बुकिंग के दौरान चलने वाला टाइमर अब और भी स्मार्ट हो गया है। यह अब आपकी बैटरी कम खर्च करेगा और पूरी ऐप को और भी स्टेबल बनाएगा।
-- **बग फिक्स:** हमने कई छोटे-बड़े टेक्निकल इश्यूज को ठीक किया है ताकि आपको मिले एक क्रैश-फ्री एक्सपीरियंस।
+### 🔋 Battery & Stability Improvements
+- **Smart Timer:** The booking timer has been optimized using native drivers, significantly reducing battery consumption and background lag.
+- **Bug Fixes:** Resolved several technical issues to ensure a stable, crash-free experience.
 
-### ✨ नया और प्रीमियम लुक
-- **Skeleton Loaders:** अब लोडिंग के दौरान आपको पुरानी चकरी (spinner) की जगह एक सुंदर एनिमेटेड ढांचा (skeleton) दिखेगा, जो ऐप को एक मॉडर्न और प्रीमियम फील देता है।
-- **स्मूथ एनिमेशंस:** ड्रॉपडाउन और मेनू अब बहुत ही सुंदर "Fade-In" इफेक्ट के साथ खुलते हैं।
-- **कंसिस्टेंट डिजाइन:** पूरी ऐप में अब एक जैसा हाई-एंड डिजाइन और कलर्स का इस्तेमाल किया गया है।
+### ✨ Premium UI/UX Enhancements
+- **Skeleton Loaders:** Replaced generic loading spinners with modern Skeleton placeholders for a more premium loading experience.
+- **Smooth Animations:** Introduced snappy `FadeInUp` transitions for dropdowns and navigation elements.
+- **Design Consistency:** Standardized high-end design across all screens, including a updated theme color (#A51F38).
 
-### ⏱️ सटीक टाइमर फॉर्मेट
-- बुकिंग टाइमर अब **MM:SS** (जैसे 03:00) फॉर्मेट में है, जिससे आपको पेमेंट के लिए बचा हुआ समय साफ़-साफ़ दिखाई दे।
+### ⏱️ Precise Timer Format
+- The booking timer now uses a consistent **MM:SS** format (e.g., 03:00) for better clarity during the payment window.
 
 ---
-**One Delhi** के साथ अपने सफर का आनंद लें! आपकी प्रतिक्रिया (Feedback) हमारे लिए बहुत महत्वपूर्ण है।
+Enjoy your ride with **One Delhi**! Your feedback helps us improve.

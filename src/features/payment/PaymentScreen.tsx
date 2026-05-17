@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, StatusBar, Platform, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, StatusBar, Platform, Modal, ActivityIndicator, ToastAndroid, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS } from '../../core/theme';
 import { useAppStore } from '../../store/useAppStore';
@@ -68,9 +68,18 @@ export const PaymentScreen = ({ navigation, route }: any) => {
       });
 
       // 2. Save to Firestore in background (Firestore handles the sync when online)
-      setDoc(doc(db, 'tickets', tid), sanitizePayload(finalTicket)).catch((err: any) => {
-        if (__DEV__) console.warn('[OfflineSync] Ticket will sync when online:', err);
-      });
+      setDoc(doc(db, 'tickets', tid), sanitizePayload(finalTicket))
+        .then(() => {
+          console.log('[PaymentScreen] Ticket synced online successfully.');
+        })
+        .catch((err: any) => {
+          console.log('[OfflineSync] Offline mode active. Ticket saved locally and will sync when online.');
+          if (Platform.OS === 'android') {
+            ToastAndroid.show('Ticket booked locally (Offline Mode) 🎫', ToastAndroid.LONG);
+          } else {
+            Alert.alert('Offline Ticket', 'Your ticket has been booked locally and is valid for travel! It will sync when internet is restored.');
+          }
+        });
 
       // 3. Log Action (Background)
       logAction({
@@ -94,7 +103,7 @@ export const PaymentScreen = ({ navigation, route }: any) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#D32F2F" />
+      <StatusBar barStyle="dark-content" backgroundColor="yellow" translucent />
       
       <View style={styles.header}>
         <SafeAreaView>
@@ -211,7 +220,7 @@ export const PaymentScreen = ({ navigation, route }: any) => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
   header: { 
-    backgroundColor: '#D32F2F', 
+    backgroundColor: '#A51F38', 
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     paddingBottom: 5
   },
