@@ -78,6 +78,14 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
         body { margin: 0; padding: 0; }
         #map { height: 100vh; width: 100vw; background: #f8f9fa; }
         
+        /* Stable Leaflet wrapper to prevent parent borders or background resets */
+        .user-marker-gps-icon {
+          background: none !important;
+          border: none !important;
+          box-shadow: none !important;
+          overflow: visible !important;
+        }
+
         /* Glowing User Blue Dot exactly like Google Maps */
         .user-marker-container {
           position: relative;
@@ -107,21 +115,23 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
           border-radius: 50%;
           border: 1px solid rgba(26, 115, 232, 0.4);
           z-index: 5;
-          animation: pulse 1.8s ease-out infinite;
+          animation: pulse 1.8s cubic-bezier(0.24, 0, 0.38, 1) infinite;
           transform-origin: center;
+          /* GPU hardware acceleration to prevent coordinate update flickers/blinks */
+          will-change: transform, opacity;
+          backface-visibility: hidden;
+          perspective: 1000px;
+          transform: translate3d(0, 0, 0) scale(0.2);
         }
 
+        /* Continuous pulse animation without any pause/blank interval to completely eliminate "blinking on/off" effect */
         @keyframes pulse {
           0% {
-            transform: scale(0.2);
+            transform: translate3d(0, 0, 0) scale(0.1);
             opacity: 0.8;
           }
-          80% {
-            transform: scale(1.0);
-            opacity: 0;
-          }
           100% {
-            transform: scale(1.0);
+            transform: translate3d(0, 0, 0) scale(1.0);
             opacity: 0;
           }
         }
@@ -213,7 +223,7 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
         ${userLocation ? `
           userMarker = L.marker([${userLocation.coords.latitude}, ${userLocation.coords.longitude}], {
             icon: L.divIcon({ 
-              className: '', 
+              className: 'user-marker-gps-icon', 
               html: '<div class="user-marker-container"><div class="user-map-dot"></div><div class="user-map-pulse"></div></div>', 
               iconSize: [40, 40],
               iconAnchor: [20, 20]
@@ -238,7 +248,7 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
           } else {
             userMarker = L.marker(latlng, {
               icon: L.divIcon({ 
-                className: '', 
+                className: 'user-marker-gps-icon', 
                 html: '<div class="user-marker-container"><div class="user-map-dot"></div><div class="user-map-pulse"></div></div>', 
                 iconSize: [40, 40],
                 iconAnchor: [20, 20]
@@ -312,11 +322,14 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
     `;
   }, []); // Only compile HTML once to keep WebView fast and smooth
 
+  // Memoize the source object reference so that the WebView NEVER reloads/flickers when the parent component re-renders
+  const webViewSource = useMemo(() => ({ html: mapHtml }), [mapHtml]);
+
   return (
     <View style={[styles.container, style]}>
       <WebView
         ref={webViewRef}
-        source={{ html: mapHtml }}
+        source={webViewSource}
         style={styles.webView}
         onLoad={onMapLoaded}
         scrollEnabled={true}
