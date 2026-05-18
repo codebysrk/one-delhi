@@ -78,14 +78,46 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
         body { margin: 0; padding: 0; }
         #map { height: 100vh; width: 100vw; background: #f8f9fa; }
         
-        /* Glowing User Blue Dot */
-        .user-marker {
-          width: 14px;
-          height: 14px;
-          background: #3b82f6;
-          border: 3px solid white;
+        /* Glowing User Blue Dot with Google Maps Radar Pulse */
+        .user-marker-container {
+          position: relative;
+          width: 24px;
+          height: 24px;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+        
+        .user-marker-dot {
+          width: 12px;
+          height: 12px;
+          background: #1a73e8; /* Google Maps Premium Blue */
+          border: 2.5px solid white;
           border-radius: 50%;
-          box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+          box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+          z-index: 2;
+          position: absolute;
+        }
+        
+        .user-marker-pulse {
+          width: 24px;
+          height: 24px;
+          background: rgba(26, 115, 232, 0.25);
+          border-radius: 50%;
+          position: absolute;
+          z-index: 1;
+          animation: user-pulse 2s infinite ease-out;
+        }
+        
+        @keyframes user-pulse {
+          0% {
+            transform: scale(0.6);
+            opacity: 0.8;
+          }
+          100% {
+            transform: scale(2.4);
+            opacity: 0;
+          }
         }
         
         /* MapScreen Stops */
@@ -174,13 +206,13 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
         // Initialize User Location if provided initially
         ${userLocation ? `
           userMarker = L.marker([${userLocation.coords.latitude}, ${userLocation.coords.longitude}], {
-            icon: L.divIcon({ className: '', html: '<div class="user-marker"></div>', iconSize: [14, 14] })
+            icon: L.divIcon({ className: '', html: '<div class="user-marker-container"><div class="user-marker-dot"></div><div class="user-marker-pulse"></div></div>', iconSize: [24, 24], iconAnchor: [12, 12] })
           }).addTo(map);
         ` : ""}
 
         // Helper 1: Center Map
         window.centerMap = function(lat, lng, zoom) {
-          map.flyTo([lat, lng], zoom || 15, { duration: 1.5 });
+          map.flyTo([lat, lng], zoom || 15, { duration: 0.8 });
         };
 
         // Helper 2: Update/Draw User Location Blue Dot
@@ -190,7 +222,7 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
             userMarker.setLatLng(latlng);
           } else {
             userMarker = L.marker(latlng, {
-              icon: L.divIcon({ className: '', html: '<div class="user-marker"></div>', iconSize: [14, 14] })
+              icon: L.divIcon({ className: '', html: '<div class="user-marker-container"><div class="user-marker-dot"></div><div class="user-marker-pulse"></div></div>', iconSize: [24, 24], iconAnchor: [12, 12] })
             }).addTo(map);
           }
         };
