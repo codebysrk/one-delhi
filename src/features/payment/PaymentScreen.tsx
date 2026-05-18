@@ -27,6 +27,7 @@ import {
   GPayIcon,
   AmazonPayIcon,
   BHIMIcon,
+  UPILogo,
 } from "../../components/icons/PaymentIcons";
 import { sanitizePayload } from "../../utils/firebaseUtils";
 import { logAction } from "../../services/logService";
@@ -561,15 +562,7 @@ export const PaymentScreen = ({ navigation, route }: any) => {
               {/* TOP BAR: UPI Logo, Bank Name, Close Button */}
               <View style={styles.pinHeader}>
                 <View style={styles.upiLogoContainer}>
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <Text style={{ fontSize: 22, fontWeight: "900", fontStyle: "italic", color: "#5E6065", letterSpacing: -0.5 }}>UP</Text>
-                    <Text style={{ fontSize: 22, fontWeight: "900", fontStyle: "italic", color: "#3B82F6", letterSpacing: -0.5 }}>I</Text>
-                    <View style={{ flexDirection: "row", marginLeft: 2, height: 16, width: 8 }}>
-                      <View style={{ width: 3, height: '100%', backgroundColor: '#E55325', transform: [{ skewX: '-20deg' }] }} />
-                      <View style={{ width: 3, height: '100%', backgroundColor: '#0A7F6C', transform: [{ skewX: '-20deg' }], marginLeft: 1 }} />
-                    </View>
-                  </View>
-                  <Text style={{ fontSize: 6, color: "#7B7C7E", fontWeight: "bold", letterSpacing: 0.1, marginTop: -3 }}>UNIFIED PAYMENTS INTERFACE</Text>
+                  <UPILogo width={75} height={28} />
                 </View>
 
                 <TouchableOpacity style={styles.pinCloseBtn} onPress={() => setIsSimulating(false)}>
