@@ -334,45 +334,37 @@ const FareDisplay = React.memo(
   }) => (
     <View style={styles.fareRow}>
       <View style={{ flex: 1 }}>
-        <Text style={styles.bottomLabel}>Amount Payable</Text>
-        {showDiscount ? (
-          <Animated.View
-            entering={FadeIn.duration(350)}
-            exiting={FadeOut.duration(200)}
-            style={styles.priceRow}
-          >
-            <Text style={styles.oldPrice}>₹{finalFare.originalTotal}</Text>
-            <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-              {isEditing ? (
-                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <Text style={styles.newPrice}>₹</Text>
-                  <TextInput
-                    style={[styles.newPrice, { minWidth: 40, padding: 0 }]}
-                    value={manualTotal}
-                    onChangeText={onManualChange}
-                    onBlur={onBlur}
-                    onSubmitEditing={onBlur}
-                    keyboardType="numeric"
-                    autoFocus
-                    selectTextOnFocus
-                  />
-                </View>
-              ) : (
-                <Text style={styles.newPrice}>₹{finalFare.total}</Text>
-              )}
-            </TouchableOpacity>
-          </Animated.View>
-        ) : null}
+        <Text style={styles.bottomLabel}>
+          Amount Payable
+        </Text>
+        <View style={[styles.priceRow, { opacity: showDiscount ? 1 : 0 }]}>
+          <Text style={styles.oldPrice}>₹{finalFare.originalTotal}</Text>
+          <TouchableOpacity onPress={onPress} activeOpacity={0.7} disabled={!showDiscount}>
+            {isEditing ? (
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Text style={styles.newPrice}>₹</Text>
+                <TextInput
+                  style={[styles.newPrice, { minWidth: 40, padding: 0 }]}
+                  value={manualTotal}
+                  onChangeText={onManualChange}
+                  onBlur={onBlur}
+                  onSubmitEditing={onBlur}
+                  keyboardType="numeric"
+                  autoFocus
+                  selectTextOnFocus
+                />
+              </View>
+            ) : (
+              <Text style={styles.newPrice}>₹{finalFare.total}</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
-      {showDiscount ? (
-        <Animated.View
-          entering={FadeIn.duration(350)}
-          exiting={FadeOut.duration(200)}
-          style={styles.discountBadge}
-        >
+      <View style={{ opacity: showDiscount ? 1 : 0, justifyContent: 'center' }}>
+        <View style={styles.discountBadge}>
           <Text style={styles.discountText}>10.0% off</Text>
-        </Animated.View>
-      ) : null}
+        </View>
+      </View>
     </View>
   ),
 );
@@ -731,12 +723,10 @@ export const BookingScreen = ({ navigation }: any) => {
       total: finalFare.total,
     };
 
-    setTimeout(() => {
-      navigation.navigate("Payment", { 
-        ticketData,
-        timeLeft: Math.floor(timeLeft.value)
-      });
-    }, 2000);
+    navigation.navigate("Payment", { 
+      ticketData,
+      timeLeft: Math.floor(timeLeft.value)
+    });
   }, [
     routeSearch,
     sourceSearch,

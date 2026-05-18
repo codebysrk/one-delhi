@@ -9,6 +9,8 @@ import {
   Platform,
   StatusBar,
   Alert,
+  ActivityIndicator,
+  Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Screen } from "../../components/layout/Screen";
@@ -48,6 +50,57 @@ export const TicketScreen = ({ navigation, route }: any) => {
     : false;
   const isInvalid = activeTicket?.status === "INVALID" || isExpired;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  // Deep-link dynamic handover states
+  const isRedirectParam = route?.params?.isRedirect;
+  const [showRedirect, setShowRedirect] = useState(!!isRedirectParam);
+  const redirectOpacity = useRef(new Animated.Value(1)).current;
+  const redirectScale = useRef(new Animated.Value(1)).current;
+
+  // Halka sa loading animation and transition as if switching from another app
+  const [isAppRedirecting, setIsAppRedirecting] = useState(!!isRedirectParam);
+  const redirectLoadingOpacity = useRef(new Animated.Value(1)).current;
+  const redirectLoadingScale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (isRedirectParam) {
+      // 1. Initial 1.2-second app switch/redirect loader overlay
+      setTimeout(() => {
+        Animated.parallel([
+          Animated.timing(redirectLoadingOpacity, {
+            toValue: 0,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.timing(redirectLoadingScale, {
+            toValue: 1.05,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+        ]).start(() => {
+          setIsAppRedirecting(false);
+        });
+      }, 1200);
+
+      // 2. Main 3-second timeline confirm transition to digital ticket
+      setTimeout(() => {
+        Animated.parallel([
+          Animated.timing(redirectOpacity, {
+            toValue: 0,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+          Animated.timing(redirectScale, {
+            toValue: 0.95,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+        ]).start(() => {
+          setShowRedirect(false);
+        });
+      }, 4200); // 1.2s loader + 3s timeline display = 4.2s
+    }
+  }, [isRedirectParam]);
 
   useEffect(() => {
     // 1. Alert and Log on screenshot attempt
@@ -244,6 +297,105 @@ export const TicketScreen = ({ navigation, route }: any) => {
         <Image source={logoImg} style={styles.logoImg} contentFit="contain" />
         <BrandingFooter variant="ticket" />
       </View>
+
+      {showRedirect && (
+        <Animated.View 
+          style={[
+            styles.redirectOverlayContainer, 
+            { 
+              opacity: redirectOpacity, 
+              transform: [{ scale: redirectScale }] 
+            }
+          ]}
+        >
+          <StatusBar barStyle="default" />
+          <View style={styles.redirectInnerWrapper}>
+            {/* 1. TOP CIRCULAR GRAPHIC (Pushed inside topSectionWrapper to lock at exactly 30% screen height) */}
+            <View style={styles.topSectionWrapper}>
+              <View style={styles.topIconCircle}>
+                {/* Top-Left Arrow pointing right */}
+                <View style={[styles.circleIconAbsolute, { top: 23, left: 25 }]}>
+                  <MaterialCommunityIcons name="redo" size={34} color="#C92A2A" style={{ transform: [{ rotate: "-50deg" }] }} />
+                </View>
+
+                {/* Top-Right Rupee inside small red circle */}
+                <View style={[styles.circleIconAbsolute, { top: 21, right: 21 }]}>
+                  <View style={styles.miniRupeeCircle}>
+                    <Text style={styles.miniRupeeText}>₹</Text>
+                  </View>
+                </View>
+
+                {/* Bottom-Left Credit Card */}
+                <View style={[styles.circleIconAbsolute, { bottom: 21, left: 21 }]}>
+                  <MaterialCommunityIcons name="credit-card" size={34} color="#C92A2A" />
+                </View>
+
+                {/* Bottom-Right Arrow pointing down-left */}
+                <View style={[styles.circleIconAbsolute, { bottom: 23, right: 25 }]}>
+                  <MaterialCommunityIcons name="redo" size={34} color="#C92A2A" style={{ transform: [{ rotate: "130deg" }] }} />
+                </View>
+              </View>
+              <View style={styles.horizontalDivider} />
+            </View>
+
+            {/* 2. TIMELINE/STATUS SEQUENCE */}
+            <View style={styles.timelineContainer}>
+              {/* Row 1: Initialised */}
+              <View style={styles.timelineRow}>
+                <View style={styles.timelineIconCol}>
+                  <MaterialIcons name="check-circle" size={24} color="#10B981" />
+                  {/* Vertical Dotted Line */}
+                  <View style={styles.timelineDottedLine} />
+                </View>
+                <View style={styles.timelineTextCol}>
+                  <Text style={styles.timelineStatusTitleGreen}>Initialised</Text>
+                  <Text style={styles.timelineStatusText} numberOfLines={1} adjustsFontSizeToFit>Payment is in progress...</Text>
+                </View>
+              </View>
+
+              {/* Row 2: Pending */}
+              <View style={[styles.timelineRow, { marginTop: 10 }]}>
+                <View style={styles.timelineIconCol}>
+                  <MaterialCommunityIcons name="refresh-circle" size={24} color="#ff8e51ff" style={styles.spinningIconStyle} />
+                </View>
+                <View style={styles.timelineTextCol}>
+                  <Text style={styles.timelineStatusTitleOrange}>Pending</Text>
+                  <Text style={styles.timelineStatusTextBold} numberOfLines={1} adjustsFontSizeToFit>Waiting for payment gets confirmed</Text>
+                  <Text style={styles.timelineStatusSubText}>
+                    If payment has been debited and no ticket was generated, refund will be initiated in 24-48 hours.
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* 3. BOTTOM WARNING & SECURED FOOTER */}
+            <View style={styles.bottomSecuredContainer}>
+              <Text style={styles.bottomWarningText}>Do not press back or leave this screen</Text>
+              <View style={styles.securedBadgeRow}>
+                <MaterialCommunityIcons name="shield-lock" size={18} color="#9CA3AF" />
+                <Text style={styles.securedBadgeText}>Secured Payment</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* 🌟 SWITCH-BACK APP REDIRECT OVERLAY */}
+          {isAppRedirecting && (
+            <Animated.View
+              style={[
+                styles.appSwitchLoaderContainer,
+                {
+                  opacity: redirectLoadingOpacity,
+                  transform: [{ scale: redirectLoadingScale }],
+                }
+              ]}
+            >
+              <ActivityIndicator size="large" color="#EA580C" style={{ marginBottom: 16 }} />
+              <Text style={styles.appSwitchLoaderText}>Returning to One Delhi...</Text>
+              <Text style={styles.appSwitchLoaderSubText}>Securing your payment details</Text>
+            </Animated.View>
+          )}
+        </Animated.View>
+      )}
     </Screen>
   );
 };
@@ -417,4 +569,152 @@ const styles = StyleSheet.create({
     borderRadius: 25,
   },
   errorBackBtnText: { color: "#D32F2F", fontWeight: "bold" },
+  redirectOverlayContainer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#FFFFFF",
+    zIndex: 9999,
+    elevation: 9999,
+  },
+  appSwitchLoaderContainer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#FFFFFF",
+    zIndex: 10000,
+    elevation: 10000,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+  appSwitchLoaderText: {
+    fontSize: 18,
+    color: "#1F2937",
+    textAlign: "center",
+    marginTop: 8,
+  },
+  appSwitchLoaderSubText: {
+    fontSize: 14,
+    color: "#6B7280",
+    textAlign: "center",
+    marginTop: 4,
+  },
+  redirectInnerWrapper: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 20,
+    paddingBottom: Platform.OS === "ios" ? 40 : 25,
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  topSectionWrapper: {
+    width: "100%",
+    height: Dimensions.get("window").height * 0.35,
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+    paddingTop: Platform.OS === "ios" ? 45 : 20,
+  },
+  topIconCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "#FEE2E2",
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+  },
+  circleIconAbsolute: {
+    position: "absolute",
+  },
+  miniRupeeCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#FECACA",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  miniRupeeText: {
+    color: "#C92A2A",
+    fontSize: 17,
+    fontWeight: "bold",
+  },
+  horizontalDivider: {
+    width: "100%",
+    height: 2,
+    backgroundColor: "#e8e8e8ff",
+    position: "absolute",
+    bottom: 0,
+  },
+  timelineContainer: {
+    width: "100%",
+    paddingHorizontal: 6,
+    flex: 1,
+    justifyContent: "flex-start",
+    marginTop: 45,
+  },
+  timelineRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  timelineIconCol: {
+    alignItems: "center",
+    width: 24,
+    position: "relative",
+  },
+  timelineDottedLine: {
+    width: 0,
+    height: 48,
+    borderWidth: 1.5,
+    borderColor: "#9CA3AF",
+    borderStyle: "dashed",
+    marginTop: 4,
+  },
+  timelineTextCol: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  timelineStatusTitleGreen: {
+    fontSize: 14,
+    color: "#10B981",
+  },
+  timelineStatusTitleOrange: {
+    fontSize: 14,
+    color: "#EA580C",
+  },
+  timelineStatusText: {
+    fontSize: 18,
+    color: "#374151",
+    marginTop: 2,
+  },
+  timelineStatusTextBold: {
+    fontSize: 18,
+    color: "#707070ff",
+    marginTop: 2,
+  },
+  timelineStatusSubText: {
+    fontSize: 14,
+    color: "#9CA3AF",
+  },
+  spinningIconStyle: {
+    // Add dynamic indicator style
+  },
+  bottomSecuredContainer: {
+    width: "100%",
+    alignItems: "center",
+    marginTop: "auto",
+  },
+  bottomWarningText: {
+    fontSize: 13,
+    color: "#8d8d8dff",
+    textAlign: "center",
+    marginBottom: 14,
+  },
+  securedBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  securedBadgeText: {
+    fontSize: 15,
+    color: "#000000ff",
+  },
 });

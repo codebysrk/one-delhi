@@ -106,7 +106,7 @@ export const MainTabNavigator = () => {
           name="TripPlanTab" 
           component={TripPlanScreen}
           options={{
-            tabBarIcon: ({ color }) => <TripPlanIcon color={color} size={26} />,
+            tabBarIcon: ({ color }) => <MaterialCommunityIcons name="arrow-decision-outline" size={26} color={color} />,
             tabBarLabel: 'Trip Plan',
             tabBarButton: (props) => <TabButton {...props} />
           }}

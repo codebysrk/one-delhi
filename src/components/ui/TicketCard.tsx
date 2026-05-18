@@ -70,12 +70,12 @@ export const TicketCard = React.memo(({ ticket, onPress, showTimer, largeText, s
         </View>
  
         <View style={styles.dataRow}>
-          <Text style={locationTextStyle} numberOfLines={1}>{ticket.source || ticket.src || ticket.from || 'Boarding'}</Text>
+          <Text style={locationTextStyle} numberOfLines={1}>{ticket.source || ticket.src || (ticket as any).from || 'Boarding'}</Text>
           <Text style={totalTextStyle}>₹{Number(ticket.total || ticket.fare || 0).toFixed(1)}</Text>
         </View>
  
         <View style={styles.destRow}>
-          <Text style={locationTextStyle} numberOfLines={2}>{ticket.dest || ticket.dst || ticket.to || 'Destination'}</Text>
+          <Text style={locationTextStyle} numberOfLines={2}>{ticket.dest || ticket.dst || (ticket as any).to || 'Destination'}</Text>
         </View>
 
         {showTID && (
