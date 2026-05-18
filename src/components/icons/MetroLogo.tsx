@@ -14,7 +14,7 @@ const METRO_LOGO_SVG = `
 
 export const MetroLogo = () => (
   <View style={styles.metroLogoContainer}>
-    <SvgXml xml={METRO_LOGO_SVG} width="40" height="40" />
+    <SvgXml xml={METRO_LOGO_SVG} width="30" height="30" />
   </View>
 );
 

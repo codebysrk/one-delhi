@@ -1,5 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { COLORS, RADII, SPACING, TYPOGRAPHY } from '../../core/theme';
 
 export type Gender = 'male' | 'female' | 'other';
 
@@ -9,10 +11,10 @@ interface GenderSelectorProps {
 }
 
 export const GenderSelector = ({ value, onChange }: GenderSelectorProps) => {
-  const genders: { label: string; value: Gender }[] = [
-    { label: 'Male', value: 'male' },
-    { label: 'Female', value: 'female' },
-    { label: 'Other', value: 'other' },
+  const genders: { label: string; value: Gender; icon: string }[] = [
+    { label: 'Male', value: 'male', icon: 'gender-male' },
+    { label: 'Female', value: 'female', icon: 'gender-female' },
+    { label: 'Other', value: 'other', icon: 'gender-transgender' },
   ];
 
   return (
@@ -31,6 +33,12 @@ export const GenderSelector = ({ value, onChange }: GenderSelectorProps) => {
               onPress={() => onChange(g.value)}
               activeOpacity={0.7}
             >
+              <MaterialCommunityIcons 
+                name={g.icon as any} 
+                size={16} 
+                color={isActive ? (COLORS.primary || '#D32F2F') : '#9CA3AF'} 
+                style={styles.icon}
+              />
               <Text style={[
                 styles.itemText,
                 isActive && styles.activeText
@@ -47,39 +55,45 @@ export const GenderSelector = ({ value, onChange }: GenderSelectorProps) => {
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 10,
+    marginBottom: SPACING.sm,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#444',
-    marginBottom: 10,
-    marginLeft: 4,
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#9CA3AF',
+    marginBottom: 8,
+    marginLeft: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
   row: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   item: {
     flex: 1,
+    flexDirection: 'row',
     height: 48,
     borderRadius: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F9FAFB',
     borderWidth: 1.5,
-    borderColor: '#E5E5E5',
+    borderColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
   },
   activeItem: {
-    borderColor: '#B3261E',
-    backgroundColor: 'rgba(179, 38, 30, 0.05)',
+    borderColor: COLORS.primary || '#D32F2F',
+    backgroundColor: '#FDEDED',
+  },
+  icon: {
+    marginRight: 6,
   },
   itemText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#4B5563',
   },
   activeText: {
-    color: '#B3261E',
+    color: COLORS.primary || '#D32F2F',
   },
 });

@@ -1,48 +1,84 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert, Dimensions, StatusBar } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TextInput, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { auth, db } from '../../services/firebase';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { useAppStore } from '../../store/useAppStore';
 import { logAction } from '../../services/logService';
-import { doc, getDoc, setDoc, updateDoc, getDocFromServer } from 'firebase/firestore';
+import { doc, getDocFromServer } from 'firebase/firestore';
 import { registerDevice, clearForceLogout } from '../../services/deviceService';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '../../components/layout/Screen';
-
-import { COLORS, TYPOGRAPHY, SPACING, RADII } from '../../core/theme';
+import { COLORS, SPACING, SHADOWS } from '../../core/theme';
 
 // Premium UI Components
 import { PremiumHeader } from '../../components/auth/PremiumHeader';
 import { PremiumInput } from '../../components/auth/PremiumInput';
 import { Button } from '../../components/ui/Button';
-import { PremiumSocialButton } from '../../components/auth/PremiumSocialButton';
+import { AuthCheckbox } from '../../components/auth/AuthCheckbox';
+import { Toast } from '../../components/ui/Toast';
 
-const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address').trim().toLowerCase(),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-});
-
-type LoginForm = z.infer<typeof loginSchema>;
+interface LoginForm {
+  email: string;
+  password: string;
+}
 
 export const LoginScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  // Reusable Animated Toast state
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
+
   const setUser = useAppStore((state) => state.setUser);
   const setUserProfile = useAppStore((state) => state.setUserProfile);
   const setDeviceId = useAppStore((state) => state.setDeviceId);
   const setIsVerifying = useAppStore((state) => state.setIsVerifying);
   const setIsAuthReady = useAppStore((state) => state.setIsAuthReady);
 
+  // Keyboard and Scroll refs
+  const scrollViewRef = useRef<ScrollView>(null);
+  const passwordInputRef = useRef<TextInput>(null);
+
+  // Listen for keyboard visibility events
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSubscription = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
+    const hideSubscription = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'error') => {
+    setToastMsg(message);
+    setToastType(type);
+    setToastVisible(true);
+  };
+
+  // Fixed React Hook Form configuration to resolve early Zod Errors:
+  // 1. Explicitly set onSubmit mode to prevent dynamic validation on render.
+  // 2. Added complete defaultValues so Zod receives strings instead of undefined.
+  // 3. Removed isValid destructuring to avoid mount-time resolver runs.
   const { control, handleSubmit, formState: { errors } } = useForm<LoginForm>({
-    resolver: zodResolver(loginSchema),
-    mode: 'onChange',
+    mode: 'onSubmit',
+    defaultValues: {
+      email: '',
+      password: '',
+    }
   });
 
   const onLogin = async (data: LoginForm) => {
+    Keyboard.dismiss();
     setLoading(true);
     setIsVerifying(true);
     console.log("[LoginScreen] Starting login process...");
@@ -58,16 +94,14 @@ export const LoginScreen = ({ navigation }: any) => {
 
       let userData: any = {};
       try {
-        // Use getDocFromServer to bypass cache and get the absolute latest status
         const userDoc = await getDocFromServer(doc(db, 'users', user.uid));
         userData = userDoc.exists() ? userDoc.data() : {};
       } catch (err: any) {
         console.log("[LoginScreen] Profile fetch error:", err.code);
         if (err.code === 'permission-denied') {
-          // If rules block reading the profile, we treat it as BANNED
           userData = { status: 'BANNED' };
         } else {
-          throw err; // Re-throw other errors (network, etc.)
+          throw err;
         }
       }
       
@@ -95,10 +129,7 @@ export const LoginScreen = ({ navigation }: any) => {
           console.error("[LoginScreen] Sign out error during ban:", err);
         }
 
-        Alert.alert(
-          'ACCESS DENIED', 
-          '🚫 YOUR ACCOUNT IS BANNED\n\nThis account has been permanently suspended for violating our security policies. You will not be able to log in from any device.\n\nContact: support@onedelhi.gov.in'
-        );
+        showToast('🚫 Banned Account: Access is restricted.', 'error');
         return;
       }
 
@@ -110,7 +141,7 @@ export const LoginScreen = ({ navigation }: any) => {
         user.email || ''
       );
 
-      // RETRY LOGIC: If unbanned JUST NOW, rules might need a second to propagate
+      // RETRY LOGIC
       if (!deviceResult) {
         console.log("[LoginScreen] Device registration failed, retrying in 1.5s...");
         await new Promise(resolve => setTimeout(resolve, 1500));
@@ -136,14 +167,11 @@ export const LoginScreen = ({ navigation }: any) => {
           console.error("[LoginScreen] Sign out error during device ban:", err);
         }
         
-        Alert.alert(
-          'ACCESS DENIED', 
-          '📱 THIS DEVICE IS RESTRICTED\n\nThis specific mobile device has been banned from accessing the system. Please contact support.'
-        );
+        showToast('📱 Device Banned: Access is restricted.', 'error');
         return;
       }
 
-      // If it was a force logout, clear it now that we are logging in manually
+      // If it was a force logout, clear it now
       if (deviceResult.forceLogout) {
         console.log("[LoginScreen] Clearing stale forceLogout flag...");
         await clearForceLogout(deviceResult.deviceId).catch(err => 
@@ -164,170 +192,245 @@ export const LoginScreen = ({ navigation }: any) => {
         deviceId: deviceResult.deviceId
       });
 
-      // Verification complete
       console.log("[LoginScreen] Login success, updating store states...");
       setDeviceId(deviceResult.deviceId); 
       setUserProfile(userData); 
       setUser(user);
-      setIsAuthReady(true); // FINAL STEP: ALLOW MAIN APP
+      setIsAuthReady(true); // FINAL STEP
       setLoading(false);
       setIsVerifying(false);
-      console.log("[LoginScreen] Store states updated. Transition should trigger.");
     } catch (error: any) {
-      console.error("[LoginScreen] Login error:", error);
-      let msg = 'Invalid email or password. Please try again.';
-      if (error.code === 'auth/too-many-requests') {
+      console.log("[LoginScreen] Handled login error:", error?.code || error?.message);
+      const errStr = error?.message || '';
+      const errCode = error?.code || '';
+      let msg = error?.message ? error.message.replace('Firebase: ', '') : 'An unexpected error occurred.';
+
+      if (errCode === 'auth/too-many-requests' || errStr.includes('too-many-requests')) {
         msg = 'Too many failed attempts. Please try again later.';
-      } else if (error.code === 'permission-denied') {
-        msg = 'Security verification failed. Please check your internet or contact support.';
+      } else if (errCode === 'permission-denied' || errStr.includes('permission-denied')) {
+        msg = 'Security verification failed. Contact support.';
+      } else if (errCode === 'auth/invalid-email' || errStr.includes('invalid-email')) {
+        msg = 'Invalid email address.';
+      } else if (
+        errCode === 'auth/invalid-credential' || 
+        errCode === 'auth/wrong-password' || 
+        errCode === 'auth/user-not-found' ||
+        errStr.includes('invalid-credential') || 
+        errStr.includes('wrong-password') || 
+        errStr.includes('user-not-found')
+      ) {
+        msg = 'Wrong email or password.';
       }
       setLoading(false);
       setIsVerifying(false);
-      Alert.alert('Login Failed', msg);
+      showToast(msg, 'error');
     } finally {
-      console.log("[LoginScreen] Login process finished, clearing flags.");
       setLoading(false);
       setIsVerifying(false);
     }
   };
 
+  // Callback to handle form validation failures
+  const onValidationErrors = (formErrors: any) => {
+    console.log("[LoginScreen] Form validation failed:", formErrors);
+    const firstError = Object.values(formErrors)[0] as any;
+    if (firstError?.message) {
+      showToast(firstError.message, 'error');
+    }
+  };
+
+  // Safe wrapper to prevent unhandled promise rejections on validation fail
+  const handleLoginSubmit = () => {
+    handleSubmit(onLogin, onValidationErrors)().catch((err) => {
+      console.log("[LoginScreen] Handled submit promise rejection:", err);
+    });
+  };
+
   const insets = useSafeAreaInsets();
 
   return (
-    <ScreenContainer noPadding ignoreTopSafe style={styles.container}>
-      <PremiumHeader 
-        title="One Delhi" 
-        subtitle="Sign in to your account to continue" 
-        variant="login"
-      />
-
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.flex}
-      >
-        <ScrollView 
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + SPACING.xxl }]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.form}>
-            <Controller
-              control={control}
-              name="email"
-              render={({ field: { onChange, value } }) => (
-                <PremiumInput
-                  label="Email Address"
-                  placeholder="Enter email or phone"
-                  value={value}
-                  onChangeText={onChange}
-                  error={errors.email?.message}
-                  icon={<MaterialCommunityIcons name="email-outline" size={20} color="#666" />}
-                  keyboardType="email-address"
-                />
-              )}
-            />
-
-            <View>
-              <Controller
-                control={control}
-                name="password"
-                render={({ field: { onChange, value } }) => (
-                  <PremiumInput
-                    label="Password"
-                    placeholder="Enter password"
-                    value={value}
-                    onChangeText={onChange}
-                    error={errors.password?.message}
-                    secureTextEntry
-                    icon={<MaterialCommunityIcons name="lock-outline" size={20} color="#666" />}
-                  />
-                )}
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={styles.flex}>
+        <ScreenContainer noPadding ignoreTopSafe style={styles.container}>
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.flex}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+          >
+            <ScrollView 
+              ref={scrollViewRef}
+              contentContainerStyle={[
+                styles.scrollContent, 
+                { paddingBottom: keyboardVisible ? 200 : insets.bottom + SPACING.xl }
+              ]}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {/* Embedded Premium Header inside unified ScrollView */}
+              <PremiumHeader 
+                title="One Delhi" 
+                subtitle="Sign in to your account to continue" 
+                variant="login"
               />
-              <TouchableOpacity style={styles.forgotBtn}>
-                <Text style={styles.forgotText}>Forgot password?</Text>
-              </TouchableOpacity>
-            </View>
 
-            <Button 
-              title="Login"
-              onPress={handleSubmit(onLogin)}
-              loading={loading}
-              size="large"
-              style={styles.loginBtn}
-            />
+              {/* Elegant Floating Card */}
+              <View style={styles.card}>
+                <Controller
+                  control={control}
+                  name="email"
+                  rules={{
+                    required: 'Email address is required',
+                  }}
+                  render={({ field: { onChange, value = '' } }) => (
+                    <PremiumInput
+                      label="Email Address"
+                      placeholder="Enter email"
+                      value={value}
+                      onChangeText={onChange}
+                      error={errors.email?.message}
+                      success={value.length > 0 && !errors.email}
+                      trim={true}
+                      icon={<MaterialCommunityIcons name="email-outline" size={20} color="#9CA3AF" />}
+                      keyboardType="email-address"
+                      returnKeyType="next"
+                      onSubmitEditing={() => passwordInputRef.current?.focus()}
+                      blurOnSubmit={false}
+                    />
+                  )}
+                />
 
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>Don't have an account? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-                <Text style={styles.signupText}>Sign up</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </ScreenContainer>
+                <View style={styles.passwordWrapper}>
+                  <Controller
+                    control={control}
+                    name="password"
+                    rules={{
+                      required: 'Password is required',
+                    }}
+                    render={({ field: { onChange, value = '' } }) => (
+                      <PremiumInput
+                        ref={passwordInputRef}
+                        label="Password"
+                        placeholder="Enter password"
+                        value={value}
+                        onChangeText={onChange}
+                        error={errors.password?.message}
+                        success={value.length > 0 && !errors.password}
+                        secureTextEntry
+                        icon={<MaterialCommunityIcons name="lock-outline" size={20} color="#9CA3AF" />}
+                        returnKeyType="done"
+                        onSubmitEditing={handleLoginSubmit}
+                      />
+                    )}
+                  />
+                  
+                  {/* Remember Me and Forgot Password Container */}
+                  <View style={styles.rememberRow}>
+                    <AuthCheckbox
+                      checked={rememberMe}
+                      onChange={setRememberMe}
+                      label="Remember me"
+                    />
+                    <TouchableOpacity 
+                      style={styles.forgotBtn} 
+                      activeOpacity={0.7}
+                      onPress={() => showToast('Feature coming soon!', 'info')}
+                    >
+                      <Text style={styles.forgotText}>Forgot password?</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <Button 
+                  title="Login"
+                  onPress={handleLoginSubmit}
+                  loading={loading}
+                  size="large"
+                  style={styles.loginBtn}
+                />
+
+                <View style={styles.footer}>
+                  <Text style={styles.footerText}>Don't have an account?</Text>
+                  <TouchableOpacity onPress={() => navigation.navigate('Signup')} activeOpacity={0.7}>
+                    <Text style={styles.signupText}>Sign up</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+
+          {/* Animated Top Notification Toast - Placed last to be painted on top! */}
+          <Toast
+            visible={toastVisible}
+            message={toastMsg}
+            type={toastType}
+            onDismiss={() => setToastVisible(false)}
+          />
+        </ScreenContainer>
+      </View>
+    </TouchableWithoutFeedback>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface || '#F8F9FA',
   },
   flex: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.xxl,
-    paddingBottom: SPACING.xxl,
+    paddingHorizontal: 0,
+    paddingTop: 0,
   },
-  form: {
-    flex: 1,
+  card: {
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.xl,
+    marginTop: -32,
+    marginHorizontal: SPACING.md,
+    marginBottom: SPACING.md,
+    ...SHADOWS.premium,
+  },
+  passwordWrapper: {
+    marginBottom: SPACING.md,
+  },
+  rememberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: SPACING.xs,
   },
   forgotBtn: {
-    alignSelf: 'flex-end',
-    marginTop: -SPACING.sm,
-    marginBottom: SPACING.xl,
-    padding: SPACING.xs,
+    paddingVertical: SPACING.xs,
   },
   forgotText: {
     color: COLORS.primary,
     ...TYPOGRAPHY.bodySmall,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   loginBtn: {
-    marginTop: SPACING.sm,
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 30,
-  },
-  line: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E5E5',
-  },
-  dividerText: {
-    marginHorizontal: 15,
-    color: '#999',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  socialRow: {
-    marginBottom: 20,
+    marginTop: SPACING.md,
+    backgroundColor: COLORS.primary,
+    borderRadius: 16,
+    height: 56,
   },
   footer: {
-    flexDirection: 'column',
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: SPACING.md,
+    justifyContent: 'center',
+    marginTop: SPACING.xl,
+    paddingTop: SPACING.lg,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
     gap: SPACING.xs,
   },
   footerText: {
-    color: COLORS.textSecondary,
-    ...TYPOGRAPHY.bodySmall,
-  } as any,
+    color: '#6B7280',
+    ...TYPOGRAPHY.bodyMedium,
+    fontWeight: '500',
+  },
   signupText: {
     color: COLORS.primary,
     ...TYPOGRAPHY.bodyMedium,

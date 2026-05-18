@@ -40,9 +40,10 @@ export default function App() {
         const imageAssets = cacheImages([
           require('./assets/images/logo.webp'),
           require('./assets/images/map-header-logo.webp'),
-          require('./assets/images/map-header.webp'),
           require('./assets/images/splash.png'),
           require('./assets/images/transit_header.webp'),
+          require('./assets/images/ticket-first.webp'),
+          require('./assets/images/ticket-second.webp'),
         ]);
 
         await Promise.all([...imageAssets]);

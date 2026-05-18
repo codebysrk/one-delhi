@@ -1,8 +1,10 @@
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Dimensions } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { COLORS, RADII, SHADOWS, SPACING, TYPOGRAPHY } from '../../core/theme';
 
 interface PremiumHeaderProps {
   title: string;
@@ -18,11 +20,15 @@ export const PremiumHeader = ({ title, subtitle, variant = 'login', onBack }: Pr
 
   return (
     <LinearGradient
-      colors={['#B3261E', '#8C1D18']}
+      colors={[COLORS.primaryLight || '#EF5350', COLORS.primaryDark || '#B3261E']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
       style={styles.container}
     >
-      <View style={styles.overlay}>
-        <View style={styles.highlight} />
+      {/* Decorative Glowing Shapes */}
+      <View style={styles.overlay} pointerEvents="none">
+        <View style={styles.glowTopLeft} />
+        <View style={styles.glowBottomRight} />
       </View>
       
       <SafeAreaView edges={['top']} style={styles.content}>
@@ -33,7 +39,7 @@ export const PremiumHeader = ({ title, subtitle, variant = 'login', onBack }: Pr
               style={styles.backButton}
               activeOpacity={0.7}
             >
-              <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
+              <MaterialCommunityIcons name="arrow-left" size={24} color={COLORS.white} />
             </TouchableOpacity>
           ) : (
             <View style={styles.logoWrapper}>
@@ -62,60 +68,60 @@ export const PremiumHeader = ({ title, subtitle, variant = 'login', onBack }: Pr
 
 const styles = StyleSheet.create({
   container: {
-    borderBottomLeftRadius: 42,
-    borderBottomRightRadius: 42,
+    borderBottomLeftRadius: RADII.xxl,
+    borderBottomRightRadius: RADII.xxl,
     overflow: 'hidden',
-    elevation: 8,
-    shadowColor: '#B3261E',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
+    ...SHADOWS.premium,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
   },
-  highlight: {
+  glowTopLeft: {
     position: 'absolute',
-    top: -width * 0.2,
-    left: -width * 0.1,
-    width: width * 1.5,
-    height: width * 0.5,
-    borderRadius: width,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    transform: [{ rotate: '-15deg' }],
+    top: -width * 0.3,
+    left: -width * 0.2,
+    width: width * 0.9,
+    height: width * 0.9,
+    borderRadius: (width * 0.9) / 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  glowBottomRight: {
+    position: 'absolute',
+    bottom: -width * 0.4,
+    right: -width * 0.1,
+    width: width * 0.8,
+    height: width * 0.8,
+    borderRadius: (width * 0.8) / 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
   },
   content: {
-    paddingHorizontal: 28,
-    paddingBottom: 40,
+    paddingHorizontal: SPACING.xl,
+    paddingBottom: SPACING.xxl,
   },
   topRow: {
     height: 60,
     justifyContent: 'center',
-    marginTop: 10,
-    marginBottom: 10,
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.sm,
   },
   logoWrapper: {
-    width: 50,
-    height: 50,
-    backgroundColor: 'white',
-    borderRadius: 12,
+    width: 48,
+    height: 48,
+    backgroundColor: COLORS.white,
+    borderRadius: RADII.md,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    ...SHADOWS.soft,
   },
   logo: {
-    width: 35,
-    height: 35,
+    width: 32,
+    height: 32,
   },
   backButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: RADII.round,
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -123,33 +129,33 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   loginPadding: {
-    paddingTop: 10,
+    paddingTop: SPACING.xs,
   },
   title: {
-    color: 'white',
+    color: COLORS.white,
     lineHeight: 46,
   },
   loginTitle: {
-    fontSize: 42,
+    fontSize: 40,
     fontWeight: '300',
     letterSpacing: -0.5,
   },
   signupTitle: {
-    fontSize: 34,
-    fontWeight: '600',
-    letterSpacing: -1,
+    fontSize: 32,
+    fontWeight: '700',
+    letterSpacing: -0.5,
   },
   subtitle: {
-    color: 'rgba(255, 255, 255, 0.9)',
-    marginTop: 12,
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginTop: SPACING.sm,
     fontWeight: '400',
   },
   loginSubtitle: {
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: 16,
+    lineHeight: 22,
   },
   signupSubtitle: {
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

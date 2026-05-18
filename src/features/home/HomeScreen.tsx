@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useMemo, useCallback } from "react";
-import { StyleSheet, Text, View, TouchableOpacity } from "react-native";
+import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { StyleSheet, Text, View, TouchableOpacity, Animated } from "react-native";
 import { Image } from "expo-image";
 import { Screen } from "../../components/layout/Screen";
 import { useAppStore } from "../../store/useAppStore";
@@ -25,6 +25,28 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const tickets = useAppStore(state => state.tickets);
   const setShowFooter = useAppStore(state => state.setShowFooter);
   const [tick, setTick] = useState(0);
+
+  // Blinking loop animation for the New badge
+  const blinkAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const blinkLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(blinkAnim, {
+          toValue: 0.1,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+        Animated.timing(blinkAnim, {
+          toValue: 1,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    blinkLoop.start();
+    return () => blinkLoop.stop();
+  }, [blinkAnim]);
 
   // Real-time update every minute to refresh timer/expiry
   useEffect(() => {
@@ -67,32 +89,26 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             onPress={() => handleNavigate("Booking")}
           >
             <Text style={styles.actionTitle}>Bus{"\n"}Ticket</Text>
-            <View
-              style={[
-                styles.iconWrapper,
-                { transform: [{ rotate: "-20deg" }] },
-              ]}
-            >
-              <MaterialCommunityIcons name="bus" size={64} color="#FFB74D" />
-            </View>
+            <Image
+              source={require("../../../assets/images/ticket-second.webp")}
+              style={styles.cardIllustration}
+              contentFit="contain"
+            />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.actionCard}
             onPress={() => handleNavigate("Pass")}
           >
-            <View style={styles.newBadgeCenter}>
+            <Animated.View style={[styles.newBadgeCenter, { opacity: blinkAnim }]}>
               <Text style={styles.newBadgeText}>New</Text>
-            </View>
+            </Animated.View>
             <Text style={styles.actionTitle}>Bus{"\n"}Passes</Text>
-            <View
-              style={[
-                styles.iconWrapper,
-                { transform: [{ rotate: "-20deg" }] },
-              ]}
-            >
-              <MaterialCommunityIcons name="ticket-percent" size={64} color="#BA68C8" />
-            </View>
+            <Image
+              source={require("../../../assets/images/ticket-first.webp")}
+              style={styles.cardIllustration}
+              contentFit="contain"
+            />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -103,7 +119,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             <View
               style={[
                 styles.iconWrapper,
-                { transform: [{ rotate: "-10deg" }], top: 5, right: -10 },
+                { transform: [{ rotate: "0deg" }], top: 2, right: -4 },
               ]}
             >
               <MetroLogo />
@@ -191,6 +207,7 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     padding: 10,
     justifyContent: "center",
+    borderRadius: 6,
     elevation: 6,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
@@ -201,24 +218,29 @@ const styles = StyleSheet.create({
   },
   newBadgeCenter: {
     position: "absolute",
-    top: 3,
+    top: 0,
     alignSelf: "center",
-    backgroundColor: "#EF9A9A",
-    paddingHorizontal: 10,
-    paddingVertical: 2,
-    borderRadius: 10,
+    backgroundColor: "#e44444ff",
+    paddingHorizontal: 2,
+    borderRadius: 5,
     zIndex: 10,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.3)",
   },
-  newBadgeText: { color: "white", fontSize: 11, fontWeight: "800" },
+  newBadgeText: { color: "white", fontSize: 12, fontWeight: "500" },
   actionTitle: {
-    fontSize: 14,
+    fontSize: 17,
     fontWeight: "800",
     color: "#000",
     lineHeight: 18,
   },
   iconWrapper: { position: "absolute", top: -15, right: -18 },
+  cardIllustration: {
+    position: "absolute",
+    right: -22,
+    top: 5,
+    width: 55,
+    height: 28,
+    transform: [{ rotate: "-35deg" }],
+  },
 
   section: { marginBottom: 30 },
   sectionHeader: {

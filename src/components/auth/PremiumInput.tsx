@@ -1,123 +1,170 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ViewStyle, TextInputProps } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { COLORS, RADII, SPACING, TYPOGRAPHY } from '../../core/theme';
 
-interface PremiumInputProps {
+interface PremiumInputProps extends Omit<TextInputProps, 'style'> {
   label: string;
   placeholder: string;
   value: string;
   onChangeText: (text: string) => void;
   icon?: React.ReactNode;
   error?: string;
+  success?: boolean;
   secureTextEntry?: boolean;
-  keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
-  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  trim?: boolean;
   style?: ViewStyle;
 }
 
-export const PremiumInput = ({
-  label,
-  placeholder,
-  value,
-  onChangeText,
-  icon,
-  error,
-  secureTextEntry,
-  keyboardType = 'default',
-  autoCapitalize = 'none',
-  style,
-}: PremiumInputProps) => {
-  const [isFocused, setIsFocused] = useState(false);
-  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+export const PremiumInput = React.forwardRef<TextInput, PremiumInputProps>(
+  (
+    {
+      label,
+      placeholder,
+      value,
+      onChangeText,
+      icon,
+      error,
+      success,
+      secureTextEntry,
+      trim = false,
+      style,
+      ...rest
+    },
+    ref
+  ) => {
+    const [isFocused, setIsFocused] = useState(false);
+    const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
-  const showPasswordToggle = secureTextEntry;
+    const handleTextChange = (text: string) => {
+      const formattedText = trim ? text.trim() : text;
+      onChangeText(formattedText);
+    };
 
-  return (
-    <View style={[styles.container, style]}>
-      <Text style={styles.label}>{label}</Text>
-      <View style={[
-        styles.inputWrapper,
-        isFocused && styles.inputFocused,
-        error ? styles.inputError : null
-      ]}>
-        {icon && <View style={styles.iconWrapper}>{icon}</View>}
-        
-        <TextInput
-          style={styles.input}
-          placeholder={placeholder}
-          placeholderTextColor="#999"
-          value={value}
-          onChangeText={onChangeText}
-          secureTextEntry={secureTextEntry && !isPasswordVisible}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          keyboardType={keyboardType}
-          autoCapitalize={autoCapitalize}
-        />
+    const showPasswordToggle = secureTextEntry;
 
-        {showPasswordToggle && (
-          <TouchableOpacity 
-            onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-            style={styles.eyeIcon}
-          >
-            {isPasswordVisible ? (
-              <MaterialCommunityIcons name="eye-off-outline" size={20} color="#666" />
-            ) : (
-              <MaterialCommunityIcons name="eye-outline" size={20} color="#666" />
-            )}
-          </TouchableOpacity>
-        )}
+    return (
+      <View style={[styles.container, style]}>
+        <Text style={styles.label}>{label}</Text>
+        <View
+          style={[
+            styles.inputWrapper,
+            isFocused && styles.inputFocused,
+            success && !error && styles.inputSuccess,
+            error ? styles.inputError : null,
+          ]}
+        >
+          {icon && <View style={[styles.iconWrapper, isFocused && styles.iconFocused]}>{icon}</View>}
+
+          <TextInput
+            ref={ref}
+            style={styles.input}
+            placeholder={placeholder}
+            placeholderTextColor="#A0AEC0"
+            value={value}
+            onChangeText={handleTextChange}
+            secureTextEntry={secureTextEntry && !isPasswordVisible}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            {...rest}
+          />
+
+          {/* Validation Actions */}
+          <View style={styles.rightActions}>
+            {showPasswordToggle ? (
+              <TouchableOpacity
+                onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+                style={styles.actionIcon}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons
+                  name={isPasswordVisible ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color={isFocused ? COLORS.primary : '#A0AEC0'}
+                />
+              </TouchableOpacity>
+            ) : error ? (
+              <MaterialCommunityIcons name="alert-circle" size={20} color={COLORS.error || '#DC2626'} />
+            ) : success ? (
+              <MaterialCommunityIcons name="check-circle" size={20} color={COLORS.success || '#2ECC71'} />
+            ) : null}
+          </View>
+        </View>
+        {error && <Text style={styles.errorText}>{error}</Text>}
       </View>
-      {error && <Text style={styles.errorText}>{error}</Text>}
-    </View>
-  );
-};
+    );
+  }
+);
+
+PremiumInput.displayName = 'PremiumInput';
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 18,
+    marginBottom: SPACING.md,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#444',
-    marginBottom: 8,
-    marginLeft: 4,
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#9CA3AF',
+    marginBottom: 6,
+    marginLeft: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F9FAFB',
     borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: '#E5E5E5',
+    borderColor: '#F3F4F6',
     height: 58,
-    paddingHorizontal: 16,
+    paddingHorizontal: SPACING.md,
   },
   inputFocused: {
-    borderColor: '#B3261E',
-    backgroundColor: '#FFF',
+    borderColor: COLORS.primary || '#D32F2F',
+    backgroundColor: COLORS.white,
+    shadowColor: COLORS.primary || '#D32F2F',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  inputSuccess: {
+    borderColor: '#A7F3D0',
+    backgroundColor: '#FCFDFE',
   },
   inputError: {
-    borderColor: '#DC2626',
+    borderColor: '#FCA5A5',
+    backgroundColor: '#FFFDFD',
   },
   iconWrapper: {
-    marginRight: 12,
+    marginRight: SPACING.xs,
+    opacity: 0.6,
+  },
+  iconFocused: {
+    opacity: 1,
   },
   input: {
     flex: 1,
-    fontSize: 16,
-    color: '#111',
+    fontSize: 15,
+    color: '#1F2937',
     height: '100%',
+    fontWeight: '600',
   },
-  eyeIcon: {
-    padding: 8,
+  rightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: SPACING.xs,
+  },
+  actionIcon: {
+    padding: SPACING.xs,
   },
   errorText: {
-    color: '#DC2626',
-    fontSize: 12,
+    color: COLORS.error || '#DC2626',
+    fontSize: 11,
     marginTop: 4,
-    marginLeft: 4,
-    fontWeight: '500',
+    marginLeft: 6,
+    fontWeight: '600',
   },
 });

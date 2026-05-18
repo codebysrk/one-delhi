@@ -10,7 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-
+import { HeaderBackgroundSvg } from './HeaderBackgroundSvg';
 export interface HeaderProps {
   title?: string;
   onBackPress?: () => void;
@@ -167,12 +167,9 @@ export const Header: React.FC<HeaderProps> = ({
             overflow:hidden container mein clip hoti hai.
             Isliye har screen par same portion dikhta hai.
           */}
-          <Image
-            source={require("../../../assets/images/map-header.webp")}
-            style={[styles.bgImage, { opacity: imageOpacity, transform: [{ translateY: 23 }, { scaleX: 1 }, { scaleY: 0.85 }] }]}
-            contentFit="cover"
-            contentPosition="top"
-          />
+          <View style={[styles.bgImage, { opacity: imageOpacity, top: insets.top }]}>
+            <HeaderBackgroundSvg />
+          </View>
           <View style={{ paddingTop: insets.top, flex: 1, position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
             {headerView}
           </View>
@@ -209,12 +206,11 @@ const styles = StyleSheet.create({
     right: 0,
     // Fixed height — header height se zyada hona chahiye taaki
     // har header size mein same portion visible rahe
-    height: 220,
+    height: 240,
     opacity: 0.9,
   },
   darkOverlay: { 
     flex: 1, 
-    backgroundColor: "rgba(0, 0, 0, 0.04)" 
   },
   content: {
     flexDirection: 'row',
@@ -288,7 +284,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingHorizontal: 16,
     alignItems: "center",
-    marginTop: 6,
+    marginTop: 2,
+    paddingVertical: 5,
   },
   searchPill: {
     flex: 1,
