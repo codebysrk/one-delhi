@@ -146,7 +146,7 @@ export const MapScreen = ({ navigation }: any) => {
 
   const centerOnUser = () => {
     if (location) {
-      webViewRef.current?.centerMap(location.coords.latitude, location.coords.longitude, 16);
+      webViewRef.current?.centerMap(location.coords.latitude, location.coords.longitude, 15);
     }
   };
 

@@ -178,9 +178,25 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
           }).addTo(map);
         ` : ""}
 
-        // Helper 1: Center Map
+        // Helper 1: Center Map (With premium distance-aware transitions to completely prevent Leaflet's shaking/vibration bug)
         window.centerMap = function(lat, lng, zoom) {
-          map.flyTo([lat, lng], zoom || 15, { duration: 0.8 });
+          var targetZoom = zoom || 15;
+          var currentCenter = map.getCenter();
+          var currentZoom = map.getZoom();
+          
+          // Leaflet built-in utility to compute real-world distance in meters
+          var distance = currentCenter.distanceTo([lat, lng]);
+
+          if (distance < 10 && currentZoom === targetZoom) {
+            // Already centered exactly, do a very fast gentle alignment
+            map.panTo([lat, lng], { animate: true, duration: 0.2 });
+          } else if (distance < 500) {
+            // Short distance: Use smooth panning/zooming setView to completely bypass the flyTo shake bug
+            map.setView([lat, lng], targetZoom, { animate: true, duration: 0.5 });
+          } else {
+            // Long distance: Perform the premium cinematic flying flight
+            map.flyTo([lat, lng], targetZoom, { duration: 0.8 });
+          }
         };
 
         // Helper 2: Update/Draw User Location Blue Dot
