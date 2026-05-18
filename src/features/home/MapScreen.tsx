@@ -98,6 +98,13 @@ export const MapScreen = ({ navigation }: any) => {
     webViewRef.current?.centerMap(loc.coords.latitude, loc.coords.longitude, 16);
   }, []);
 
+  // Trigger flyTo animation immediately at the earliest possible millisecond when map loaded and location ready
+  useEffect(() => {
+    if (location && mapLoaded) {
+      updateMapRegion(location);
+    }
+  }, [location, mapLoaded, updateMapRegion]);
+
   useFocusEffect(
     useCallback(() => {
       translateY.value = withSpring(SNAP_MID, ANIMATIONS.fastSpring);
@@ -116,14 +123,20 @@ export const MapScreen = ({ navigation }: any) => {
           setLoading(false);
           return;
         }
+
+        // 1. Get cached last known location instantly (triggers animation immediately when map loads)
+        let cachedLoc = await Location.getLastKnownPositionAsync();
+        if (cachedLoc) {
+          setLocation(cachedLoc);
+        }
+
+        // 2. Fetch fresh precise location in background
         let loc = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
         });
         setLocation(loc);
-        updateMapRegion(loc);
       } catch (error) {
         console.log("Location fetch error:", error);
-        // Don't alert here as it might be annoying on every reload, but log it
       } finally {
         setLoading(false);
       }
