@@ -65,6 +65,7 @@ export const MapScreen = ({ navigation }: any) => {
   const SNAP_BOTTOM = SHEET_FULL_HEIGHT - SHEET_MIN_HEIGHT + 250;
 
   const webViewRef = useRef<GoogleMapRef>(null);
+  const hasFlownRef = useRef(false);
   const [location, setLocation] = useState<Location.LocationObject | null>(
     null,
   );
@@ -98,10 +99,11 @@ export const MapScreen = ({ navigation }: any) => {
     webViewRef.current?.centerMap(loc.coords.latitude, loc.coords.longitude, 15);
   }, []);
 
-  // Trigger flyTo animation immediately at the earliest possible millisecond when map loaded and location ready
+  // Trigger flyTo animation immediately at the earliest possible millisecond when map loaded and location ready (Runs exactly once to prevent flickering)
   useEffect(() => {
-    if (location && mapLoaded) {
+    if (location && mapLoaded && !hasFlownRef.current) {
       updateMapRegion(location);
+      hasFlownRef.current = true;
     }
   }, [location, mapLoaded, updateMapRegion]);
 

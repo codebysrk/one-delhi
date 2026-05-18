@@ -230,7 +230,11 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
         window.updateUserLocation = function(lat, lng) {
           var latlng = [lat, lng];
           if (userMarker) {
-            userMarker.setLatLng(latlng);
+            var curr = userMarker.getLatLng();
+            // ONLY update position if coordinates actually changed to prevent CSS animation reset/flicker
+            if (curr.lat !== lat || curr.lng !== lng) {
+              userMarker.setLatLng(latlng);
+            }
           } else {
             userMarker = L.marker(latlng, {
               icon: L.divIcon({ 
