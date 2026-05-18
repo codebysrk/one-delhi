@@ -36,8 +36,13 @@ export default function App() {
   useEffect(() => {
     async function prepare() {
       try {
-        // Pre-load images
-        const imageAssets = cacheImages([
+        if (fontsLoaded) {
+          setAppIsReady(true);
+          await SplashScreen.hideAsync();
+        }
+
+        // Pre-load images in background without blocking the splash screen hide
+        cacheImages([
           require('./assets/images/logo.webp'),
           require('./assets/images/map-header-logo.webp'),
           require('./assets/images/splash.png'),
@@ -45,15 +50,8 @@ export default function App() {
           require('./assets/images/ticket-first.webp'),
           require('./assets/images/ticket-second.webp'),
         ]);
-
-        await Promise.all([...imageAssets]);
       } catch (e) {
         console.warn(e);
-      } finally {
-        if (fontsLoaded) {
-          setAppIsReady(true);
-          await SplashScreen.hideAsync();
-        }
       }
     }
     prepare();
