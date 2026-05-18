@@ -184,7 +184,7 @@ export const PaymentScreen = ({ navigation, route }: any) => {
   };
 
   const handleKeyPress = (val: string) => {
-    if (enteredPin.length < 6) {
+    if (enteredPin.length < 4) {
       setEnteredPin((p) => p + val);
     }
   };
@@ -194,8 +194,8 @@ export const PaymentScreen = ({ navigation, route }: any) => {
   };
 
   const submitPin = () => {
-    if (enteredPin.length < 4) {
-      Alert.alert("Invalid PIN", "Please enter your 4 or 6-digit secure UPI PIN.");
+    if (enteredPin.length !== 4) {
+      Alert.alert("Invalid PIN", "Please enter your 4-digit secure UPI PIN.");
       return;
     }
 
@@ -558,16 +558,54 @@ export const PaymentScreen = ({ navigation, route }: any) => {
           {/* STEP 2: HIGH-FIDELITY NPCI SECURE UPI PIN ENTRY SCREEN */}
           {simStep === "pin_entry" && (
             <View style={styles.pinContainer}>
+              {/* TOP BAR: UPI Logo, Bank Name, Close Button */}
               <View style={styles.pinHeader}>
-                <Text style={styles.pinBankName}>HDFC BANK</Text>
-                <Text style={styles.pinMerchantDetails}>To: One Delhi Transport Department</Text>
-                <Text style={styles.pinAmount}>Amount: ₹{ticketData.total || "15.0"}</Text>
+                <View style={styles.upiLogoContainer}>
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <Text style={{ fontSize: 22, fontWeight: "900", fontStyle: "italic", color: "#5E6065", letterSpacing: -0.5 }}>UP</Text>
+                    <Text style={{ fontSize: 22, fontWeight: "900", fontStyle: "italic", color: "#3B82F6", letterSpacing: -0.5 }}>I</Text>
+                    <View style={{ flexDirection: "row", marginLeft: 2, height: 16, width: 8 }}>
+                      <View style={{ width: 3, height: '100%', backgroundColor: '#E55325', transform: [{ skewX: '-20deg' }] }} />
+                      <View style={{ width: 3, height: '100%', backgroundColor: '#0A7F6C', transform: [{ skewX: '-20deg' }], marginLeft: 1 }} />
+                    </View>
+                  </View>
+                  <Text style={{ fontSize: 6, color: "#7B7C7E", fontWeight: "bold", letterSpacing: 0.1, marginTop: -3 }}>UNIFIED PAYMENTS INTERFACE</Text>
+                </View>
+
+                <TouchableOpacity style={styles.pinCloseBtn} onPress={() => setIsSimulating(false)}>
+                  <MaterialCommunityIcons name="close" size={26} color="#1F2937" />
+                </TouchableOpacity>
               </View>
 
+              {/* Sub-Header Border and Bank Indicator */}
+              <View style={styles.pinBankIndicatorRow}>
+                <Text style={styles.pinBankIndicatorText}>ICICI Bank</Text>
+              </View>
+
+              {/* PAY BOX: Cream/Light Yellow container */}
+              <View style={styles.pinPayBox}>
+                <View style={styles.pinPayBoxLeft}>
+                  <Text style={styles.pinPayBoxAmountTitle}>Pay ₹{Number(ticketData.total || 15.0).toFixed(2)}</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4 }}>
+                    <Text style={styles.pinPayBoxToText}>To</Text>
+                    <Text style={styles.pinPayBoxMerchantName}>ONE DELHI TRANSPORT</Text>
+                    <MaterialCommunityIcons name="check-circle" size={16} color="#0A8A33" style={{ marginLeft: 4 }} />
+                  </View>
+                </View>
+                
+                <View style={styles.pinPayBoxRight}>
+                  <Text style={styles.pinRupeeArrowText}>₹ ➔</Text>
+                  <View style={styles.pinUserLogoCircle}>
+                    <MaterialCommunityIcons name="account" size={18} color="white" />
+                  </View>
+                </View>
+              </View>
+
+              {/* DOTS ROW: Spaced Circles */}
               <View style={styles.pinEntryRow}>
-                <Text style={styles.pinLabelText}>ENTER 6-DIGIT UPI PIN</Text>
+                <Text style={styles.pinLabelText}>Enter your UPI PIN</Text>
                 <View style={styles.pinDotsRow}>
-                  {[0, 1, 2, 3, 4, 5].map((index) => {
+                  {[0, 1, 2, 3].map((index) => {
                     const hasChar = enteredPin.length > index;
                     return (
                       <View 
@@ -582,6 +620,15 @@ export const PaymentScreen = ({ navigation, route }: any) => {
                 </View>
               </View>
 
+              {/* WARNING PILL BANNER */}
+              <View style={styles.pinWarningPillContainer}>
+                <View style={styles.pinWarningPill}>
+                  <MaterialCommunityIcons name="shield-check" size={16} color="#059669" />
+                  <Text style={styles.pinWarningPillText}>Never enter your UPI PIN to receive money</Text>
+                </View>
+              </View>
+
+              {/* KEYPAD SYSTEM: Light Mode styled blocks */}
               <View style={styles.pinKeypadContainer}>
                 {/* Numeric Row 1 */}
                 <View style={styles.pinKeypadRow}>
@@ -622,13 +669,13 @@ export const PaymentScreen = ({ navigation, route }: any) => {
                   ))}
                 </View>
 
-                {/* Bottom Row: Backspace, 0, Submit Checkmark */}
+                {/* Bottom Row: Backspace, 0, Pay/Submit checkmark key */}
                 <View style={styles.pinKeypadRow}>
                   <TouchableOpacity 
-                    style={styles.keypadKey}
+                    style={[styles.keypadKey, styles.greyKeyBg]}
                     onPress={handleBackspace}
                   >
-                    <MaterialCommunityIcons name="backspace-outline" size={24} color="#9CA3AF" />
+                    <MaterialCommunityIcons name="backspace-outline" size={24} color="#1F2937" />
                   </TouchableOpacity>
 
                   <TouchableOpacity 
@@ -638,17 +685,30 @@ export const PaymentScreen = ({ navigation, route }: any) => {
                     <Text style={styles.keypadKeyText}>0</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity 
-                    style={[styles.keypadKey, styles.submitKeyBg]}
-                    onPress={submitPin}
-                  >
-                    <MaterialCommunityIcons name="check" size={32} color="white" />
-                  </TouchableOpacity>
+                  {enteredPin.length < 4 ? (
+                    <TouchableOpacity 
+                      style={[styles.keypadKey, styles.bluePayCapsule]}
+                      onPress={() => {
+                        Alert.alert("Enter UPI PIN", "Please enter your 4-digit UPI PIN first.");
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.bluePayCapsuleText}>Pay</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity 
+                      style={[styles.keypadKey, styles.navySubmitCircle]}
+                      onPress={submitPin}
+                      activeOpacity={0.8}
+                    >
+                      <MaterialCommunityIcons name="check" size={28} color="white" />
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
 
               <TouchableOpacity style={styles.cancelPinTextBtn} onPress={() => setSimStep("confirmation")}>
-                <Text style={styles.cancelPinText}>Go Back</Text>
+                <Text style={styles.cancelPinText}>Cancel Transaction</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -1103,69 +1163,188 @@ const styles = StyleSheet.create({
   // --- High-fidelity NPCI UPI PIN Screen Styles ---
   pinContainer: {
     flex: 1,
-    backgroundColor: "#0F1621",
+    backgroundColor: "#FAF8F5",
     justifyContent: "space-between",
-    paddingTop: 40,
-    paddingBottom: 20,
+    paddingTop: Platform.OS === "ios" ? 40 : 25,
+    paddingBottom: 15,
   },
   pinHeader: {
-    paddingHorizontal: 30,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderColor: "#1E293B",
-  },
-  pinBankName: { color: "#FFFFFF", fontSize: 18, fontWeight: "900", letterSpacing: 1 },
-  pinMerchantDetails: { color: "#9CA3AF", fontSize: 14, marginTop: 10 },
-  pinAmount: { color: "#10B981", fontSize: 16, fontWeight: "bold", marginTop: 6 },
-  pinEntryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 30,
+    paddingHorizontal: 20,
+    paddingBottom: 10,
   },
-  pinLabelText: { color: "#9CA3AF", fontSize: 13, fontWeight: "700", letterSpacing: 1 },
-  pinDotsRow: {
+  upiLogoContainer: {
+    alignItems: "flex-start",
+  },
+  pinCloseBtn: {
+    padding: 4,
+  },
+  pinBankIndicatorRow: {
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  pinBankIndicatorText: {
+    color: "#4B5563",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  pinPayBox: {
+    backgroundColor: "#FCF6EA",
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 20,
+    marginTop: 15,
     flexDirection: "row",
-    marginTop: 20,
-    gap: 16,
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderWidth: 0.5,
+    borderColor: "#F3E8D0",
   },
-  pinDotCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: "#4B5563",
-    backgroundColor: "transparent",
+  pinPayBoxLeft: {
+    flex: 1,
   },
-  pinDotCircleFilled: {
-    backgroundColor: "#FFFFFF",
-    borderColor: "#FFFFFF",
+  pinPayBoxAmountTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#000000",
   },
-  pinKeypadContainer: {
-    backgroundColor: "#1E293B",
-    paddingVertical: 20,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+  pinPayBoxToText: {
+    fontSize: 13,
+    color: "#6B7280",
+    marginRight: 6,
   },
-  pinKeypadRow: {
+  pinPayBoxMerchantName: {
+    fontSize: 13,
+    color: "#0A8A33",
+    fontWeight: "700",
+  },
+  pinPayBoxRight: {
     flexDirection: "row",
-    justifyContent: "space-around",
-    paddingVertical: 12,
+    alignItems: "center",
+    gap: 8,
   },
-  keypadKey: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+  pinRupeeArrowText: {
+    fontSize: 16,
+    color: "#6B7280",
+    fontWeight: "bold",
+  },
+  pinUserLogoCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: "#3B82F6",
     justifyContent: "center",
     alignItems: "center",
   },
-  keypadKeyText: { color: "#FFFFFF", fontSize: 28, fontWeight: "700" },
-  submitKeyBg: {
-    backgroundColor: "#2563EB",
+  pinEntryRow: {
+    alignItems: "center",
+    paddingVertical: 20,
+  },
+  pinLabelText: {
+    color: "#1F2937",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  pinDotsRow: {
+    flexDirection: "row",
+    marginTop: 20,
+    gap: 20,
+  },
+  pinDotCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#000000",
+    backgroundColor: "transparent",
+  },
+  pinDotCircleFilled: {
+    backgroundColor: "#0A255C",
+    borderColor: "#0A255C",
+  },
+  pinWarningPillContainer: {
+    alignItems: "center",
+    width: "100%",
+    paddingVertical: 5,
+  },
+  pinWarningPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    gap: 6,
+  },
+  pinWarningPillText: {
+    fontSize: 11,
+    color: "#1F2937",
+    fontWeight: "600",
+  },
+  pinKeypadContainer: {
+    backgroundColor: "#F3F4F6",
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+  pinKeypadRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 6,
+  },
+  keypadKey: {
+    flex: 1,
+    height: 52,
+    marginHorizontal: 5,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 1,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 1,
+  },
+  keypadKeyText: {
+    color: "#1F2937",
+    fontSize: 26,
+    fontWeight: "600",
+  },
+  greyKeyBg: {
+    backgroundColor: "#E5E7EB",
+  },
+  bluePayCapsule: {
+    backgroundColor: "#0066FF",
+    borderRadius: 14,
+    elevation: 2,
+  },
+  bluePayCapsuleText: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  navySubmitCircle: {
+    backgroundColor: "#0C255C",
+    borderRadius: 26,
+    elevation: 2,
   },
   cancelPinTextBtn: {
     alignSelf: "center",
-    paddingVertical: 10,
+    paddingVertical: 8,
   },
-  cancelPinText: { color: "#EF4444", fontSize: 14, fontWeight: "bold" },
+  cancelPinText: {
+    color: "#EF4444",
+    fontSize: 13,
+    fontWeight: "bold",
+  },
 
   // --- Processing state styles ---
   simProcessingBox: {
