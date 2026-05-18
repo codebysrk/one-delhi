@@ -95,7 +95,7 @@ export const MapScreen = ({ navigation }: any) => {
   );
 
   const updateMapRegion = useCallback((loc: Location.LocationObject) => {
-    webViewRef.current?.centerMap(loc.coords.latitude, loc.coords.longitude, 16);
+    webViewRef.current?.centerMap(loc.coords.latitude, loc.coords.longitude, 15);
   }, []);
 
   // Trigger flyTo animation immediately at the earliest possible millisecond when map loaded and location ready

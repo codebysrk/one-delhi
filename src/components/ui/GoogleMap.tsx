@@ -20,8 +20,8 @@ interface GoogleMapProps {
 }
 
 export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
-  initialCenter = { latitude: 28.6139, longitude: 77.2090 },
-  initialZoom = 13,
+  initialCenter = { latitude: 28.8955, longitude: 76.6066 },
+  initialZoom = 8,
   userLocation,
   onMapLoaded,
   style,
