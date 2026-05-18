@@ -102,6 +102,7 @@ export const MapScreen = ({ navigation }: any) => {
   useEffect(() => {
     if (location && mapLoaded) {
       updateMapRegion(location);
+      webViewRef.current?.updateUserLocation(location.coords.latitude, location.coords.longitude);
     }
   }, [location, mapLoaded, updateMapRegion]);
 

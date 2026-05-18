@@ -83,20 +83,20 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
           position: relative;
           width: 24px;
           height: 24px;
-          display: flex;
-          justify-content: center;
-          align-items: center;
         }
         
         .user-marker-dot {
           width: 12px;
           height: 12px;
           background: #1a73e8; /* Google Maps Premium Blue */
-          border: 2.5px solid white;
+          border: 2px solid white;
           border-radius: 50%;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+          box-shadow: 0 1px 3px rgba(0,0,0,0.4);
           z-index: 2;
           position: absolute;
+          top: 6px;
+          left: 6px;
+          box-sizing: border-box;
         }
         
         .user-marker-pulse {
@@ -105,6 +105,9 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
           background: rgba(26, 115, 232, 0.25);
           border-radius: 50%;
           position: absolute;
+          top: 0px;
+          left: 0px;
+          box-sizing: border-box;
           z-index: 1;
           animation: user-pulse 2s infinite ease-out;
         }
