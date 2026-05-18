@@ -11,7 +11,7 @@ import { registerDevice, clearForceLogout } from '../../services/deviceService';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '../../components/layout/Screen';
-import { COLORS, SPACING, SHADOWS } from '../../core/theme';
+import { COLORS, TYPOGRAPHY, SPACING, SHADOWS } from '../../core/theme';
 
 // Premium UI Components
 import { PremiumHeader } from '../../components/auth/PremiumHeader';
