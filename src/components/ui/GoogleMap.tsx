@@ -180,7 +180,7 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
 
         // Helper 1: Center Map
         window.centerMap = function(lat, lng, zoom) {
-          map.flyTo([lat, lng], zoom || 15, { duration: 0.9, easeLinearity: 0.15 });
+          map.flyTo([lat, lng], zoom || 15, { duration: 1.5 });
         };
 
         // Helper 2: Update/Draw User Location Blue Dot
