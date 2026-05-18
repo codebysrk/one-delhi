@@ -78,49 +78,50 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
         body { margin: 0; padding: 0; }
         #map { height: 100vh; width: 100vw; background: #f8f9fa; }
         
-        /* Glowing User Blue Dot with Google Maps Radar Pulse */
-        .user-marker-gps-container {
-          background: none !important;
-          border: none !important;
-          overflow: visible !important;
-          width: 24px !important;
-          height: 24px !important;
+        /* Glowing User Blue Dot exactly like Google Maps */
+        .user-marker-container {
+          position: relative;
+          width: 40px;
+          height: 40px;
+          display: flex;
+          justify-content: center;
+          align-items: center;
         }
-        
+
         .user-map-dot {
+          position: absolute;
           width: 14px;
           height: 14px;
-          background: #1a73e8; /* Google Maps Premium Blue */
-          border: 2px solid white;
+          background: #1a73e8; /* Google Maps blue */
+          border: 2px solid #ffffff;
           border-radius: 50%;
           box-shadow: 0 1px 3px rgba(0,0,0,0.4);
-          z-index: 999;
-          position: absolute;
-          top: 5px;
-          left: 5px;
-          box-sizing: border-box;
+          z-index: 10;
         }
-        
+
         .user-map-pulse {
-          width: 24px;
-          height: 24px;
-          background: rgba(26, 115, 232, 0.4);
-          border-radius: 50%;
           position: absolute;
-          top: 0px;
-          left: 0px;
-          box-sizing: border-box;
-          z-index: 998;
-          animation: user-pulse 2s infinite ease-out;
+          width: 40px;
+          height: 40px;
+          background: rgba(26, 115, 232, 0.25); /* Muted Google Maps light blue */
+          border-radius: 50%;
+          border: 1px solid rgba(26, 115, 232, 0.4);
+          z-index: 5;
+          animation: pulse 1.8s ease-out infinite;
+          transform-origin: center;
         }
-        
-        @keyframes user-pulse {
+
+        @keyframes pulse {
           0% {
-            transform: scale(0.5);
+            transform: scale(0.2);
             opacity: 0.8;
           }
+          80% {
+            transform: scale(1.0);
+            opacity: 0;
+          }
           100% {
-            transform: scale(3.0);
+            transform: scale(1.0);
             opacity: 0;
           }
         }
@@ -211,7 +212,12 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
         // Initialize User Location if provided initially
         ${userLocation ? `
           userMarker = L.marker([${userLocation.coords.latitude}, ${userLocation.coords.longitude}], {
-            icon: L.divIcon({ className: 'user-marker-gps-container', html: '<div class="user-map-dot"></div><div class="user-map-pulse"></div>', iconSize: [24, 24], iconAnchor: [12, 12] })
+            icon: L.divIcon({ 
+              className: '', 
+              html: '<div class="user-marker-container"><div class="user-map-dot"></div><div class="user-map-pulse"></div></div>', 
+              iconSize: [40, 40],
+              iconAnchor: [20, 20]
+            })
           }).addTo(map);
         ` : ""}
 
@@ -227,7 +233,12 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
             userMarker.setLatLng(latlng);
           } else {
             userMarker = L.marker(latlng, {
-              icon: L.divIcon({ className: 'user-marker-gps-container', html: '<div class="user-map-dot"></div><div class="user-map-pulse"></div>', iconSize: [24, 24], iconAnchor: [12, 12] })
+              icon: L.divIcon({ 
+                className: '', 
+                html: '<div class="user-marker-container"><div class="user-map-dot"></div><div class="user-map-pulse"></div></div>', 
+                iconSize: [40, 40],
+                iconAnchor: [20, 20]
+              })
             }).addTo(map);
           }
         };
