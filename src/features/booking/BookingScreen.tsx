@@ -35,6 +35,7 @@ import Animated, {
   FadeOut,
   useSharedValue,
   useAnimatedStyle,
+  withTiming,
   FadeInUp,
   FadeOutDown,
 } from "react-native-reanimated";
@@ -331,42 +332,54 @@ const FareDisplay = React.memo(
     manualTotal: string;
     onManualChange: (v: string) => void;
     onBlur: () => void;
-  }) => (
-    <View style={styles.fareRow}>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.bottomLabel}>
-          Amount Payable
-        </Text>
-        <View style={[styles.priceRow, { opacity: showDiscount ? 1 : 0 }]}>
-          <Text style={styles.oldPrice}>₹{finalFare.originalTotal}</Text>
-          <TouchableOpacity onPress={onPress} activeOpacity={0.7} disabled={!showDiscount}>
-            {isEditing ? (
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Text style={styles.newPrice}>₹</Text>
-                <TextInput
-                  style={[styles.newPrice, { minWidth: 40, padding: 0 }]}
-                  value={manualTotal}
-                  onChangeText={onManualChange}
-                  onBlur={onBlur}
-                  onSubmitEditing={onBlur}
-                  keyboardType="numeric"
-                  autoFocus
-                  selectTextOnFocus
-                />
-              </View>
-            ) : (
-              <Text style={styles.newPrice}>₹{finalFare.total}</Text>
-            )}
-          </TouchableOpacity>
+  }) => {
+    const opacityVal = useSharedValue(showDiscount ? 1 : 0);
+
+    useEffect(() => {
+      opacityVal.value = withTiming(showDiscount ? 1 : 0, { duration: 350 });
+    }, [showDiscount, opacityVal]);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+      opacity: opacityVal.value,
+    }));
+
+    return (
+      <View style={styles.fareRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.bottomLabel}>
+            Amount Payable
+          </Text>
+          <Animated.View style={[styles.priceRow, animatedStyle]}>
+            <Text style={styles.oldPrice}>₹{finalFare.originalTotal}</Text>
+            <TouchableOpacity onPress={onPress} activeOpacity={0.7} disabled={!showDiscount}>
+              {isEditing ? (
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <Text style={styles.newPrice}>₹</Text>
+                  <TextInput
+                    style={[styles.newPrice, { minWidth: 40, padding: 0 }]}
+                    value={manualTotal}
+                    onChangeText={onManualChange}
+                    onBlur={onBlur}
+                    onSubmitEditing={onBlur}
+                    keyboardType="numeric"
+                    autoFocus
+                    selectTextOnFocus
+                  />
+                </View>
+              ) : (
+                <Text style={styles.newPrice}>₹{finalFare.total}</Text>
+              )}
+            </TouchableOpacity>
+          </Animated.View>
         </View>
+        <Animated.View style={[{ justifyContent: 'center' }, animatedStyle]}>
+          <View style={styles.discountBadge}>
+            <Text style={styles.discountText}>10.0% off</Text>
+          </View>
+        </Animated.View>
       </View>
-      <View style={{ opacity: showDiscount ? 1 : 0, justifyContent: 'center' }}>
-        <View style={styles.discountBadge}>
-          <Text style={styles.discountText}>10.0% off</Text>
-        </View>
-      </View>
-    </View>
-  ),
+    );
+  }
 );
 
 export const BookingScreen = ({ navigation }: any) => {
