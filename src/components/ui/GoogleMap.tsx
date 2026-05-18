@@ -79,10 +79,9 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
         #map { height: 100vh; width: 100vw; background: #f8f9fa; }
         
         /* Glowing User Blue Dot with Google Maps Radar Pulse */
-        .user-marker-container {
-          position: relative;
-          width: 60px;
-          height: 60px;
+        .user-marker-gps-container {
+          background: none !important;
+          border: none !important;
           overflow: visible !important;
         }
         
@@ -95,19 +94,19 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
           box-shadow: 0 1px 3px rgba(0,0,0,0.4);
           z-index: 2;
           position: absolute;
-          top: 23px;
-          left: 23px;
+          top: 5px;
+          left: 5px;
           box-sizing: border-box;
         }
         
         .user-marker-pulse {
-          width: 20px;
-          height: 20px;
-          background: rgba(26, 115, 232, 0.35);
+          width: 24px;
+          height: 24px;
+          background: rgba(26, 115, 232, 0.4);
           border-radius: 50%;
           position: absolute;
-          top: 20px;
-          left: 20px;
+          top: 0px;
+          left: 0px;
           box-sizing: border-box;
           z-index: 1;
           animation: user-pulse 2s infinite ease-out;
@@ -119,7 +118,7 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
             opacity: 0.8;
           }
           100% {
-            transform: scale(2.6);
+            transform: scale(3.0);
             opacity: 0;
           }
         }
@@ -210,7 +209,7 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
         // Initialize User Location if provided initially
         ${userLocation ? `
           userMarker = L.marker([${userLocation.coords.latitude}, ${userLocation.coords.longitude}], {
-            icon: L.divIcon({ className: '', html: '<div class="user-marker-container"><div class="user-marker-dot"></div><div class="user-marker-pulse"></div></div>', iconSize: [60, 60], iconAnchor: [30, 30] })
+            icon: L.divIcon({ className: 'user-marker-gps-container', html: '<div class="user-marker-dot"></div><div class="user-marker-pulse"></div>', iconSize: [24, 24], iconAnchor: [12, 12] })
           }).addTo(map);
         ` : ""}
 
@@ -226,7 +225,7 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
             userMarker.setLatLng(latlng);
           } else {
             userMarker = L.marker(latlng, {
-              icon: L.divIcon({ className: '', html: '<div class="user-marker-container"><div class="user-marker-dot"></div><div class="user-marker-pulse"></div></div>', iconSize: [60, 60], iconAnchor: [30, 30] })
+              icon: L.divIcon({ className: 'user-marker-gps-container', html: '<div class="user-marker-dot"></div><div class="user-marker-pulse"></div>', iconSize: [24, 24], iconAnchor: [12, 12] })
             }).addTo(map);
           }
         };
