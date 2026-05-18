@@ -58,17 +58,7 @@ export default function App() {
   }, [fontsLoaded]);
 
   if (!fontsLoaded || !appIsReady) {
-    return (
-      <View style={styles.splashContainer}>
-        <StatusBar style="light" />
-        <Image 
-          source={require('./assets/images/splash.png')} 
-          style={{ width: '100%', height: '100%' }}
-          contentFit="contain"
-          transition={300}
-        />
-      </View>
-    );
+    return null;
   }
 
   return (
@@ -82,14 +72,4 @@ export default function App() {
   );
 }
 
-const styles = StyleSheet.create({
-  splashContainer: {
-    flex: 1,
-    backgroundColor: '#D32F2F',
-    justifyContent: 'flex-start', // Shifted from center
-    alignItems: 'center',
-  },
-  splashImage: {
-    // Style will be applied dynamically in the component to avoid top-level issues
-  }
-});
+const styles = StyleSheet.create({});
