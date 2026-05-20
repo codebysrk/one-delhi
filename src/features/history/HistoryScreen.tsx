@@ -13,13 +13,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Screen } from "../../components/layout/Screen";
 import { Header } from "../../components/layout/Header";
 import { FlashList } from "@shopify/flash-list";
-import {
-  collection,
-  query,
-  where,
-  orderBy,
-  onSnapshot,
-} from "firebase/firestore";
 import { db, auth } from "../../services/firebase";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { TicketCard } from "../../components/ui/TicketCard";
@@ -41,26 +34,36 @@ export const HistoryScreen = ({ navigation }: any) => {
   useEffect(() => {
     if (!user) return;
 
-    const q = query(
-      collection(db, "tickets"),
-      where("userId", "==", user.uid),
-      orderBy("timestamp", "desc"),
-    );
+    const unsubscribe = db
+      .collection("tickets")
+      .where("userId", "==", user.uid)
+      .orderBy("timestamp", "desc")
+      .onSnapshot((snapshot) => {
+        if (!snapshot) return;
+        const ticketsData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as any[];
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const ticketsData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as any[];
+        const getMs = (timestamp: any): number => {
+          if (!timestamp) return 0;
+          return typeof timestamp === 'number' 
+            ? timestamp 
+            : (timestamp.toMillis?.() || (timestamp.seconds ? timestamp.seconds * 1000 : 0));
+        };
 
-      const sortedTickets = ticketsData.sort(
-        (a, b) => b.timestamp - a.timestamp,
-      );
+        const sortedTickets = ticketsData.sort(
+          (a, b) => getMs(b.timestamp) - getMs(a.timestamp),
+        );
 
-      setTickets(sortedTickets);
-      setLoading(false);
-      setRefreshing(false);
-    });
+        setTickets(sortedTickets);
+        setLoading(false);
+        setRefreshing(false);
+      }, (error) => {
+        if (__DEV__) console.error("[HistoryScreen] Firestore snapshot error:", error);
+        setLoading(false);
+        setRefreshing(false);
+      });
 
     return () => unsubscribe();
   }, [user, setTickets]);

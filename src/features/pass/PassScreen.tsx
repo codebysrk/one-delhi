@@ -16,6 +16,7 @@ import { Header } from '../../components/layout/Header';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppStore } from '../../store/useAppStore';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { PrimaryButton } from '../../components/ui/PrimaryButton';
 
 const PASS_TYPES = [
   { id: '1', label: 'DAILY ALL ROUTE NON AC PASS', fare: '₹40', sub: 'Daily non-ac bus pass for all routes' },
@@ -206,8 +207,8 @@ export const PassScreen = ({ navigation }: any) => {
 
       {/* Footer Button */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
-        <TouchableOpacity 
-          style={styles.nextBtn}
+        <PrimaryButton 
+          title="Next Step"
           onPress={() => navigation.navigate('Payment', { 
             ticketData: {
               route: 'BUS PASS',
@@ -217,9 +218,7 @@ export const PassScreen = ({ navigation }: any) => {
               passName: selectedPass.label
             }
           })}
-        >
-          <Text style={styles.nextBtnText}>Next Step</Text>
-        </TouchableOpacity>
+        />
       </View>
     </ScreenContainer>
   );

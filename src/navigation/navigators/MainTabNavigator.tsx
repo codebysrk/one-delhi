@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, StyleSheet, Pressable } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -11,7 +11,6 @@ import { EVScreen } from '../../features/ev/EVScreen';
 import { TripPlanScreen } from '../../features/trips/TripPlanScreen';
 import { HelpScreen } from '../../features/profile/HelpScreen';
 import { SearchScreen } from '../../features/home/SearchScreen';
-import { TripPlanIcon } from '../../components/icons/TripPlanIcon';
 import { useAppStore } from '../../store/useAppStore';
 import { COLORS, TYPOGRAPHY, LAYOUT, ANIMATIONS } from '../../core/theme';
 import { BrandingFooter } from '../../components/ui/BrandingFooter';

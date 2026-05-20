@@ -3,20 +3,17 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
-  StatusBar,
   ScrollView,
-  Platform,
   TextInput,
   Alert,
   ActivityIndicator,
+  TouchableOpacity,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Screen } from "../../components/layout/Screen";
 import { Header } from "../../components/layout/Header";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAppStore } from "../../store/useAppStore";
-import { updateProfile, signOut } from "firebase/auth";
 import { auth } from "../../services/firebase";
 
 export const SettingsScreen = ({ navigation }: any) => {
@@ -39,7 +36,7 @@ export const SettingsScreen = ({ navigation }: any) => {
     setLoading(true);
     try {
       if (name !== user?.displayName) {
-        await updateProfile(auth.currentUser, { displayName: name });
+        await auth.currentUser.updateProfile({ displayName: name });
       }
       setUser({ ...auth.currentUser });
       setIsEditing(null);
@@ -59,7 +56,7 @@ export const SettingsScreen = ({ navigation }: any) => {
         style: "destructive",
         onPress: async () => {
           try {
-            await signOut(auth);
+            await auth.signOut();
             // resetStore() is handled by RootNavigator's onAuthStateChanged
           } catch (error: any) {
             Alert.alert("Error", error.message);
@@ -177,11 +174,7 @@ export const SettingsScreen = ({ navigation }: any) => {
         showShadow={true}
         rightElement={
           isEditing || (user && name !== user.displayName) ? (
-            <TouchableOpacity
-              onPress={handleSave}
-              disabled={loading}
-              style={styles.saveBtn}
-            >
+            <TouchableOpacity onPress={handleSave} disabled={loading} style={styles.saveBtn} accessibilityLabel="Save profile">
               {loading ? (
                 <ActivityIndicator size="small" color="#A51F38" />
               ) : (
@@ -189,7 +182,7 @@ export const SettingsScreen = ({ navigation }: any) => {
               )}
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity onPress={handleLogout} style={styles.saveBtn}>
+            <TouchableOpacity onPress={handleLogout} style={[styles.saveBtn, { backgroundColor: 'transparent' }]} accessibilityLabel="Logout">
               <MaterialCommunityIcons name="logout" size={24} color="#C0392B" />
             </TouchableOpacity>
           )
@@ -223,10 +216,7 @@ export const SettingsScreen = ({ navigation }: any) => {
                     <Text style={styles.infoValue}>{item.value}</Text>
                   )}
                   {item.hasButton && (
-                    <TouchableOpacity
-                      style={styles.redCircleBtn}
-                      onPress={() => setIsEditing(item.key)}
-                    >
+                    <TouchableOpacity style={styles.redCircleBtn} onPress={() => setIsEditing(item.key)} accessibilityLabel={`Edit ${item.label}`}>
                       <MaterialCommunityIcons
                         name="arrow-right"
                         size={16}
@@ -244,11 +234,7 @@ export const SettingsScreen = ({ navigation }: any) => {
           <Text style={styles.sectionTitle}>Others</Text>
           <View style={styles.othersBox}>
             {otherItems.map((item, index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.otherRow}
-                onPress={() => navigation.navigate("ComingSoon")}
-              >
+              <TouchableOpacity key={index} style={styles.otherRow} onPress={() => navigation.navigate("ComingSoon")} accessibilityLabel={item.label}>
                 <View style={styles.iconBox}>{item.icon}</View>
                 <Text style={styles.otherLabel}>{item.label}</Text>
               </TouchableOpacity>

@@ -16,7 +16,6 @@ import { Header } from "../../components/layout/Header";
 import { FlashList } from "@shopify/flash-list";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Swipeable } from "react-native-gesture-handler";
-import { collection, getDocs } from "firebase/firestore";
 import { db, auth } from "../../services/firebase";
 import { useAppStore } from "../../store/useAppStore";
 import { logAction } from "../../services/logService";
@@ -46,7 +45,7 @@ export const SearchScreen = ({ navigation }: any) => {
   useEffect(() => {
     const fetchRoutes = async () => {
       try {
-        const querySnapshot = await getDocs(collection(db, "routes"));
+        const querySnapshot = await db.collection("routes").get();
         const fetchedRoutes: Route[] = [];
         querySnapshot.forEach((doc) => {
           fetchedRoutes.push(doc.data() as Route);
@@ -68,7 +67,7 @@ export const SearchScreen = ({ navigation }: any) => {
     routes.forEach((r: any) => {
       // Format 1: Has directions.up and directions.down
       if (r.directions) {
-        if (r.directions.up) {
+        if (r.directions.up && Array.isArray(r.directions.up.stops) && r.directions.up.stops.length > 0) {
           list.push({
             route: r.route || r.id || r.routeNumber,
             id: `${r.route || r.id || r.routeNumber}-UP`,
@@ -78,7 +77,7 @@ export const SearchScreen = ({ navigation }: any) => {
             originalRoute: r,
           });
         }
-        if (r.directions.down) {
+        if (r.directions.down && Array.isArray(r.directions.down.stops) && r.directions.down.stops.length > 0) {
           list.push({
             route: r.route || r.id || r.routeNumber,
             id: `${r.route || r.id || r.routeNumber}-DOWN`,
@@ -117,7 +116,7 @@ export const SearchScreen = ({ navigation }: any) => {
     const list: any[] = [];
     recentRoutes.forEach((r: any) => {
       if (r.directions) {
-        if (r.directions.up) {
+        if (r.directions.up && Array.isArray(r.directions.up.stops) && r.directions.up.stops.length > 0) {
           list.push({
             route: r.route || r.id || r.routeNumber,
             id: `${r.route || r.id || r.routeNumber}-UP`,
@@ -127,7 +126,7 @@ export const SearchScreen = ({ navigation }: any) => {
             originalRoute: r,
           });
         }
-        if (r.directions.down) {
+        if (r.directions.down && Array.isArray(r.directions.down.stops) && r.directions.down.stops.length > 0) {
           list.push({
             route: r.route || r.id || r.routeNumber,
             id: `${r.route || r.id || r.routeNumber}-DOWN`,

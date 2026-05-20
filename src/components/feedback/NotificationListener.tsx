@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { useAppStore } from '../../store/useAppStore';
 
@@ -9,26 +8,27 @@ export const NotificationListener = () => {
   useEffect(() => {
     if (!user) return;
 
-    const q = query(
-      collection(db, 'notifications'),
-      orderBy('timestamp', 'desc'),
-      limit(1)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      if (!snapshot.empty) {
-        const latest = snapshot.docs[0].data();
-        if (latest.timestamp) {
-          setLatestNotificationTimestamp(latest.timestamp);
+    const unsubscribe = db
+      .collection('notifications')
+      .orderBy('timestamp', 'desc')
+      .limit(1)
+      .onSnapshot(
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const latest = snapshot.docs[0].data();
+            if (latest.timestamp) {
+              setLatestNotificationTimestamp(latest.timestamp);
+            }
+          }
+        },
+        (error) => {
+          if (error.code === 'permission-denied') {
+            // This is expected when a user is banned or logged out
+            return;
+          }
+          if (__DEV__) console.error('[NotificationListener] Firestore error:', error);
         }
-      }
-    }, (error) => {
-      if (error.code === 'permission-denied') {
-        // This is expected when a user is banned or logged out
-        return;
-      }
-      if (__DEV__) console.error('[NotificationListener] Firestore error:', error);
-    });
+      );
 
     return () => unsubscribe();
   }, [user]);

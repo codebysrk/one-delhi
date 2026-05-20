@@ -129,5 +129,12 @@ export const getLatestActiveTicket = (tickets: Ticket[]): Ticket | null => {
   
   if (activeOnes.length === 0) return null;
   
-  return activeOnes.sort((a, b) => b.timestamp - a.timestamp)[0];
+  const getMs = (timestamp: any): number => {
+    if (!timestamp) return 0;
+    return typeof timestamp === 'number' 
+      ? timestamp 
+      : (timestamp.toMillis?.() || (timestamp.seconds ? timestamp.seconds * 1000 : 0));
+  };
+  
+  return activeOnes.sort((a, b) => getMs(b.timestamp) - getMs(a.timestamp))[0];
 };

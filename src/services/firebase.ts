@@ -1,31 +1,39 @@
-import { initializeApp } from "firebase/app";
-import { initializeFirestore } from "firebase/firestore";
-import { Platform } from "react-native";
-import { initializeAuth, getReactNativePersistence, browserLocalPersistence } from "firebase/auth";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import firebase from '@react-native-firebase/app';
+import authInstance from '@react-native-firebase/auth';
+import firestoreInstance from '@react-native-firebase/firestore';
+import appCheckInstance from '@react-native-firebase/app-check';
 
-const firebaseConfig = {
-    apiKey: "AIzaSyCcmJeDPobzD-6IcJF96-IHdLkvPudi-N0",
-    authDomain: "onedelhii.firebaseapp.com",
-    projectId: "onedelhii",
-    storageBucket: "onedelhii.firebasestorage.app",
-    messagingSenderId: "645784683590",
-    appId: "1:645784683590:web:4bd8fdc3ee5a690a883647",
-    measurementId: "G-NPCJGVC37D"
-};
+// Initialize Firebase App Check only in Production environment
+if (!__DEV__) {
+  try {
+    const appCheck = appCheckInstance();
+    const rnfbProvider = appCheck.newReactNativeFirebaseAppCheckProvider();
 
-const app = initializeApp(firebaseConfig);
+    rnfbProvider.configure({
+      android: {
+        provider: 'playIntegrity',
+      },
+      apple: {
+        provider: 'appAttestWithDeviceCheckFallback',
+      }
+    });
 
-// Initialize Auth with platform-specific persistence
-export const auth = initializeAuth(app, {
-  persistence: Platform.OS === 'web' 
-    ? browserLocalPersistence 
-    : getReactNativePersistence(AsyncStorage)
-});
+    appCheck.initializeAppCheck({
+      provider: rnfbProvider,
+      isTokenAutoRefreshEnabled: true,
+    }).then(() => {
+      console.log("[AppCheck] Firebase App Check initialized successfully.");
+    }).catch((err) => {
+      console.error("[AppCheck] Failed to initialize App Check:", err);
+    });
+  } catch (err) {
+    console.error("[AppCheck] App Check initialization failed:", err);
+  }
+} else {
+  console.log("[AppCheck] Disabled in development mode to prevent local network blocks.");
+}
 
-// Using initializeFirestore - standard configuration
-export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
-});
+export const auth = authInstance();
+export const db = firestoreInstance();
 
-export default app;
+export default firebase;

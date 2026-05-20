@@ -1,26 +1,31 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TextInput, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import { 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  StyleSheet, 
+  KeyboardAvoidingView, 
+  Platform, 
+  ScrollView, 
+  TextInput, 
+  Keyboard, 
+  TouchableWithoutFeedback, 
+  Dimensions,
+  ActivityIndicator
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '../../components/layout/Screen';
 import { useForm, Controller } from 'react-hook-form';
 import * as z from 'zod';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
 import { auth, db } from '../../services/firebase';
-import { createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth';
-import { setDoc, doc } from 'firebase/firestore';
 import { logAction } from '../../services/logService';
 import { useAppStore } from '../../store/useAppStore';
 import { registerDevice } from '../../services/deviceService';
+import { COLORS, TYPOGRAPHY, SPACING, SHADOWS, RADII } from '../../core/theme';
+import { PrimaryButton } from '../../components/ui/PrimaryButton';
 
-import { COLORS, TYPOGRAPHY, SPACING, SHADOWS } from '../../core/theme';
-
-// Premium UI Components
-import { PremiumHeader } from '../../components/auth/PremiumHeader';
-import { PremiumInput } from '../../components/auth/PremiumInput';
-import { Button } from '../../components/ui/Button';
-import { GenderSelector } from '../../components/auth/GenderSelector';
-import { AuthCheckbox } from '../../components/auth/AuthCheckbox';
-import { PasswordStrengthMeter } from '../../components/auth/PasswordStrengthMeter';
+const { height } = Dimensions.get('window');
 
 const signupSchema = z.object({
   fullName: z.string().min(3, 'Name must be at least 3 characters'),
@@ -33,7 +38,7 @@ const signupSchema = z.object({
       'Must contain uppercase, lowercase, number, and special character'
     ),
   confirmPassword: z.string().min(8, 'Please confirm your password'),
-  gender: z.string().min(1, 'Please select gender') as z.ZodType<any>,
+  gender: z.string().optional() as z.ZodType<any>,
   terms: z.boolean().refine(val => val === true, { message: 'You must agree to the terms' }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
@@ -50,7 +55,7 @@ const customZodResolver = (schema: z.ZodSchema<any>) => async (values: any) => {
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       const formattedErrors: any = {};
-      error.errors.forEach((err) => {
+      error.issues.forEach((err) => {
         const path = err.path.join('.') || 'form';
         formattedErrors[path] = {
           type: err.code,
@@ -80,6 +85,15 @@ export const SignupScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
+  // Focus and visibility states for inputs
+  const [fullNameFocused, setFullNameFocused] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
+  const [confirmPasswordFocused, setConfirmPasswordFocused] = useState(false);
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   // Premium Inline error alert state
   const [signupError, setSignupError] = useState<string | null>(null);
 
@@ -89,7 +103,7 @@ export const SignupScreen = ({ navigation }: any) => {
   const setIsVerifying = useAppStore((state) => state.setIsVerifying);
   const setIsAuthReady = useAppStore((state) => state.setIsAuthReady);
 
-  // Scroll ref
+  // Scroll and Input refs
   const scrollViewRef = useRef<ScrollView>(null);
   const emailInputRef = useRef<TextInput>(null);
   const passwordInputRef = useRef<TextInput>(null);
@@ -109,10 +123,6 @@ export const SignupScreen = ({ navigation }: any) => {
     };
   }, []);
 
-  // Fixed React Hook Form configuration to resolve early Zod Errors:
-  // 1. Explicitly set onSubmit mode to prevent dynamic validation on render.
-  // 2. Added complete defaultValues so Zod receives strings instead of undefined.
-  // 3. Removed isValid destructuring to avoid mount-time resolver runs.
   const { control, handleSubmit, watch, formState: { errors } } = useForm<SignupForm>({
     resolver: customZodResolver(signupSchema),
     mode: 'onSubmit',
@@ -121,12 +131,10 @@ export const SignupScreen = ({ navigation }: any) => {
       email: '',
       password: '',
       confirmPassword: '',
-      gender: '',
+      gender: 'NOT_SPECIFIED',
       terms: true,
     }
   });
-
-  const watchedPassword = watch('password');
 
   const onSignup = async (data: SignupForm) => {
     Keyboard.dismiss();
@@ -135,10 +143,10 @@ export const SignupScreen = ({ navigation }: any) => {
     setSignupError(null); // Clear previous errors
     try {
       // 1. Create User
-      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      const userCredential = await auth.createUserWithEmailAndPassword(data.email, data.password);
       const user = userCredential.user;
 
-      await updateProfile(user, {
+      await user.updateProfile({
         displayName: data.fullName,
       });
 
@@ -148,17 +156,17 @@ export const SignupScreen = ({ navigation }: any) => {
       if (deviceResult && deviceResult.status === 'BANNED') {
         setLoading(false);
         setIsVerifying(false);
-        await signOut(auth);
+        await auth.signOut();
         
         setSignupError('📱 This device is banned from creating new accounts.');
         return;
       }
 
       // 3. Create user document in Firestore
-      await setDoc(doc(db, 'users', user.uid), {
+      await db.collection('users').doc(user.uid).set({
         name: data.fullName,
         email: data.email,
-        gender: data.gender,
+        gender: data.gender || 'NOT_SPECIFIED',
         createdAt: new Date().toISOString(),
         role: 'USER',
         status: 'ACTIVE',
@@ -177,7 +185,7 @@ export const SignupScreen = ({ navigation }: any) => {
       setUserProfile({
         name: data.fullName,
         email: data.email,
-        gender: data.gender,
+        gender: data.gender || 'NOT_SPECIFIED',
         createdAt: new Date().toISOString(),
         role: 'USER',
         status: 'ACTIVE',
@@ -198,6 +206,8 @@ export const SignupScreen = ({ navigation }: any) => {
 
       if (errCode === 'auth/email-already-in-use' || errStr.includes('email-already-in-use')) {
         msg = 'This email is already registered. Please login.';
+      } else if (errCode === 'auth/network-request-failed' || errStr.includes('network-request-failed')) {
+        msg = 'Network error. Please check your internet connection and try again.';
       } else if (errCode === 'permission-denied' || errStr.includes('permission-denied')) {
         msg = 'Security verification failed. Device may be restricted.';
       } else if (errCode === 'auth/invalid-email' || errStr.includes('invalid-email')) {
@@ -230,10 +240,15 @@ export const SignupScreen = ({ navigation }: any) => {
 
   const insets = useSafeAreaInsets();
 
+  const dynamicPadding = {
+    paddingLeft: Math.max(24, insets.left),
+    paddingRight: Math.max(24, insets.right),
+  };
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <View style={styles.flex}>
-        <ScreenContainer noPadding ignoreTopSafe style={styles.container}>
+      <View style={styles.container}>
+        <ScreenContainer noPadding ignoreTopSafe style={styles.screenContainer}>
           <KeyboardAvoidingView 
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.flex}
@@ -243,159 +258,265 @@ export const SignupScreen = ({ navigation }: any) => {
               ref={scrollViewRef}
               contentContainerStyle={[
                 styles.scrollContent, 
-                { paddingBottom: keyboardVisible ? 240 : insets.bottom + SPACING.xl }
+                { paddingBottom: keyboardVisible ? 240 : insets.bottom + 24 }
               ]}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              {/* Embedded Premium Header inside unified ScrollView */}
-              <PremiumHeader 
-                title="Create Account" 
-                subtitle="Sign up to get started" 
-                variant="signup"
-                onBack={() => navigation.goBack()}
-              />
+              {/* Header Container */}
+              <View style={[
+                styles.headerContainer, 
+                { paddingTop: insets.top || 16 },
+                dynamicPadding
+              ]}>
+                <View style={styles.headerBg} />
+                <View style={styles.headerContent}>
+                  {/* Header Title / Subtitle */}
+                  <View style={styles.titleContainer}>
+                    <Text style={styles.headlineTitle}>Create Account</Text>
+                    <Text style={styles.bodyText}>Sign up to get started</Text>
+                  </View>
+                </View>
+              </View>
 
-              {/* Elegant Floating Card */}
-              <View style={styles.card}>
-                <Controller
-                  control={control}
-                  name="fullName"
-                  render={({ field: { onChange, value = '' } }) => (
-                    <PremiumInput
-                      label="Full Name"
-                      placeholder="Enter full name"
-                      value={value}
-                      onChangeText={onChange}
-                      error={errors.fullName?.message}
-                      success={value.length >= 3 && !errors.fullName}
-                      icon={<MaterialCommunityIcons name="account-outline" size={18} color="#9CA3AF" />}
-                      style={styles.compactInput}
-                      returnKeyType="next"
-                      onSubmitEditing={() => emailInputRef.current?.focus()}
-                      blurOnSubmit={false}
+              {/* Main Content Area */}
+              <View style={[styles.mainContent, dynamicPadding]}>
+                {/* Full Name Input */}
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>Full Name</Text>
+                  <View style={[
+                    styles.inputWrapper, 
+                    fullNameFocused && styles.inputWrapperFocused,
+                    errors.fullName && styles.inputWrapperError
+                  ]}>
+                    <MaterialIcons name="person" size={20} color="#5f5e5e" style={styles.inputIcon} />
+                    <Controller
+                      control={control}
+                      name="fullName"
+                      render={({ field: { onChange, onBlur, value = '' } }) => (
+                        <TextInput
+                          style={styles.textInput}
+                          placeholder="Full Name"
+                          placeholderTextColor="#c8c6c5"
+                          autoCapitalize="words"
+                          autoCorrect={false}
+                          value={value}
+                          onChangeText={onChange}
+                          onBlur={() => {
+                            onBlur();
+                            setFullNameFocused(false);
+                          }}
+                          onFocus={() => setFullNameFocused(true)}
+                          returnKeyType="next"
+                          onSubmitEditing={() => emailInputRef.current?.focus()}
+                        />
+                      )}
                     />
+                  </View>
+                  {errors.fullName && (
+                    <Text style={styles.errorText}>{errors.fullName.message}</Text>
                   )}
-                />
-
-                <Controller
-                  control={control}
-                  name="email"
-                  render={({ field: { onChange, value = '' } }) => (
-                    <PremiumInput
-                      ref={emailInputRef}
-                      label="Email"
-                      placeholder="Enter email"
-                      value={value}
-                      onChangeText={onChange}
-                      error={errors.email?.message}
-                      success={value.length > 0 && !errors.email}
-                      trim={true}
-                      icon={<MaterialCommunityIcons name="email-outline" size={18} color="#9CA3AF" />}
-                      keyboardType="email-address"
-                      style={styles.compactInput}
-                      returnKeyType="next"
-                      onSubmitEditing={() => passwordInputRef.current?.focus()}
-                      blurOnSubmit={false}
-                    />
-                  )}
-                />
-
-                <View style={styles.row}>
-                  <Controller
-                    control={control}
-                    name="password"
-                    render={({ field: { onChange, value = '' } }) => (
-                      <PremiumInput
-                        ref={passwordInputRef}
-                        label="Password"
-                        placeholder="Create"
-                        value={value}
-                        onChangeText={onChange}
-                        error={errors.password?.message}
-                        success={value.length >= 8 && !errors.password}
-                        secureTextEntry
-                        icon={<MaterialCommunityIcons name="lock-outline" size={18} color="#9CA3AF" />}
-                        style={styles.halfInputLeft}
-                        returnKeyType="next"
-                        onSubmitEditing={() => confirmPasswordInputRef.current?.focus()}
-                        blurOnSubmit={false}
-                      />
-                    )}
-                  />
-
-                  <Controller
-                    control={control}
-                    name="confirmPassword"
-                    render={({ field: { onChange, value = '' } }) => (
-                      <PremiumInput
-                        ref={confirmPasswordInputRef}
-                        label="Confirm"
-                        placeholder="Confirm"
-                        value={value}
-                        onChangeText={onChange}
-                        error={errors.confirmPassword?.message}
-                        success={value.length >= 8 && value === watchedPassword && !errors.confirmPassword}
-                        secureTextEntry
-                        icon={<MaterialCommunityIcons name="lock-outline" size={18} color="#9CA3AF" />}
-                        style={styles.halfInputRight}
-                        returnKeyType="done"
-                        onSubmitEditing={() => Keyboard.dismiss()}
-                      />
-                    )}
-                  />
                 </View>
 
-                {/* Password Strength Meter Widget & Checklist */}
-                <PasswordStrengthMeter password={watchedPassword} />
-
-                <View style={styles.compactSection}>
-                  <Controller
-                    control={control}
-                    name="gender"
-                    render={({ field: { onChange, value } }) => (
-                      <GenderSelector value={value} onChange={onChange} />
-                    )}
-                  />
-                  {errors.gender && <Text style={styles.errorText}>{errors.gender.message as any}</Text>}
+                {/* Email Input */}
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>Email</Text>
+                  <View style={[
+                    styles.inputWrapper, 
+                    emailFocused && styles.inputWrapperFocused,
+                    errors.email && styles.inputWrapperError
+                  ]}>
+                    <MaterialIcons name="mail" size={20} color="#5f5e5e" style={styles.inputIcon} />
+                    <Controller
+                      control={control}
+                      name="email"
+                      render={({ field: { onChange, onBlur, value = '' } }) => (
+                        <TextInput
+                          ref={emailInputRef}
+                          style={styles.textInput}
+                          placeholder="Enter your email"
+                          placeholderTextColor="#c8c6c5"
+                          keyboardType="email-address"
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          value={value}
+                          onChangeText={onChange}
+                          onBlur={() => {
+                            onBlur();
+                            setEmailFocused(false);
+                          }}
+                          onFocus={() => setEmailFocused(true)}
+                          returnKeyType="next"
+                          onSubmitEditing={() => passwordInputRef.current?.focus()}
+                        />
+                      )}
+                    />
+                  </View>
+                  {errors.email && (
+                    <Text style={styles.errorText}>{errors.email.message}</Text>
+                  )}
                 </View>
 
-                <View style={styles.compactSection}>
+                {/* Password Input */}
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>Password</Text>
+                  <View style={[
+                    styles.inputWrapper, 
+                    passwordFocused && styles.inputWrapperFocused,
+                    errors.password && styles.inputWrapperError
+                  ]}>
+                    <MaterialIcons name="lock" size={20} color="#5f5e5e" style={styles.inputIcon} />
+                    <Controller
+                      control={control}
+                      name="password"
+                      render={({ field: { onChange, onBlur, value = '' } }) => (
+                        <TextInput
+                          ref={passwordInputRef}
+                          style={styles.textInput}
+                          placeholder="Enter password"
+                          placeholderTextColor="#c8c6c5"
+                          secureTextEntry={!showPassword}
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          value={value}
+                          onChangeText={onChange}
+                          onBlur={() => {
+                            onBlur();
+                            setPasswordFocused(false);
+                          }}
+                          onFocus={() => setPasswordFocused(true)}
+                          returnKeyType="next"
+                          onSubmitEditing={() => confirmPasswordInputRef.current?.focus()}
+                        />
+                      )}
+                    />
+                    <TouchableOpacity 
+                      style={styles.visibilityToggle}
+                      onPress={() => setShowPassword(!showPassword)}
+                      activeOpacity={0.7}
+                    >
+                      <MaterialIcons 
+                        name={showPassword ? "visibility" : "visibility-off"} 
+                        size={20} 
+                        color="#5f5e5e" 
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  {errors.password && (
+                    <Text style={styles.errorText}>{errors.password.message}</Text>
+                  )}
+                </View>
+
+                {/* Confirm Password Input */}
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>Confirm Password</Text>
+                  <View style={[
+                    styles.inputWrapper, 
+                    confirmPasswordFocused && styles.inputWrapperFocused,
+                    errors.confirmPassword && styles.inputWrapperError
+                  ]}>
+                    <MaterialIcons name="lock" size={20} color="#5f5e5e" style={styles.inputIcon} />
+                    <Controller
+                      control={control}
+                      name="confirmPassword"
+                      render={({ field: { onChange, onBlur, value = '' } }) => (
+                        <TextInput
+                          ref={confirmPasswordInputRef}
+                          style={styles.textInput}
+                          placeholder="Confirm Password"
+                          placeholderTextColor="#c8c6c5"
+                          secureTextEntry={!showConfirmPassword}
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          value={value}
+                          onChangeText={onChange}
+                          onBlur={() => {
+                            onBlur();
+                            setConfirmPasswordFocused(false);
+                          }}
+                          onFocus={() => setConfirmPasswordFocused(true)}
+                          returnKeyType="done"
+                          onSubmitEditing={handleSignupSubmit}
+                        />
+                      )}
+                    />
+                    <TouchableOpacity 
+                      style={styles.visibilityToggle}
+                      onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                      activeOpacity={0.7}
+                    >
+                      <MaterialIcons 
+                        name={showConfirmPassword ? "visibility" : "visibility-off"} 
+                        size={20} 
+                        color="#5f5e5e" 
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  {errors.confirmPassword && (
+                    <Text style={styles.errorText}>{errors.confirmPassword.message}</Text>
+                  )}
+                </View>
+
+                {/* Terms and Conditions */}
+                <View style={styles.termsContainer}>
                   <Controller
                     control={control}
                     name="terms"
                     render={({ field: { onChange, value } }) => (
-                      <AuthCheckbox checked={value} onChange={onChange}>
-                        <Text style={styles.checkboxLabel}>
-                          I agree to the <Text style={styles.link}>Terms of Service</Text> and <Text style={styles.link}>Privacy Policy</Text>
+                      <TouchableOpacity 
+                        style={styles.checkboxWrapper}
+                        onPress={() => onChange(!value)}
+                        activeOpacity={0.8}
+                      >
+                        <View style={[
+                          styles.checkbox, 
+                          value && styles.checkboxChecked
+                        ]}>
+                          {value && (
+                            <MaterialIcons name="check" size={16} color={COLORS.white} />
+                          )}
+                        </View>
+                        <Text style={styles.termsText}>
+                          I agree to the <Text style={styles.linkText}>Terms of Service</Text> and <Text style={styles.linkText}>Privacy Policy</Text>
                         </Text>
-                      </AuthCheckbox>
+                      </TouchableOpacity>
                     )}
                   />
-                  {errors.terms && <Text style={styles.errorText}>{errors.terms.message}</Text>}
+                  {errors.terms && (
+                    <Text style={styles.errorText}>{errors.terms.message}</Text>
+                  )}
                 </View>
 
+                {/* Signup Error Banner */}
                 {signupError && (
                   <View style={styles.errorBanner}>
-                    <MaterialCommunityIcons name="alert-circle-outline" size={18} color="#DC2626" />
+                    <MaterialIcons name="error-outline" size={18} color={COLORS.error} />
                     <Text style={styles.errorBannerText}>{signupError}</Text>
                   </View>
                 )}
 
-                <Button 
-                  title="Sign Up"
-                  onPress={handleSignupSubmit}
-                  loading={loading}
-                  size="large"
-                  style={styles.signupBtn}
-                />
+                {/* Actions Group */}
+                <View style={styles.actionsGroup}>
+                  {/* Signup Button */}
+                  <PrimaryButton 
+                    title="Sign Up"
+                    onPress={handleSignupSubmit}
+                    loading={loading}
+                    disabled={loading}
+                    activeOpacity={0.9}
+                    iconElement={<MaterialIcons name="arrow-forward" size={20} color={COLORS.white} />}
+                    iconPosition="right"
+                  />
 
-                <View style={styles.footer}>
-                  <Text style={styles.footerText}>Already have an account?</Text>
-                  <TouchableOpacity onPress={() => navigation.navigate('Login')} activeOpacity={0.7}>
-                    <Text style={styles.loginLink}>Login</Text>
-                  </TouchableOpacity>
+                  {/* Redirect Link */}
+                  <View style={styles.bottomLoginContainer}>
+                    <Text style={styles.bottomLoginText}>Already have an account? </Text>
+                    <TouchableOpacity onPress={() => navigation.replace('Login')} activeOpacity={0.7}>
+                      <Text style={styles.loginLinkText}>Login</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
+
               </View>
             </ScrollView>
           </KeyboardAvoidingView>
@@ -408,102 +529,213 @@ export const SignupScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.surface || '#F8F9FA',
+    backgroundColor: COLORS.background,
+  },
+  screenContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background,
   },
   flex: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 0,
-    paddingTop: 0,
+    flexGrow: 1,
+    backgroundColor: COLORS.background,
   },
-  card: {
+  headerContainer: {
+    height: height * 0.30,
+    position: 'relative',
+    paddingHorizontal: 24,
+  },
+  headerBg: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: COLORS.primary,
+  },
+  headerContent: {
+    flex: 1,
+    justifyContent: 'space-between',
+    paddingTop: 16,
+    paddingBottom: 24,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.text,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  titleContainer: {
+    marginTop: 'auto',
+  },
+  headlineTitle: {
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: '700',
+    color: COLORS.white,
+    marginBottom: 4,
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : undefined,
+  },
+  bodyText: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : undefined,
+  },
+  mainContent: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    backgroundColor: COLORS.background,
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 6,
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : undefined,
+  },
+  inputWrapper: {
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 8,
     backgroundColor: COLORS.white,
-    borderRadius: 24,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.xl,
-    marginTop: -32,
-    marginHorizontal: SPACING.md,
-    marginBottom: SPACING.md,
-    ...SHADOWS.premium,
+    paddingHorizontal: 12,
   },
-  compactInput: {
-    marginBottom: SPACING.sm,
+  inputWrapperFocused: {
+    borderColor: COLORS.primary,
+    borderWidth: 1,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  row: {
+  inputWrapperError: {
+    borderColor: COLORS.error,
+  },
+  inputIcon: {
+    marginRight: 8,
+  },
+  textInput: {
+    flex: 1,
+    height: '100%',
+    fontSize: 14,
+    color: COLORS.text,
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : undefined,
+    paddingVertical: 0,
+  },
+  visibilityToggle: {
+    padding: 4,
+  },
+  errorText: {
+    color: COLORS.error,
+    fontSize: 12,
+    marginTop: 4,
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : undefined,
+  },
+  termsContainer: {
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  checkboxWrapper: {
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
-  halfInputLeft: {
-    flex: 1,
-    marginRight: SPACING.xs,
-    marginBottom: SPACING.sm,
-  },
-  halfInputRight: {
-    flex: 1,
-    marginLeft: SPACING.xs,
-    marginBottom: SPACING.sm,
-  },
-  compactSection: {
-    marginBottom: SPACING.sm,
-  },
-  checkboxLabel: {
-    ...TYPOGRAPHY.bodyMedium,
-    color: '#6B7280',
-    lineHeight: 18,
-  },
-  link: {
-    color: COLORS.primary,
-    fontWeight: '700',
-  },
-  signupBtn: {
-    marginTop: SPACING.md,
-    backgroundColor: COLORS.primary,
-    borderRadius: 16,
-    height: 56,
-  },
-  footer: {
-    flexDirection: 'row',
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 4,
+    backgroundColor: COLORS.white,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: SPACING.xl,
-    paddingTop: SPACING.lg,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    gap: SPACING.xs,
-  },
-  footerText: {
-    color: '#6B7280',
-    ...TYPOGRAPHY.bodyMedium,
-    fontWeight: '500',
-  },
-  loginLink: {
-    color: COLORS.primary,
-    ...TYPOGRAPHY.bodyMedium,
-    fontWeight: '700',
-  },
-  errorText: {
-    color: COLORS.error || '#DC2626',
-    ...TYPOGRAPHY.caption,
+    marginRight: 12,
     marginTop: 2,
-    marginLeft: 6,
+  },
+  checkboxChecked: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  termsText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 18,
+    color: COLORS.textSecondary,
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : undefined,
+  },
+  linkText: {
+    color: COLORS.primary,
     fontWeight: '600',
   },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#FF525215',
     borderWidth: 1,
-    borderColor: '#FCA5A5',
-    borderRadius: 12,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-    gap: SPACING.xs,
+    borderColor: COLORS.error,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    gap: 8,
   },
   errorBannerText: {
-    color: '#991B1B',
-    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.primaryDark,
+    fontSize: 12,
     fontWeight: '600',
     flex: 1,
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : undefined,
+  },
+  actionsGroup: {
+    marginTop: 'auto',
+    paddingTop: 16,
+    paddingBottom: 16,
+  },
+  signupButton: {
+    height: 48,
+    backgroundColor: COLORS.primary,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    ...SHADOWS.soft,
+  },
+  disabledButton: {
+    opacity: 0.7,
+  },
+  signupButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.white,
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : undefined,
+  },
+  bottomLoginContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 24,
+  },
+  bottomLoginText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : undefined,
+  },
+  loginLinkText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.primary,
+    textDecorationLine: 'underline',
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : undefined,
   },
 });

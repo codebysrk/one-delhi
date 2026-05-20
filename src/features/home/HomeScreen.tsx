@@ -3,7 +3,6 @@ import { StyleSheet, Text, View, TouchableOpacity, Animated } from "react-native
 import { Image } from "expo-image";
 import { Screen } from "../../components/layout/Screen";
 import { useAppStore } from "../../store/useAppStore";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { MetroLogo } from "../../components/icons/MetroLogo";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { TicketCard } from "../../components/ui/TicketCard";

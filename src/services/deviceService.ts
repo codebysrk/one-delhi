@@ -3,7 +3,7 @@ import * as Network from 'expo-network';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
-import { doc, setDoc, updateDoc, getDoc, onSnapshot } from 'firebase/firestore';
+
 import { db } from './firebase';
 import { sanitizePayload } from '../utils/firebaseUtils';
 import { logAction } from './logService';
@@ -44,16 +44,16 @@ export const registerDevice = async (
 ): Promise<{ deviceId: string; status: string; forceLogout: boolean } | null> => {
   try {
     const deviceId = await getOrCreateDeviceId();
-    const deviceRef = doc(db, 'devices', deviceId);
+    const deviceRef = db.collection('devices').doc(deviceId);
     
     let deviceSnap;
     try {
-      deviceSnap = await getDoc(deviceRef);
+      deviceSnap = await deviceRef.get();
     } catch (e: any) {
       if (e.code === 'permission-denied') {
         // Retry once after a small delay - sometimes auth token takes a moment
         await new Promise(resolve => setTimeout(resolve, 1500));
-        deviceSnap = await getDoc(deviceRef);
+        deviceSnap = await deviceRef.get();
       } else {
         throw e;
       }
@@ -64,8 +64,8 @@ export const registerDevice = async (
       ipAddress = (await Network.getIpAddressAsync()) || 'Unknown';
     } catch {}
 
-    const existingStatus = deviceSnap.exists() ? deviceSnap.data().status : 'APPROVED';
-    const existingForceLogout = deviceSnap.exists() ? deviceSnap.data().forceLogout : false;
+    const existingStatus = deviceSnap.exists ? deviceSnap.data()?.status : 'APPROVED';
+    const existingForceLogout = deviceSnap.exists ? deviceSnap.data()?.forceLogout : false;
 
     // If device is already banned, don't try to update or log anything (prevents permission-denied)
     if (existingStatus === 'BANNED') {
@@ -75,7 +75,7 @@ export const registerDevice = async (
 
     const now = Date.now();
 
-    if (!deviceSnap.exists()) {
+    if (!deviceSnap.exists) {
       // New device — full registration
       const deviceData = sanitizePayload({
         deviceId,
@@ -96,7 +96,7 @@ export const registerDevice = async (
         forceLogout: false,
       });
 
-      await setDoc(deviceRef, deviceData);
+      await deviceRef.set(deviceData);
 
       await logAction({
         userId,
@@ -111,7 +111,7 @@ export const registerDevice = async (
       });
     } else {
       // Existing device — update activity
-      await updateDoc(deviceRef, sanitizePayload({
+      await deviceRef.update(sanitizePayload({
         lastActive: now,
         ipAddress,
         userId,
@@ -140,15 +140,15 @@ export const listenToDeviceSecurity = (
 ): (() => void) => {
   if (!deviceId) return () => {};
 
-  return onSnapshot(doc(db, 'devices', deviceId), (snap) => {
-    if (!snap.exists()) return;
+  return db.collection('devices').doc(deviceId).onSnapshot((snap) => {
+    if (!snap || !snap.exists) return;
     const data = snap.data();
-    if (data.status === 'BANNED') {
+    if (data?.status === 'BANNED') {
       onAction('BANNED');
-    } else if (data.forceLogout === true) {
+    } else if (data?.forceLogout === true) {
       onAction('LOGOUT');
     }
-  }, (error) => {
+  }, (error: any) => {
     if (error.code === 'permission-denied') {
       // If permission is denied, it's because the security rules (isNotBanned) 
       // have blocked access, which means the user or device is likely banned.
@@ -163,7 +163,7 @@ export const listenToDeviceSecurity = (
 export const updateLastActive = async (deviceId: string): Promise<void> => {
   if (!deviceId) return;
   try {
-    await updateDoc(doc(db, 'devices', deviceId), { lastActive: Date.now() });
+    await db.collection('devices').doc(deviceId).update({ lastActive: Date.now() });
   } catch {
     // Silent — non-critical
   }
@@ -173,6 +173,6 @@ export const updateLastActive = async (deviceId: string): Promise<void> => {
 export const clearForceLogout = async (deviceId: string): Promise<void> => {
   if (!deviceId) return;
   try {
-    await updateDoc(doc(db, 'devices', deviceId), { forceLogout: false });
+    await db.collection('devices').doc(deviceId).update({ forceLogout: false });
   } catch {}
 };

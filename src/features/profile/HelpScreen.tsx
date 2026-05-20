@@ -1,13 +1,13 @@
 import React, { useState, useMemo, useCallback, memo } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar, Platform, ImageBackground, ScrollView, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, StatusBar, Platform, ScrollView, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Screen } from "../../components/layout/Screen";
-import { Image } from "expo-image";
+import { PrimaryButton } from "../../components/ui/PrimaryButton";
 import { useAppStore } from "../../store/useAppStore";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { FlashList } from "@shopify/flash-list";
 import { MainHeader } from "../../components/layout/Header";
-import Animated, { useSharedValue, useAnimatedStyle, withSpring, interpolate } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
 
 export const HelpScreen = ({ navigation }: any) => {
   const { width } = useWindowDimensions();
@@ -447,9 +447,11 @@ export const HelpScreen = ({ navigation }: any) => {
           <Text style={styles.actionHint}>
             Can't find what you're looking for?
           </Text>
-          <TouchableOpacity style={styles.actionBtn} activeOpacity={0.8}>
-            <Text style={styles.actionBtnText}>Raise New Complaint</Text>
-          </TouchableOpacity>
+          <PrimaryButton
+            title="Raise New Complaint"
+            onPress={() => {}}
+            activeOpacity={0.8}
+          />
         </View>
       </View>
     </Screen>

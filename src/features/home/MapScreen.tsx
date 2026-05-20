@@ -33,8 +33,6 @@ import Animated, {
   FadeInRight,
 } from "react-native-reanimated";
 import { useAppStore } from "../../store/useAppStore";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "../../services/firebase";
 import { BottomSheet } from "../../components/layout/BottomSheet";
 import { MainHeader } from "../../components/layout/Header";
 import { ANIMATIONS } from "../../core/theme";

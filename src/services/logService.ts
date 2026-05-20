@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import firestore from '@react-native-firebase/firestore';
 import { db } from './firebase';
 import { sanitizePayload } from '../utils/firebaseUtils';
 
@@ -57,12 +57,12 @@ export const logAction = async (data: Omit<LogData, 'timestamp'>): Promise<void>
     const logData = sanitizePayload({
       ...data,
       deviceMeta,
-      timestamp: serverTimestamp(),
+      timestamp: firestore.FieldValue.serverTimestamp(),
     });
 
     try {
-      const logRef = doc(collection(db, 'logs'));
-      await setDoc(logRef, logData, { merge: true });
+      const logRef = db.collection('logs').doc();
+      await logRef.set(logData, { merge: true });
     } catch (error: any) {
       if (error.code === 'permission-denied') {
         // Silent catch for security-related permission denials

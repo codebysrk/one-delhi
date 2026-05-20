@@ -4,17 +4,14 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ImageBackground,
   useWindowDimensions,
   Dimensions,
   ScrollView,
-  TextInput,
 } from "react-native";
 import { GoogleMap, GoogleMapRef } from "../../components/ui/GoogleMap";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Screen } from "../../components/layout/Screen";
-import { Image } from "expo-image";
 import * as Location from "expo-location";
 import { MainHeader } from "../../components/layout/Header";
 

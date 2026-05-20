@@ -12,21 +12,14 @@ import {
   TouchableOpacity,
   Alert,
   TextInput,
-  Dimensions,
   Keyboard,
-  Modal,
-  useWindowDimensions,
-  BackHandler,
-  Platform,
   ScrollView,
-  KeyboardAvoidingView,
-  FlatList,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { PortalProvider } from "../../components/ui/Portal";
 import { Screen } from "../../components/layout/Screen";
 import { Header } from "../../components/layout/Header";
-import { FlashList } from "@shopify/flash-list";
-const AnyFlashList = FlashList as any;
+import { SearchableDropdown } from "../../components/ui/SearchableDropdown";
 import { useAppStore } from "../../store/useAppStore";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
@@ -36,10 +29,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  FadeInUp,
-  FadeOutDown,
 } from "react-native-reanimated";
-import { getDocs, collection } from "firebase/firestore";
 import { db } from "../../services/firebase";
 import { AppState, AppStateStatus } from "react-native";
 import { ANIMATIONS } from "../../core/theme";
@@ -51,6 +41,7 @@ import {
   responsiveWidth,
   responsiveHeight,
 } from "../../core/responsive";
+import { PrimaryButton } from "../../components/ui/PrimaryButton";
 
 // --- 1. Separate Memoized Item Components for Peak Performance ---
 
@@ -74,11 +65,7 @@ const RouteItem = React.memo(
         <View style={styles.routeItemContent}>
           <View style={styles.routeIconHeader}>
             <View style={styles.routeCircleWrapper}>
-              <MaterialCommunityIcons
-                name="bus"
-                size={22}
-                color="#000000ff"
-              />
+              <MaterialCommunityIcons name="bus" size={22} color="#000000ff" />
             </View>
             <Text style={styles.routeNumberText}>
               {item.id?.replace(/UP$|DOWN$/, "")}
@@ -269,7 +256,10 @@ const BusTypeSelector = React.memo(
             key={type}
             style={[
               styles.typeBtn,
-              type === "AC" && { paddingHorizontal: moderateScale(10), minWidth: moderateScale(40) },
+              type === "AC" && {
+                paddingHorizontal: moderateScale(10),
+                minWidth: moderateScale(40),
+              },
               busType === type &&
                 (type === "AC"
                   ? styles.typeBtnActive
@@ -346,12 +336,14 @@ const FareDisplay = React.memo(
     return (
       <View style={styles.fareRow}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.bottomLabel}>
-            Amount Payable
-          </Text>
+          <Text style={styles.bottomLabel}>Amount Payable</Text>
           <Animated.View style={[styles.priceRow, animatedStyle]}>
             <Text style={styles.oldPrice}>₹{finalFare.originalTotal}</Text>
-            <TouchableOpacity onPress={onPress} activeOpacity={0.7} disabled={!showDiscount}>
+            <TouchableOpacity
+              onPress={onPress}
+              activeOpacity={0.7}
+              disabled={!showDiscount}
+            >
               {isEditing ? (
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
                   <Text style={styles.newPrice}>₹</Text>
@@ -372,14 +364,14 @@ const FareDisplay = React.memo(
             </TouchableOpacity>
           </Animated.View>
         </View>
-        <Animated.View style={[{ justifyContent: 'center' }, animatedStyle]}>
+        <Animated.View style={[{ justifyContent: "center" }, animatedStyle]}>
           <View style={styles.discountBadge}>
             <Text style={styles.discountText}>10.0% off</Text>
           </View>
         </Animated.View>
       </View>
     );
-  }
+  },
 );
 
 export const BookingScreen = ({ navigation }: any) => {
@@ -393,24 +385,16 @@ export const BookingScreen = ({ navigation }: any) => {
   const [routeSearch, setRouteSearch] = useState("");
   const [sourceSearch, setSourceSearch] = useState("");
   const [destSearch, setDestSearch] = useState("");
-  const [activeInput, setActiveInput] = useState<
-    "route" | "source" | "dest" | null
-  >(null);
-
   const [isManualFare, setIsManualFare] = useState(false);
   const [manualTotal, setManualTotal] = useState("");
   const [selectedFullRouteId, setSelectedFullRouteId] = useState("");
+  const [selectedSourceIndex, setSelectedSourceIndex] = useState<number | null>(null);
   const [dbRoutes, setDbRoutes] = useState<Route[]>([]);
   const [isDbLoading, setIsDbLoading] = useState(true);
-  const [routeSelection, setRouteSelection] = useState<
-    { start: number; end: number } | undefined
-  >(undefined);
-  const [sourceSelection, setSourceSelection] = useState<
-    { start: number; end: number } | undefined
-  >(undefined);
-  const [destSelection, setDestSelection] = useState<
-    { start: number; end: number } | undefined
-  >(undefined);
+
+  const routeDropdownRef = useRef<{ focus: () => void; blur: () => void }>(null);
+  const sourceDropdownRef = useRef<{ focus: () => void; blur: () => void }>(null);
+  const destDropdownRef = useRef<{ focus: () => void; blur: () => void }>(null);
 
   // Fare calculation state
   const [validationStatus, setValidationStatus] = useState<
@@ -434,49 +418,23 @@ export const BookingScreen = ({ navigation }: any) => {
     }
   };
 
-  const { height: windowHeight } = useWindowDimensions();
   const [showToast, setShowToast] = useState(false);
-  const routeInputRef = useRef<TextInput>(null);
-  const sourceInputRef = useRef<TextInput>(null);
-  const destInputRef = useRef<TextInput>(null);
-  const isSelecting = useRef(false);
-  const autoFocusTrack = useRef({ route: false, source: false });
-  const [measuredPos, setMeasuredPos] = useState({
-    x: 0,
-    y: 0,
-    width: 0,
-    height: 0,
-  });
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-
-  useEffect(() => {
-    const showSubscription = Keyboard.addListener("keyboardDidShow", () =>
-      setIsKeyboardVisible(true),
-    );
-    const hideSubscription = Keyboard.addListener("keyboardDidHide", () =>
-      setIsKeyboardVisible(false),
-    );
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, []);
-
   const resetForm = useCallback(() => {
     setRouteSearch("");
     setSourceSearch("");
     setDestSearch("");
+    setSelectedSourceIndex(null);
     setQty(1);
     setBusType("AC");
     timeLeft.value = 180;
     setTimeLeftForLogic(180);
-    setActiveInput(null);
   }, []);
 
   // Reset stops when route changes
   useEffect(() => {
     setSourceSearch("");
     setDestSearch("");
+    setSelectedSourceIndex(null);
     setIsManualFare(false);
     setManualTotal("");
   }, [routeSearch]);
@@ -488,19 +446,19 @@ export const BookingScreen = ({ navigation }: any) => {
     const fetchRoutes = async () => {
       try {
         setIsDbLoading(true);
-        const querySnapshot = await getDocs(collection(db, "routes"));
+        const querySnapshot = await db.collection("routes").get();
         const fetchedRoutes: Route[] = [];
 
         querySnapshot.forEach((docSnap) => {
           const r = docSnap.data();
-          if (r.directions?.up) {
+          if (r.directions?.up && Array.isArray(r.directions.up.stops) && r.directions.up.stops.length > 0) {
             fetchedRoutes.push({
               id: `${r.route}UP`,
               name: `${r.route} UP`,
               stops: r.directions.up.stops,
             });
           }
-          if (r.directions?.down) {
+          if (r.directions?.down && Array.isArray(r.directions.down.stops) && r.directions.down.stops.length > 0) {
             fetchedRoutes.push({
               id: `${r.route}DOWN`,
               name: `${r.route} DOWN`,
@@ -565,22 +523,7 @@ export const BookingScreen = ({ navigation }: any) => {
     }, []),
   );
 
-  // Android Back Button Handling
-  useEffect(() => {
-    const backAction = () => {
-      if (activeInput) {
-        setActiveInput(null);
-        return true;
-      }
-      return false;
-    };
-
-    const backHandler = BackHandler.addEventListener(
-      "hardwareBackPress",
-      backAction,
-    );
-    return () => backHandler.remove();
-  }, [activeInput]);
+  // Android Back Button Handling handled by components
 
   useEffect(() => {
     if (timeLeftForLogic === 0) {
@@ -736,9 +679,9 @@ export const BookingScreen = ({ navigation }: any) => {
       total: finalFare.total,
     };
 
-    navigation.navigate("Payment", { 
+    navigation.navigate("Payment", {
       ticketData,
-      timeLeft: Math.floor(timeLeft.value)
+      timeLeft: Math.floor(timeLeft.value),
     });
   }, [
     routeSearch,
@@ -751,482 +694,243 @@ export const BookingScreen = ({ navigation }: any) => {
     navigation,
   ]);
 
-  const filteredRoutes = useMemo(() => {
-    if (activeInput !== "route") return [];
-    
-    // 1. Initial empty search or clearing input: show top 10 routes only to keep rendering load extremely low
-    if (!routeSearch) return dbRoutes.slice(0, 10);
-
-    // If the search text is exactly the selected route, show top 10 routes so user can change it
-    const isFullSelection = dbRoutes.some(
-      (r) =>
-        `${r.id?.replace(/UP$|DOWN$/, "")}-${r.stops?.[r.stops.length - 1]}` ===
-        routeSearch,
-    );
-    if (isFullSelection) return dbRoutes.slice(0, 10);
-
-    // 2. Active search: filter base routes dynamically
-    const normalizeRoute = (str: string) => {
-      return str.toUpperCase().replace(/[\s-]/g, '');
-    };
-    const normalizedQuery = normalizeRoute(routeSearch);
-
-    return dbRoutes.filter((r) => {
-      const normalizedId = normalizeRoute(r.id || '');
-      const normalizedName = normalizeRoute(r.name || '');
-      return normalizedId.includes(normalizedQuery) || normalizedName.includes(normalizedQuery);
-    });
-  }, [routeSearch, activeInput, dbRoutes]);
+  const dropdownRoutesData = useMemo(() => {
+    return dbRoutes.map((r) => ({
+      id: r.id,
+      route: r.id.replace(/UP$|DOWN$/, ""),
+      source: r.stops[0],
+      dest: r.stops[r.stops.length - 1],
+      originalItem: r,
+    }));
+  }, [dbRoutes]);
 
   const currentRouteStops = useMemo(() => {
-    if (!routeSearch) return [];
-
-    // First, try finding by the full ID we saved during selection
-    if (selectedFullRouteId) {
-      const found = dbRoutes.find((r) => r.id === selectedFullRouteId);
-      if (found) return found.stops;
-    }
-
-    // Fallback for manual typing: match base route ID
-    const searchId = routeSearch.split("-")[0].trim().toLowerCase();
-    const found = dbRoutes.find((r) => {
-      const baseId = r.id?.replace(/UP$|DOWN$/, "").toLowerCase();
-      return (
-        baseId === searchId ||
-        r.id?.toLowerCase() === searchId ||
-        r.name?.toLowerCase() === searchId
-      );
-    });
-
+    if (!selectedFullRouteId) return [];
+    const found = dbRoutes.find((r) => r.id === selectedFullRouteId);
     return found ? found.stops : [];
-  }, [routeSearch, selectedFullRouteId, dbRoutes]);
+  }, [selectedFullRouteId, dbRoutes]);
 
-  const filteredSources = useMemo(() => {
-    if (activeInput !== "source") return [];
-    if (!sourceSearch) return currentRouteStops;
+  const sourceDropdownData = useMemo(() => {
+    return currentRouteStops.map((stop, index) => ({
+      id: `${stop}-${index}`,
+      name: stop,
+      index,
+    }));
+  }, [currentRouteStops]);
 
-    // If it's a full selection, show all stops of the route
-    if (currentRouteStops.includes(sourceSearch)) return currentRouteStops;
+  const destDropdownData = useMemo(() => {
+    const mappedStops = currentRouteStops.map((stop, index) => ({
+      id: `${stop}-${index}`,
+      name: stop,
+      index,
+    }));
 
-    const searchLower = sourceSearch.toLowerCase().trim();
-    return currentRouteStops.filter((s) =>
-      s.toLowerCase().includes(searchLower),
-    );
-  }, [sourceSearch, activeInput, currentRouteStops]);
-
-  const filteredDests = useMemo(() => {
-    if (activeInput !== "dest") return [];
-    let stopsToFilter = currentRouteStops;
     if (sourceSearch) {
-      const sourceIdx = currentRouteStops.indexOf(sourceSearch);
-      if (sourceIdx !== -1) {
-        stopsToFilter = currentRouteStops.slice(sourceIdx + 1);
+      const idx = selectedSourceIndex !== null ? selectedSourceIndex : currentRouteStops.indexOf(sourceSearch);
+      if (idx !== -1) {
+        return mappedStops.slice(idx + 1);
       }
     }
-    stopsToFilter = stopsToFilter.filter((s) => s !== sourceSearch);
-    if (!destSearch) return stopsToFilter;
-
-    // If it's a full selection, show all remaining stops
-    if (stopsToFilter.includes(destSearch)) return stopsToFilter;
-
-    const searchLower = destSearch.toLowerCase().trim();
-    return stopsToFilter.filter((s) => s.toLowerCase().includes(searchLower));
-  }, [destSearch, activeInput, currentRouteStops, sourceSearch]);
-
-  const dropdownPlacement = useMemo(() => {
-    if (!activeInput) return null;
-
-    const SAFE_MARGIN = 50;
-    const inputTop = measuredPos.y;
-    const inputBottom = measuredPos.y + measuredPos.height;
-
-    const spaceAbove = inputTop - SAFE_MARGIN;
-    const spaceBelow = windowHeight - inputBottom - SAFE_MARGIN;
-
-    // Decide direction: prefer downward unless space is very limited
-    const openUpward = spaceBelow < 250 && spaceAbove > spaceBelow;
-
-    if (openUpward) {
-      return {
-        bottom: windowHeight - inputTop,
-        maxHeight: spaceAbove,
-        positionStyle: {
-          bottom: windowHeight - inputTop,
-          maxHeight: spaceAbove,
-        },
-      };
-    } else {
-      return {
-        top: inputBottom,
-        maxHeight: spaceBelow,
-        positionStyle: { top: inputBottom, maxHeight: spaceBelow },
-      };
-    }
-  }, [activeInput, measuredPos, windowHeight]);
-
-  const handleFocus = useCallback(
-    (type: "route" | "source" | "dest") => {
-      if (isSelecting.current) return;
-
-      // When route is clicked, clear everything to start fresh
-      if (type === "route") {
-        setRouteSearch("");
-        setSelectedFullRouteId("");
-        setSourceSearch("");
-        setDestSearch("");
-      }
-
-      // Double check: don't open source/dest if prerequisites aren't met
-      if ((type === "source" || type === "dest") && !selectedFullRouteId) {
-        return;
-      }
-      if (type === "dest" && !sourceSearch) {
-        return;
-      }
-
-      if (type === "source") setSourceSearch("");
-      if (type === "dest") setDestSearch("");
-
-      const ref =
-        type === "route"
-          ? routeInputRef
-          : type === "source"
-            ? sourceInputRef
-            : destInputRef;
-
-      // Measure and open dropdown
-      ref.current?.measure((x, y, width, height, pageX, pageY) => {
-        const finalY = pageY || 0;
-        setMeasuredPos({ x: pageX, y: finalY, width, height });
-        setActiveInput(type);
-      });
-    },
-    [currentRouteStops, selectedFullRouteId, sourceSearch],
-  );
-
-  const handleSelect = useCallback(
-    (type: "route" | "source" | "dest", item: any) => {
-      if (isSelecting.current) return;
-      isSelecting.current = true;
-
-      // 1. Update state based on type
-      if (type === "route") {
-        const destination = item.stops[item.stops.length - 1];
-        const displayId = item.id.replace(/UP$|DOWN$/, "");
-        setRouteSearch(`${displayId}-${destination}`);
-        setSelectedFullRouteId(item.id);
-        // Reset cursor to beginning so start of text is visible
-        setRouteSelection({ start: 0, end: 0 });
-        setTimeout(() => setRouteSelection(undefined), 300);
-      } else if (type === "source") {
-        setSourceSearch(item);
-        setSourceSelection({ start: 0, end: 0 });
-        setTimeout(() => setSourceSelection(undefined), 300);
-      } else if (type === "dest") {
-        setDestSearch(item);
-        setDestSelection({ start: 0, end: 0 });
-        setTimeout(() => setDestSelection(undefined), 300);
-      }
-
-      // 2. Clear focus and prepare next step
-      routeInputRef.current?.blur();
-      sourceInputRef.current?.blur();
-      destInputRef.current?.blur();
-
-      // 3. Close dropdown and focus next field
-      // 3. Close dropdown
-      setTimeout(() => {
-        setActiveInput(null);
-        isSelecting.current = false;
-      }, 100);
-    },
-    [handleFocus],
-  );
-
-  // Auto-focus logic using useEffect to handle async state updates properly
-  useEffect(() => {
-    if (
-      selectedFullRouteId &&
-      !sourceSearch &&
-      !activeInput &&
-      !autoFocusTrack.current.route
-    ) {
-      autoFocusTrack.current.route = true;
-      handleFocus("source");
-    } else if (
-      selectedFullRouteId &&
-      sourceSearch &&
-      !destSearch &&
-      !activeInput &&
-      !autoFocusTrack.current.source
-    ) {
-      autoFocusTrack.current.source = true;
-      handleFocus("dest");
-    }
-
-    // Reset tracking if fields are cleared
-    if (!selectedFullRouteId) autoFocusTrack.current.route = false;
-    if (!sourceSearch) autoFocusTrack.current.source = false;
-  }, [selectedFullRouteId, sourceSearch, destSearch, handleFocus, activeInput]);
-
-  // Use the memoized components in renderItem
-  const onRouteSelect = useCallback(
-    (item: any) => handleSelect("route", item),
-    [handleSelect],
-  );
-
-  const renderRouteItem = useCallback(
-    ({ item, index }: { item: any; index: number }) => (
-      <RouteItem item={item} index={index} onSelect={onRouteSelect} />
-    ),
-    [onRouteSelect],
-  );
-
-  const renderSourceDestItem = useCallback(
-    ({ item, index }: { item: any; index: number }) => (
-      <StopItem
-        item={item}
-        index={index}
-        onSelect={handleSelect}
-        activeInput={activeInput}
-      />
-    ),
-    [activeInput, handleSelect],
-  );
+    return mappedStops;
+  }, [currentRouteStops, sourceSearch, selectedSourceIndex]);
 
   const insets = useSafeAreaInsets();
 
   return (
-    <Screen noPadding ignoreTopSafe style={styles.container}>
-      {/* Header */}
-      <Header
-        title="Buy tickets"
-        centerTitle={true}
-        onBackPress={() => navigation.goBack()}
-        titleStyle={{ fontSize: 22 }}
-      />
+    <PortalProvider>
+      <Screen noPadding ignoreTopSafe style={styles.container}>
+        {/* Header */}
+        <Header
+          title="Buy tickets"
+          centerTitle={true}
+          onBackPress={() => navigation.goBack()}
+          titleStyle={{ fontSize: 22 }}
+        />
 
-      <View style={[styles.container, { flex: 0 }]}>
-        <TimerPill timeLeft={timeLeft} />
-      </View>
+        {/* Timer */}
+        <View style={styles.timerContainer}>
+          <TimerPill timeLeft={timeLeft} />
+        </View>
 
-      {/* Content Scroll Wrapper */}
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <ScrollView
-          style={styles.contentScroll}
-          contentContainerStyle={styles.contentScrollContainer}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          scrollEventThrottle={16}
-          onScroll={() => {
-            if (activeInput) {
-              setActiveInput(null);
-              routeInputRef.current?.blur();
-              sourceInputRef.current?.blur();
-              destInputRef.current?.blur();
-            }
-          }}
-        >
-          <View style={styles.card}>
-            {/* Route Input */}
-            <View style={styles.inputSection}>
-              <Text style={styles.inputLabel}>Route Info</Text>
-              <View
-                style={[
-                  styles.inputBox,
-                  activeInput === "route" && styles.inputBoxFocused,
-                ]}
-              >
-                <View style={styles.inputIcon}>
-                  <MaterialIcons name="route" size={24} color="#000" />
-                </View>
-                <TextInput
-                  ref={routeInputRef}
-                  style={styles.input}
-                  placeholder="Current Route"
-                  placeholderTextColor="#9CA3AF"
+        {/* Main layout: ScrollView + fixed bottom — wrapped in flex:1 */}
+        <View style={styles.mainLayout}>
+          <ScrollView
+            style={styles.contentScroll}
+            contentContainerStyle={styles.contentScrollContainer}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            scrollEventThrottle={16}
+          >
+            <View style={styles.card}>
+              {/* Route Input */}
+              <View style={styles.inputSection}>
+                <Text style={styles.inputLabel}>Route Info</Text>
+                <SearchableDropdown
+                  ref={routeDropdownRef}
+                  data={dropdownRoutesData}
                   value={routeSearch}
                   onChangeText={setRouteSearch}
-                  onFocus={() => handleFocus("route")}
-                  autoCorrect={false}
-                  autoCapitalize="characters"
-                  multiline={false}
-                  scrollEnabled
-                  selection={routeSelection}
+                  onSelect={(item: any) => {
+                    const displayId = item.id.replace(/UP$|DOWN$/, "");
+                    setRouteSearch(`${displayId}-${item.dest}`);
+                    setSelectedFullRouteId(item.id);
+                    setSourceSearch("");
+                    setDestSearch("");
+                    // First input selection ke baad automatically second (source) input trigger and focus
+                    setTimeout(() => {
+                      sourceDropdownRef.current?.focus();
+                    }, 100);
+                  }}
+                  variant="route"
+                  searchKeys={["route", "source", "dest"]}
+                  displayKey="route"
+                  keyExtractor={(item: any) => item.id}
+                  placeholder="Current Route"
+                  leftIcon={
+                    <MaterialIcons name="route" size={24} color="#000" />
+                  }
+                  storageKey="recent_routes"
+                  maxHeight={550}
+                  onFocus={() => {
+                    setRouteSearch("");
+                    setSelectedFullRouteId("");
+                    setSourceSearch("");
+                    setDestSearch("");
+                    setSelectedSourceIndex(null);
+                  }}
+                  keyboardOpenMaxHeight={500}
                 />
               </View>
-            </View>
 
-            {/* Source/Destination */}
-            <View style={styles.inputSection}>
-              <Text style={styles.inputLabel}>From - To</Text>
-              <View
-                style={[
-                  styles.inputBox,
-                  activeInput === "source" && styles.inputBoxFocused,
-                  !selectedFullRouteId && styles.inputBoxDisabled,
-                ]}
-              >
-                <View style={styles.inputIcon}>
-                  <View style={styles.stopDot} />
-                </View>
-                <TextInput
-                  ref={sourceInputRef}
-                  style={styles.input}
-                  placeholder="Source Stop"
-                  placeholderTextColor="#9CA3AF"
+              {/* Source/Destination */}
+              <View style={styles.inputSection}>
+                <Text style={styles.inputLabel}>From - To</Text>
+                <SearchableDropdown
+                  ref={sourceDropdownRef}
+                  data={sourceDropdownData}
                   value={sourceSearch}
                   onChangeText={setSourceSearch}
-                  onFocus={() => handleFocus("source")}
-                  editable={!!selectedFullRouteId}
-                  multiline={false}
-                  scrollEnabled
-                  selection={sourceSelection}
+                  onSelect={(item: any) => {
+                    setSourceSearch(item.name);
+                    setSelectedSourceIndex(item.index);
+                    // Second input selection ke baad automatically third (destination) input trigger and focus
+                    setTimeout(() => {
+                      destDropdownRef.current?.focus();
+                    }, 100);
+                  }}
+                  variant="simple"
+                  searchKeys={["name"]}
+                  displayKey="name"
+                  keyExtractor={(item: any) => item.id}
+                  placeholder="Source Stop"
+                  editable={!!selectedFullRouteId && routeSearch.length > 0}
+                  leftIcon={
+                    <MaterialCommunityIcons
+                      name="circle"
+                      size={18}
+                      color="#000"
+                    />
+                  }
+                  containerStyle={{ marginBottom: 12 }}
+                  maxHeight={320}
+                  onFocus={() => {
+                    setSourceSearch("");
+                    setDestSearch("");
+                    setSelectedSourceIndex(null);
+                  }}
+                  keyboardOpenMaxHeight={220}
+                  
                 />
-              </View>
 
-              <View
-                style={[
-                  styles.inputBox,
-                  activeInput === "dest" && styles.inputBoxFocused,
-                  (!selectedFullRouteId || !sourceSearch) &&
-                    styles.inputBoxDisabled,
-                ]}
-              >
-                <View style={styles.inputIcon}>
-                  <MaterialCommunityIcons
-                    name="map-marker"
-                    size={20}
-                    color="#000"
-                  />
-                </View>
-                <TextInput
-                  ref={destInputRef}
-                  style={styles.input}
-                  placeholder="Destination Stop"
-                  placeholderTextColor="#9CA3AF"
+                <SearchableDropdown
+                  ref={destDropdownRef}
+                  data={destDropdownData}
                   value={destSearch}
                   onChangeText={setDestSearch}
-                  onFocus={() => handleFocus("dest")}
-                  editable={!!selectedFullRouteId && !!sourceSearch}
-                  multiline={false}
-                  scrollEnabled
-                  selection={destSelection}
+                  onSelect={(item: any) => {
+                    setDestSearch(item.name);
+                    // Third input selection complete hone par keyboard hide and blur
+                    destDropdownRef.current?.blur();
+                  }}
+                  variant="simple"
+                  searchKeys={["name"]}
+                  displayKey="name"
+                  keyExtractor={(item: any) => item.id}
+                  placeholder="Destination Stop"
+                  editable={
+                    !!selectedFullRouteId &&
+                    routeSearch.length > 0 &&
+                    sourceSearch.length > 0
+                  }
+                  leftIcon={
+                    <MaterialCommunityIcons
+                      name="map-marker"
+                      size={24}
+                      color="#000"
+                    />
+                  }
+                  maxHeight={320}
+                  onFocus={() => {
+                    setDestSearch("");
+                  }}
+                  keyboardOpenMaxHeight={220}
                 />
               </View>
-            </View>
 
-            {/* Bus Type */}
-            <BusTypeSelector
-              busType={busType}
-              onTypeChange={(type) => {
-                setBusType(type);
-                setIsManualFare(false);
-                setManualTotal("");
+              {/* Bus Type */}
+              <BusTypeSelector
+                busType={busType}
+                onTypeChange={(type) => {
+                  setBusType(type);
+                  setIsManualFare(false);
+                  setManualTotal("");
+                }}
+              />
+            </View>
+          </ScrollView>
+
+          {/* Bottom Section — fixed at bottom */}
+          <View
+            style={[
+              styles.bottom,
+              { paddingBottom: insets.bottom + moderateScale(16) },
+            ]}
+          >
+            <QuantitySelector qty={qty} onQtyChange={setQty} />
+
+            <FareDisplay
+              finalFare={getFinalFare()}
+              showDiscount={!!(routeSearch && sourceSearch && destSearch)}
+              isEditing={isEditingFare}
+              onPress={handleFarePress}
+              manualTotal={manualTotal}
+              onManualChange={(val) => {
+                setIsManualFare(true);
+                setManualTotal(val);
               }}
+              onBlur={() => setIsEditingFare(false)}
+            />
+
+            <PrimaryButton
+              title="BUY"
+              onPress={handleBuy}
+              disabled={false}
             />
           </View>
-        </ScrollView>
-
-        {/* Bottom Section */}
-        <View style={[styles.bottom, { paddingBottom: insets.bottom + moderateScale(16) }]}>
-          <QuantitySelector qty={qty} onQtyChange={setQty} />
-
-          <FareDisplay
-            finalFare={getFinalFare()}
-            showDiscount={!!(routeSearch && sourceSearch && destSearch)}
-            isEditing={isEditingFare}
-            onPress={handleFarePress}
-            manualTotal={manualTotal}
-            onManualChange={(val) => {
-              setIsManualFare(true);
-              setManualTotal(val);
-            }}
-            onBlur={() => setIsEditingFare(false)}
-          />
-
-          <TouchableOpacity
-            style={styles.buyBtn}
-            onPress={handleBuy}
-            disabled={false}
-          >
-            <Text style={styles.buyText}>BUY</Text>
-          </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
 
-      {/* Dropdown List */}
-      {activeInput && dropdownPlacement && measuredPos.width > 0 && (
-        <Animated.View
-          entering={FadeIn.duration(150)}
-          exiting={FadeOut.duration(100)}
-          style={[
-            activeInput === "route"
-              ? styles.routeDropdown
-              : styles.stopDropdown,
-            {
-              position: "absolute",
-              left: measuredPos.x + scale(55),
-              width: measuredPos.width - scale(45),
-              zIndex: 1000,
-              elevation: 100,
-              ...dropdownPlacement.positionStyle,
-            },
-          ]}
-        >
-          <FlatList
-            showsVerticalScrollIndicator={true}
-            data={
-              activeInput === "route"
-                ? filteredRoutes
-                : activeInput === "source"
-                  ? filteredSources
-                  : filteredDests
-            }
-            keyExtractor={(item, index) =>
-              activeInput === "route"
-                ? item?.id != null
-                  ? `route-${item.id}`
-                  : `route-${index}`
-                : `${activeInput}-${selectedFullRouteId ?? "noroute"}-${index}-${String(item)}`
-            }
-            keyboardShouldPersistTaps="always"
-            nestedScrollEnabled={true}
-            removeClippedSubviews={Platform.OS === "android"}
-            initialNumToRender={10}
-            maxToRenderPerBatch={10}
-            windowSize={5}
-            ListEmptyComponent={
-              <View style={styles.emptyItem}>
-                <Text style={styles.emptyItemText}>
-                  {!routeSearch &&
-                  (activeInput === "source" || activeInput === "dest")
-                    ? "Please select a route first"
-                    : "No results found"}
-                </Text>
-              </View>
-            }
-            renderItem={
-              activeInput === "route" ? renderRouteItem : renderSourceDestItem
-            }
-          />
-        </Animated.View>
-      )}
-
-      {/* Toast */}
-      {showToast && (
-        <Animated.View
-          entering={FadeIn.duration(ANIMATIONS.fastTiming.duration)}
-          exiting={FadeOut.duration(ANIMATIONS.fastTiming.duration)}
-          style={styles.toast}
-        >
-          <Text style={styles.toastText}>Session expired</Text>
-        </Animated.View>
-      )}
-    </Screen>
+        {/* Toast */}
+        {showToast && (
+          <Animated.View
+            entering={FadeIn.duration(ANIMATIONS.fastTiming.duration)}
+            exiting={FadeOut.duration(ANIMATIONS.fastTiming.duration)}
+            style={styles.toast}
+          >
+            <Text style={styles.toastText}>Session expired</Text>
+          </Animated.View>
+        )}
+      </Screen>
+    </PortalProvider>
   );
 };
 
@@ -1269,6 +973,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(16),
     paddingTop: moderateScale(16),
     paddingBottom: moderateScale(24),
+  },
+  mainLayout: {
+    flex: 1,
+    flexDirection: "column",
   },
   card: {
     backgroundColor: "#FFF",

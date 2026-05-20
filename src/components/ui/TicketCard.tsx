@@ -51,11 +51,7 @@ export const TicketCard = React.memo(({ ticket, onPress, showTimer, largeText, s
   const totalTextStyle = [styles.totalText, largeText && styles.largeTotalText];
 
   return (
-    <TouchableOpacity 
-      style={styles.card} 
-      onPress={onPress}
-      activeOpacity={0.9}
-    >
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7} accessibilityLabel="Open ticket details">
       <View style={styles.headerStrip} />
       
       <View style={[styles.body, compact && { paddingBottom: 8 }]}>

@@ -17,7 +17,6 @@ import { Screen } from "../../components/layout/Screen";
 import { Header } from "../../components/layout/Header";
 import { GoogleMap, GoogleMapRef } from "../../components/ui/GoogleMap";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../services/firebase";
 import * as Location from "expo-location";
 import { BottomSheet } from "../../components/layout/BottomSheet";
@@ -323,11 +322,12 @@ const SHEET_FULL_HEIGHT = SCREEN_HEIGHT * 0.98;
 
   useEffect(() => {
     setLoading(true);
-    const docRef = doc(db, "routes", routeId);
-    
-    const unsubscribe = onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
+    const unsubscribe = db
+      .collection("routes")
+      .doc(routeId)
+      .onSnapshot((docSnap) => {
+        if (docSnap && docSnap.exists) {
+          const data = docSnap.data();
         let formattedData: RouteData;
         
         if (data.stops && Array.isArray(data.stops)) {
@@ -346,8 +346,15 @@ const SHEET_FULL_HEIGHT = SCREEN_HEIGHT * 0.98;
             stops: data.stops,
           };
         } else if (data.directions) {
-          const activeDirection = direction || (data.directions.up ? "UP" : "DOWN");
-          const dirData = activeDirection === "UP" ? data.directions.up : (data.directions.down || data.directions.up);
+          const hasUp = !!(data.directions.up && Array.isArray(data.directions.up.stops) && data.directions.up.stops.length > 0);
+          const hasDown = !!(data.directions.down && Array.isArray(data.directions.down.stops) && data.directions.down.stops.length > 0);
+          let activeDirection = direction || (hasUp ? "UP" : "DOWN");
+          if (activeDirection === "UP" && !hasUp) {
+            activeDirection = "DOWN";
+          } else if (activeDirection === "DOWN" && !hasDown) {
+            activeDirection = "UP";
+          }
+          const dirData = activeDirection === "UP" ? data.directions.up : data.directions.down;
           const stopNames = dirData?.stops || [];
           const coords = dirData?.stop_coordinates && dirData.stop_coordinates.length > 0
             ? dirData.stop_coordinates

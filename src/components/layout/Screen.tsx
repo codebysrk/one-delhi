@@ -111,6 +111,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   inner: {
-    flex: 1,
+    flexGrow: 1,
   }
 });

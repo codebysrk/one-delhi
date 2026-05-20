@@ -1,3 +1,4 @@
+(global as any).RNFB_SILENCE_MODULAR_DEPRECATION_WARNINGS = true;
 import 'react-native-get-random-values';
 import 'fast-text-encoding';
 import React, { useState, useEffect } from 'react';

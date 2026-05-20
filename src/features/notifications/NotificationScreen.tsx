@@ -7,7 +7,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '../../components/layout/Screen';
 import { Header } from '../../components/layout/Header';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { collection, query, orderBy, onSnapshot, limit } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { useAppStore } from '../../store/useAppStore';
 
@@ -28,25 +27,24 @@ export const NotificationScreen = ({ navigation }: any) => {
   const initialLastSeen = useRef(lastSeenNotification);
 
   useEffect(() => {
-    const q = query(
-      collection(db, 'notifications'),
-      orderBy('timestamp', 'desc'),
-      limit(50)
-    );
+    const unsubscribe = db
+      .collection('notifications')
+      .orderBy('timestamp', 'desc')
+      .limit(50)
+      .onSnapshot((snapshot) => {
+        if (!snapshot) return;
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
+        setNotifications(data);
+        setLoading(false);
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
-      setNotifications(data);
-      setLoading(false);
-
-      // Update latest notification timestamp if we have data
-      if (data.length > 0 && data[0].timestamp) {
-        setLatestNotificationTimestamp(data[0].timestamp);
-      }
-    }, (error) => {
-      console.error('[NotificationScreen] Firestore error:', error);
-      setLoading(false);
-    });
+        // Update latest notification timestamp if we have data
+        if (data.length > 0 && data[0].timestamp) {
+          setLatestNotificationTimestamp(data[0].timestamp);
+        }
+      }, (error) => {
+        console.error('[NotificationScreen] Firestore error:', error);
+        setLoading(false);
+      });
 
     // Mark as read when leaving the screen
     return () => {

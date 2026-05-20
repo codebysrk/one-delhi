@@ -15,12 +15,11 @@ import { HelpScreen } from '../features/profile/HelpScreen';
 import { SettingsScreen } from '../features/profile/SettingsScreen';
 import { useAppStore } from '../store/useAppStore';
 import { db, auth } from '../services/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
-import { collection, query, where, getDocs, orderBy, doc, getDoc, onSnapshot } from 'firebase/firestore';
+
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { registerDevice, listenToDeviceSecurity, clearForceLogout } from '../services/deviceService';
 import { logAction } from '../services/logService';
-import { signOut } from 'firebase/auth';
+
 import { Alert, BackHandler, ToastAndroid } from 'react-native';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
@@ -61,8 +60,8 @@ export const RootNavigator = () => {
 
   const fetchUserProfile = useCallback(async (userId: string) => {
     try {
-      const docSnap = await getDoc(doc(db, "users", userId));
-      if (docSnap.exists()) {
+      const docSnap = await db.collection("users").doc(userId).get();
+      if (docSnap.exists) {
         setUserProfile(docSnap.data());
       }
     } catch (error: any) {
@@ -78,12 +77,11 @@ export const RootNavigator = () => {
   const fetchUserTickets = useCallback(async (userId: string) => {
     if (!userId) return;
     try {
-      const q = query(
-        collection(db, "tickets"), 
-        where("userId", "==", userId),
-        orderBy("timestamp", "desc")
-      );
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await db
+        .collection("tickets")
+        .where("userId", "==", userId)
+        .orderBy("timestamp", "desc")
+        .get();
       const userTickets: any[] = [];
       querySnapshot.forEach((doc) => {
         userTickets.push({ id: doc.id, ...doc.data() });
@@ -117,14 +115,14 @@ export const RootNavigator = () => {
           userId: currentState.user.uid,
           userName: currentState.userProfile?.name || 'User',
           userEmail: currentState.user.email || '',
-          action: action === 'BANNED' ? 'BANNED' : 'LOGOUT',
+          action: action === 'BANNED' ? (type === 'USER' ? 'USER_BANNED' : 'DEVICE_BANNED') : 'LOGOUT',
           details: `Security action triggered: ${action} (${type})`,
           type: 'USER',
           deviceId: currentState.deviceId || undefined
         }).catch(() => {});
       }
 
-      await signOut(auth);
+      await auth.signOut();
       resetStore();
       
       const message = action === 'BANNED'
@@ -196,8 +194,8 @@ export const RootNavigator = () => {
             });
 
             // REAL-TIME USER BAN LISTENER
-            userUnsubscribe = onSnapshot(doc(db, 'users', user.uid), (snap) => {
-              if (!snap.exists()) {
+            userUnsubscribe = db.collection('users').doc(user.uid).onSnapshot((snap) => {
+              if (!snap || !snap.exists) {
                 console.log("[RootNavigator] User document DELETED. Logging out.");
                 handleSecurityAction('BANNED', 'USER');
                 return;
@@ -209,7 +207,7 @@ export const RootNavigator = () => {
                 console.log("[RootNavigator] User BANNED in real-time. Triggering logout.");
                 handleSecurityAction('BANNED', 'USER');
               }
-            }, (err) => {
+            }, (err: any) => {
               if (err.code === 'permission-denied') {
                 console.log("[RootNavigator] Permission denied for user doc (likely BANNED). Triggering logout.");
                 handleSecurityAction('BANNED', 'USER');
@@ -236,7 +234,7 @@ export const RootNavigator = () => {
     useEffect(() => {
     let isMounted = true;
 
-    const subscriber = onAuthStateChanged(auth, async (firebaseUser) => {
+    const subscriber = auth.onAuthStateChanged(async (firebaseUser) => {
       if (!isMounted) return;
       
       try {
@@ -245,8 +243,8 @@ export const RootNavigator = () => {
           
           try {
             // Fetch Profile
-            const docSnap = await getDoc(doc(db, "users", firebaseUser.uid));
-            const profile = docSnap.exists() ? docSnap.data() : null;
+            const docSnap = await db.collection("users").doc(firebaseUser.uid).get();
+            const profile = docSnap.exists ? docSnap.data() : null;
             
             if (!isMounted) return;
 
@@ -344,7 +342,7 @@ export const RootNavigator = () => {
           screenOptions={{ 
             headerShown: false,
             animation: 'slide_from_right',
-            animationDuration: 10,
+            animationDuration: 300,
             gestureEnabled: true,
             gestureDirection: 'horizontal',
           }} 

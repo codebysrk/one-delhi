@@ -23,7 +23,7 @@ import { COLORS } from "../../core/theme";
 import { useAppStore } from "../../store/useAppStore";
 import { generateTicketId, getRouteNumberOnly } from "../../utils/ticketHelper";
 import { db, auth } from "../../services/firebase";
-import { collection, addDoc, Timestamp, setDoc, doc } from "firebase/firestore";
+import firestore from "@react-native-firebase/firestore";
 import {
   PaytmIcon,
   PhonePeIcon,
@@ -35,6 +35,11 @@ import { sanitizePayload } from "../../utils/firebaseUtils";
 import { logAction } from "../../services/logService";
 import { moderateScale, responsiveFontSize, scale } from "../../core/responsive";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { UpiConfirmScreen } from "./UpiConfirmScreen";
+import { UpiPinScreen } from "./UpiPinScreen";
+import { LoadingOverlay } from "../../components/ui/LoadingOverlay";
+import * as Haptics from "expo-haptics";
+import { PrimaryButton } from "../../components/ui/PrimaryButton";
 
 interface SimulatedTransaction {
   id: string;
@@ -69,7 +74,10 @@ const amountToWords = (num: number): string => {
 
 export const PaymentScreen = ({ navigation, route }: any) => {
   const { ticketData = {}, timeLeft: initialTimeLeft = 180 } = route.params || {};
-  const displayTotal = Math.round(Number(ticketData.total || 9));
+  const displayTotal = Number(ticketData.total || 9);
+  const formattedTotal = displayTotal % 1 === 0 ? displayTotal.toFixed(0) : displayTotal.toFixed(1);
+  const baseFareNum = Number(ticketData.baseFare || 10);
+  const formattedBaseFare = baseFareNum % 1 === 0 ? baseFareNum.toFixed(0) : baseFareNum.toFixed(1);
   const { addTicket } = useAppStore();
   const now = new Date();
   const dateStr = `${now.getDate().toString().padStart(2, "0")} ${now.toLocaleString("en-GB", { month: "short" })}, ${now.getFullYear()}`;
@@ -87,17 +95,70 @@ export const PaymentScreen = ({ navigation, route }: any) => {
   // --- UPI Payment Simulation State Machine ---
   const [isSimulating, setIsSimulating] = useState(false);
   const [selectedApp, setSelectedApp] = useState<"Paytm" | "PhonePe" | "GPay" | "Amazon Pay" | "BHIM">("GPay");
-  const [simStep, setSimStep] = useState<"confirmation" | "pin_entry" | "processing">("confirmation");
-  const [enteredPin, setEnteredPin] = useState("");
+  const [simStep, setSimStep] = useState<"confirmation" | "pin_entry" | "processing" | "success" | "failed">("confirmation");
+  const [paymentGatewayLoading, setPaymentGatewayLoading] = useState(false);
   const [processingMessage, setProcessingMessage] = useState("Securing connection...");
-  const [showBankSheet, setShowBankSheet] = useState(false);
   const [selectedBank, setSelectedBank] = useState<string | null>("SBI"); // SBI selected by default
   const simAnimProgress = React.useRef(new Animated.Value(0)).current;
+
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [typedTxnId, setTypedTxnId] = useState("");
+  const [finalCreatedTicket, setFinalCreatedTicket] = useState<any>(null);
+
+  const successScale = React.useRef(new Animated.Value(0)).current;
+  const checkmarkScale = React.useRef(new Animated.Value(0)).current;
+  const detailsOpacity = React.useRef(new Animated.Value(0)).current;
 
   // Fake generated IDs for active simulation
   const [activeTxnId, setActiveTxnId] = useState("");
   const [activeBankRef, setActiveBankRef] = useState("");
   const [activeTimestamp, setActiveTimestamp] = useState("");
+
+  useEffect(() => {
+    if (simStep === "success" && activeTxnId) {
+      setTypedTxnId("");
+      let current = "";
+      let index = 0;
+      const interval = setInterval(() => {
+        if (index < activeTxnId.length) {
+          current += activeTxnId[index];
+          setTypedTxnId(current);
+          index++;
+        } else {
+          clearInterval(interval);
+        }
+      }, 40);
+      return () => clearInterval(interval);
+    }
+  }, [simStep, activeTxnId]);
+
+  useEffect(() => {
+    if (simStep === "success") {
+      successScale.setValue(0);
+      checkmarkScale.setValue(0);
+      detailsOpacity.setValue(0);
+
+      Animated.sequence([
+        Animated.spring(successScale, {
+          toValue: 1,
+          friction: 6,
+          tension: 40,
+          useNativeDriver: true,
+        }),
+        Animated.spring(checkmarkScale, {
+          toValue: 1,
+          friction: 5,
+          tension: 50,
+          useNativeDriver: true,
+        }),
+        Animated.timing(detailsOpacity, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [simStep]);
 
   useEffect(() => {
     const timer = setInterval(
@@ -135,8 +196,6 @@ export const PaymentScreen = ({ navigation, route }: any) => {
   // --- Simulation Flow Controllers ---
   const startSimulation = (app: typeof selectedApp) => {
     setSelectedApp(app);
-    setEnteredPin("");
-    setShowBankSheet(false);
     setSelectedBank("SBI");
     setSimStep("confirmation");
     setIsSimulating(true);
@@ -174,14 +233,21 @@ export const PaymentScreen = ({ navigation, route }: any) => {
   };
 
   const openSimulation = (app: typeof selectedApp) => {
-    startSimulation(app);
-    simAnimProgress.setValue(0);
-    Animated.timing(simAnimProgress, {
-      toValue: 1,
-      duration: 350,
-      easing: Easing.bezier(0.22, 1, 0.36, 1),
-      useNativeDriver: true,
-    }).start();
+    setSelectedApp(app);
+    setIsRedirecting(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    setTimeout(() => {
+      setIsRedirecting(false);
+      startSimulation(app);
+      simAnimProgress.setValue(0);
+      Animated.timing(simAnimProgress, {
+        toValue: 1,
+        duration: 350,
+        easing: Easing.bezier(0.22, 1, 0.36, 1),
+        useNativeDriver: true,
+      }).start();
+    }, 1500);
   };
 
   const closeSimulation = () => {
@@ -195,24 +261,117 @@ export const PaymentScreen = ({ navigation, route }: any) => {
     });
   };
 
-  const handleKeyPress = (val: string) => {
-    if (enteredPin.length < 4) {
-      setEnteredPin((p) => p + val);
-    }
-  };
+  const saveTicketInBackground = async () => {
+    try {
+      const now = new Date();
+      const dateStr = `${now.getDate().toString().padStart(2, "0")} ${now.toLocaleString("en-GB", { month: "short" })}, ${now.getFullYear()}`;
+      const timeStr = now.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+      const tid = generateTicketId();
 
-  const handleBackspace = () => {
-    setEnteredPin((p) => p.slice(0, -1));
+      const finalTicket = {
+        ...ticketData,
+        baseFare: ticketData.baseFare || 10,
+        date: dateStr,
+        time: timeStr,
+        timestamp: firestore.Timestamp.now(),
+        userId: auth.currentUser?.uid,
+        deviceId: useAppStore.getState().deviceId,
+        status: "Active",
+        tid: tid,
+      };
+
+      // 1. Add to Local Store Immediately
+      addTicket({
+        ...finalTicket,
+        timestamp: finalTicket.timestamp.toMillis(),
+        fare: ticketData.total,
+        status: "Active" as any,
+        tid: tid,
+      });
+
+      // 2. Save to Firestore in background
+      db.collection("tickets").doc(tid).set(sanitizePayload(finalTicket))
+        .then(() => {
+          console.log("[PaymentScreen] Ticket synced online successfully.");
+        })
+        .catch((err: any) => {
+          console.log(
+            "[OfflineSync] Offline mode active. Ticket saved locally and will sync when online.",
+          );
+        });
+
+      // 3. Log Action (Background)
+      logAction({
+        userId: auth.currentUser?.uid || "anonymous",
+        userName: useAppStore.getState().userProfile?.name || "User",
+        userEmail: auth.currentUser?.email || "",
+        action: "BUY_TICKET",
+        details: `Ticket purchased for route ${ticketData.route}: ₹${ticketData.total}`,
+        type: "USER",
+        targetType: "TICKET",
+        targetId: tid,
+        deviceId: useAppStore.getState().deviceId || undefined,
+      }).catch(() => {});
+
+      setFinalCreatedTicket({
+        ...finalTicket,
+        timestamp: finalTicket.timestamp.toMillis(),
+        fare: ticketData.total,
+        tid,
+      });
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const submitPin = () => {
-    if (enteredPin.length !== 4) {
-      Alert.alert("Invalid PIN", "Please enter your 4-digit secure UPI PIN.");
-      return;
-    }
+    setSimStep("processing");
+    setProcessingMessage("Initializing payment...");
 
-    // Instantly finalize payment and redirect to ticket screen!
-    handleFinalize();
+    // Simulating slight network latency with step-by-step processing messages
+    setTimeout(() => {
+      setProcessingMessage("Connecting securely...");
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }, 1000);
+
+    setTimeout(() => {
+      setProcessingMessage("Verifying transaction...");
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }, 2000);
+
+    setTimeout(() => {
+      setProcessingMessage("Confirming payment...");
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }, 3000);
+
+    setTimeout(() => {
+      setProcessingMessage("Checking payment status...");
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }, 4000);
+
+    setTimeout(async () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setSimStep("success");
+      await saveTicketInBackground();
+    }, 5000);
+  };
+
+  const handleDone = () => {
+    closeSimulation();
+    navigation.navigate("Ticket", {
+      ticket: finalCreatedTicket || {
+        ...ticketData,
+        tid: "T" + Date.now().toString(),
+        timestamp: Date.now(),
+        fare: ticketData.total,
+        status: "Active",
+      },
+      isRedirect: true,
+    });
   };
 
   const handleFinalize = async () => {
@@ -232,7 +391,7 @@ export const PaymentScreen = ({ navigation, route }: any) => {
         baseFare: ticketData.baseFare || 10,
         date: dateStr,
         time: timeStr,
-        timestamp: Timestamp.now(),
+        timestamp: firestore.Timestamp.now(),
         userId: auth.currentUser?.uid,
         deviceId: useAppStore.getState().deviceId,
         status: "Active",
@@ -249,7 +408,7 @@ export const PaymentScreen = ({ navigation, route }: any) => {
       });
 
       // 2. Save to Firestore in background
-      setDoc(doc(db, "tickets", tid), sanitizePayload(finalTicket))
+      db.collection("tickets").doc(tid).set(sanitizePayload(finalTicket))
         .then(() => {
           console.log("[PaymentScreen] Ticket synced online successfully.");
         })
@@ -299,6 +458,25 @@ export const PaymentScreen = ({ navigation, route }: any) => {
   };
 
   const insets = useSafeAreaInsets();
+  const timerScale = React.useRef(new Animated.Value(1)).current;
+
+  // Pulse animation when only a short time remains
+  React.useEffect(() => {
+    let loop: Animated.CompositeAnimation | null = null;
+    if (timeLeft > 0 && timeLeft <= 30) {
+      loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(timerScale, { toValue: 1.06, duration: 450, easing: Easing.linear, useNativeDriver: true }),
+          Animated.timing(timerScale, { toValue: 1.0, duration: 450, easing: Easing.linear, useNativeDriver: true }),
+        ])
+      );
+      loop.start();
+    } else {
+      timerScale.setValue(1);
+      if (loop) loop.stop();
+    }
+    return () => { if (loop) loop.stop(); };
+  }, [timeLeft, timerScale]);
 
   // --- Dynamic Color Customizations based on Chosen UPI App ---
   const appBranding = useMemo(() => {
@@ -325,6 +503,7 @@ export const PaymentScreen = ({ navigation, route }: any) => {
 
       <ScrollView
         style={styles.scrollContainer}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.summaryCard}>
@@ -338,8 +517,8 @@ export const PaymentScreen = ({ navigation, route }: any) => {
                 <Text style={styles.busRouteText}>{ticketData.route}</Text>
               </View>
               <Text style={styles.fareCalcText}>
-                ₹{Number(ticketData.baseFare).toFixed(1)} x {ticketData.qty} ={" "}
-                <Text style={styles.fareGreen}>₹{ticketData.total}</Text>
+                ₹{formattedBaseFare} x {ticketData.qty} ={" "}
+                <Text style={styles.fareGreen}>₹{formattedTotal}</Text>
               </Text>
             </View>
 
@@ -373,21 +552,29 @@ export const PaymentScreen = ({ navigation, route }: any) => {
 
         {/* --- 2. Four UPI Selection Grid --- */}
         <View style={styles.upiGrid}>
-          <TouchableOpacity style={styles.upiCard} onPress={() => openSimulation("Paytm")}>
-            <PaytmIcon size={42} />
-            <Text style={styles.upiLabel}>Paytm</Text>
+          <TouchableOpacity style={styles.upiCard} onPress={() => openSimulation("Paytm")} disabled={isRedirecting || isSimulating} accessibilityLabel="Pay with Paytm" activeOpacity={0.7}>
+            <View style={{ alignItems: 'center' }}>
+              <PaytmIcon size={42} />
+              <Text style={styles.upiLabel}>Paytm</Text>
+            </View>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.upiCard} onPress={() => openSimulation("PhonePe")}>
-            <PhonePeIcon size={42} />
-            <Text style={styles.upiLabel}>PhonePe</Text>
+          <TouchableOpacity style={styles.upiCard} onPress={() => openSimulation("PhonePe")} disabled={isRedirecting || isSimulating} accessibilityLabel="Pay with PhonePe" activeOpacity={0.7}>
+            <View style={{ alignItems: 'center' }}>
+              <PhonePeIcon size={42} />
+              <Text style={styles.upiLabel}>PhonePe</Text>
+            </View>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.upiCard} onPress={() => openSimulation("GPay")}>
-            <GPayIcon size={42} />
-            <Text style={styles.upiLabel}>GPay</Text>
+          <TouchableOpacity style={styles.upiCard} onPress={() => openSimulation("GPay")} disabled={isRedirecting || isSimulating} accessibilityLabel="Pay with GPay" activeOpacity={0.7}>
+            <View style={{ alignItems: 'center' }}>
+              <GPayIcon size={42} />
+              <Text style={styles.upiLabel}>GPay</Text>
+            </View>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.upiCard} onPress={() => openSimulation("Amazon Pay")}>
-            <AmazonPayIcon size={42} />
-            <Text style={styles.upiLabel}>Amazon</Text>
+          <TouchableOpacity style={styles.upiCard} onPress={() => openSimulation("Amazon Pay")} disabled={isRedirecting || isSimulating} accessibilityLabel="Pay with Amazon Pay" activeOpacity={0.7}>
+            <View style={{ alignItems: 'center' }}>
+              <AmazonPayIcon size={42} />
+              <Text style={styles.upiLabel}>Amazon</Text>
+            </View>
           </TouchableOpacity>
         </View>
 
@@ -395,16 +582,18 @@ export const PaymentScreen = ({ navigation, route }: any) => {
           <Text style={styles.sectionTitle}>OTHERS</Text>
         </View>
 
-        <TouchableOpacity style={styles.othersRow} onPress={() => openSimulation("GPay")}>
-          <View style={styles.othersLeft}>
-            <MaterialCommunityIcons
-              name="credit-card"
-              size={28}
-              color="#D32F2F"
-            />
-            <Text style={styles.othersText}>Wallet, Cards or Net banking</Text>
+        <TouchableOpacity style={styles.othersRow} onPress={() => openSimulation("GPay")} disabled={isRedirecting || isSimulating} accessibilityLabel="Other payment methods" activeOpacity={0.7}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+            <View style={styles.othersLeft}>
+              <MaterialCommunityIcons
+                name="credit-card"
+                size={28}
+                color="#D32F2F"
+              />
+              <Text style={styles.othersText}>Wallet, Cards or Net banking</Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={26} color="#666" />
           </View>
-          <MaterialCommunityIcons name="chevron-right" size={26} color="#666" />
         </TouchableOpacity>
 
         {/* Simulation logs button removed for production mode */}
@@ -412,14 +601,14 @@ export const PaymentScreen = ({ navigation, route }: any) => {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      <View style={[styles.footerContainer, { bottom: insets.bottom + 10 }]}>
-        <View style={styles.timerPill}>
+      <Animated.View style={[styles.footerContainer, { bottom: insets.bottom + 10 }]}>
+        <Animated.View style={[styles.timerPill, { transform: [{ scale: timerScale }] }]}>
           <Text style={styles.timerText}>
             Pay within{" "}
             <Text style={styles.timerBold}>{formatTime(timeLeft)}</Text>
           </Text>
-        </View>
-      </View>
+        </Animated.View>
+      </Animated.View>
 
       {/* ========================================================= */}
       {/* --- MASTERPIECE FULL-SCREEN INTERACTIVE SIMULATOR SCREEN --- */}
@@ -446,356 +635,120 @@ export const PaymentScreen = ({ navigation, route }: any) => {
           
           {/* STEP 1: SPECIFIC APP CONFIRMATION SCREEN */}
           {simStep === "confirmation" && (
-            <View style={styles.confirmContainer}>
-              {/* HEADER WITH BACK BUTTON */}
-              <View style={styles.confirmTopBar}>
-                <TouchableOpacity onPress={closeSimulation} style={styles.confirmBackBtn}>
-                  <MaterialCommunityIcons name="arrow-left" size={28} color="black" />
-                </TouchableOpacity>
-              </View>
-
-              {/* OVERVIEW CONTENT */}
-              <ScrollView contentContainerStyle={styles.confirmContentScroll} showsVerticalScrollIndicator={false}>
-                {/* Purple Suitcase circular logo */}
-                <View style={styles.confirmAvatarContainer}>
-                  <View style={styles.confirmPurpleAvatar}>
-                    <MaterialCommunityIcons name="briefcase-outline" size={26} color="#5F259F" />
-                  </View>
-                </View>
-
-                {/* One Delhi Verified Title */}
-                <View style={styles.confirmTitleRow}>
-                  <Text style={styles.confirmOneDelhiTitle}>One Delhi</Text>
-                  <MaterialCommunityIcons name="check-circle" size={18} color="#00C2FF" style={{ marginLeft: 4 }} />
-                </View>
-
-                {/* UPI Merchant sub-address */}
-                <View style={styles.confirmUpiRow}>
-                  <Text style={styles.confirmUpiAddress}>delhioneonline@ybl</Text>
-                  <View style={styles.phonepeMiniIconBg}>
-                    <Text style={styles.phonepeMiniIconText}>पे</Text>
-                  </View>
-                </View>
-
-                {/* Gradient Ribbon */}
-                <View style={styles.gradientRibbonContainer}>
-                  <LinearGradient
-                    colors={["#E9F2FD", "#FDF0F2", "#FEF8E7"]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.gradientRibbon}
-                  >
-                    <View style={styles.cardLogoWrapper}>
-                      <View style={[styles.cardLogoCircle, { backgroundColor: "#EB001B", zIndex: 2 }]} />
-                      <View style={[styles.cardLogoCircle, { backgroundColor: "#F9A01B", marginLeft: -5, zIndex: 1 }]} />
-                    </View>
-                    <Text style={styles.gradientRibbonText}>This merchant accepts Rupay credit card.</Text>
-                  </LinearGradient>
-                </View>
-
-                {/* Huge Amount text */}
-                <View style={styles.hugeAmountContainer}>
-                  <Text style={styles.hugeRupeeSymbol}>₹</Text>
-                  <Text style={styles.hugeAmountText}>{displayTotal}</Text>
-                </View>
-
-                {/* Words amount */}
-                <Text style={styles.amountWordsText}>{amountToWords(displayTotal)}</Text>
-              </ScrollView>
-
-              {/* BOTTOM INTERACTION BAR */}
-              <View style={styles.confirmBottomContainer}>
-                {/* Reference ID Pill */}
-                <View style={styles.confirmRefPill}>
-                  <Text style={styles.confirmRefPillText} numberOfLines={1}>
-                    Payment for {activeTxnId}
-                  </Text>
-                </View>
-
-                {/* Large Proceed Securely button */}
-                <TouchableOpacity 
-                  style={styles.proceedSecurelyBtn}
-                  onPress={() => setShowBankSheet(true)}
-                  activeOpacity={0.8}
-                >
-                  <MaterialCommunityIcons name="shield-check" size={20} color="white" style={{ marginRight: 8 }} />
-                  <Text style={styles.proceedSecurelyBtnText}>Proceed Securely</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* BANK SELECTION BOTTOM SHEET OVERLAY */}
-              {showBankSheet && (
-                <View style={styles.bottomSheetBackdrop}>
-                  <TouchableOpacity 
-                    style={styles.bottomSheetDismissArea} 
-                    activeOpacity={1} 
-                    onPress={() => setShowBankSheet(false)} 
-                  />
-                  <View style={styles.bottomSheetContainer}>
-                    {/* Top indicator handle bar */}
-                    <View style={styles.bottomSheetHandle} />
-
-                    <Text style={styles.bottomSheetTitle}>Pay ₹{displayTotal} from</Text>
-
-                    {/* Bank Selection list */}
-                    <ScrollView style={styles.bankListScroll} showsVerticalScrollIndicator={false}>
-                      {/* Paytm Payments Bank option removed */}
-
-                      {/* SBI Bank Option */}
-                      <TouchableOpacity 
-                        style={[styles.bankRow, selectedBank === "SBI" && styles.bankRowActive]}
-                        onPress={() => setSelectedBank("SBI")}
-                        activeOpacity={0.7}
-                      >
-                        <View style={styles.bankRowLeft}>
-                          {/* Custom SBI Logo */}
-                          <View style={styles.sbiLogoContainer}>
-                            <View style={styles.sbiLogoInner} />
-                            <View style={styles.sbiLogoLine} />
-                          </View>
-                          <View style={styles.bankRowTextContainer}>
-                            <Text style={styles.bankRowTitle}>State Bank Of India - 4526</Text>
-                            <Text style={styles.bankRowSubText}>Set UPI PIN</Text>
-                          </View>
-                        </View>
-                        <MaterialCommunityIcons 
-                          name={selectedBank === "SBI" ? "check-circle" : "circle-outline"} 
-                          size={22} 
-                          color={selectedBank === "SBI" ? "#0045A5" : "#9CA3AF"} 
-                        />
-                      </TouchableOpacity>
-
-                      {/* HDFC Bank Option */}
-                      <TouchableOpacity 
-                        style={[styles.bankRow, selectedBank === "HDFC" && styles.bankRowActive]}
-                        onPress={() => setSelectedBank("HDFC")}
-                        activeOpacity={0.7}
-                      >
-                        <View style={styles.bankRowLeft}>
-                          {/* Custom HDFC Logo */}
-                          <View style={styles.hdfcLogoContainer}>
-                            <Text style={styles.hdfcLogoText}>HDFC</Text>
-                          </View>
-                          <View style={styles.bankRowTextContainer}>
-                            <Text style={styles.bankRowTitle}>HDFC Bank - 8899</Text>
-                            <Text style={styles.bankRowSubText}>Check Balance</Text>
-                          </View>
-                        </View>
-                        <MaterialCommunityIcons 
-                          name={selectedBank === "HDFC" ? "check-circle" : "circle-outline"} 
-                          size={22} 
-                          color={selectedBank === "HDFC" ? "#0045A5" : "#9CA3AF"} 
-                        />
-                      </TouchableOpacity>
-
-                      {/* Rupay Credit Card Option (Disabled/Visual Only) */}
-                      <View style={styles.bankRowDisabled}>
-                        <View style={styles.bankRowLeft}>
-                          {/* Rupay Logo rounded rect card */}
-                          <View style={styles.rupayLogoContainer}>
-                            <Text style={styles.rupayLogoText}>RuPay</Text>
-                          </View>
-                          <View style={styles.bankRowTextContainer}>
-                            <Text style={styles.bankRowTitle}>Pay With Rupay Credit Card</Text>
-                            <Text style={styles.bankRowSubText}>Add Card</Text>
-                          </View>
-                        </View>
-                      </View>
-
-                      {/* Link Bank Account trigger */}
-                      <TouchableOpacity style={styles.linkAccountRow} activeOpacity={0.7}>
-                        <MaterialCommunityIcons name="plus" size={22} color="#0056C6" style={{ marginRight: 12 }} />
-                        <Text style={styles.linkAccountText}>Link Bank Account</Text>
-                      </TouchableOpacity>
-                    </ScrollView>
-
-                    {/* Bottom Pay Securely Button */}
-                    <TouchableOpacity 
-                      style={[styles.paySecurelyBtn, !selectedBank && styles.paySecurelyBtnDisabled]}
-                      onPress={() => {
-                        if (!selectedBank) {
-                          Alert.alert("Select Bank", "Please select a bank account first to make the payment.");
-                          return;
-                        }
-                        setSimStep("pin_entry");
-                      }}
-                      activeOpacity={selectedBank ? 0.8 : 1}
-                    >
-                      <MaterialCommunityIcons 
-                        name="shield-check" 
-                        size={20} 
-                        color={selectedBank ? "white" : "#9CA3AF"} 
-                        style={{ marginRight: 8 }} 
-                      />
-                      <Text style={[styles.paySecurelyBtnText, !selectedBank && styles.paySecurelyBtnTextDisabled]}>
-                        Pay Securely ₹{displayTotal}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              )}
-            </View>
+            <UpiConfirmScreen
+              selectedApp={selectedApp}
+              activeTxnId={activeTxnId}
+              formattedTotal={formattedTotal}
+              displayTotal={displayTotal}
+              selectedBank={selectedBank}
+              setSelectedBank={setSelectedBank}
+              onProceed={() => setSimStep("pin_entry")}
+              onClose={closeSimulation}
+            />
           )}
 
           {/* STEP 2: HIGH-FIDELITY NPCI SECURE UPI PIN ENTRY SCREEN */}
           {simStep === "pin_entry" && (
-            <View style={styles.pinContainer}>
-              <View style={styles.pinTopContent}>
-                <View style={styles.pinHeaderWrapper}>
-                  {/* TOP BAR: UPI Logo, Close Button */}
-                  <View style={styles.pinHeader}>
-                    <View style={styles.upiLogoContainer}>
-                      <UPILogo width={75} height={28} />
-                    </View>
-
-                    <TouchableOpacity style={styles.pinCloseBtn} onPress={closeSimulation}>
-                      <MaterialCommunityIcons name="close" size={26} color="#1F2937" />
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Sub-Header Border and Bank Indicator */}
-                  <View style={styles.pinBankIndicatorRow}>
-                    <Text style={styles.pinBankIndicatorText}>
-                      {selectedBank === "SBI" && "State Bank Of India"}
-                      {selectedBank === "HDFC" && "HDFC Bank"}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* PAY BOX: Cream/Light Yellow container */}
-                <View style={styles.pinPayBox}>
-                  <View style={styles.pinPayBoxLeft}>
-                    <Text style={styles.pinPayBoxAmountTitle}>Pay ₹{displayTotal}</Text>
-                    <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4 }}>
-                      <Text style={styles.pinPayBoxToText}>To</Text>
-                      <Text style={styles.pinPayBoxMerchantName}>One Delhi</Text>
-                      <MaterialCommunityIcons name="check-circle" size={14} color="#18A53A" style={{ marginLeft: 4 }} />
-                    </View>
-                  </View>
-                  
-                  <View style={styles.pinPayBoxRight}>
-                    <Text style={styles.pinRupeeArrowText}>₹ ➔</Text>
-                    <View style={styles.pinUserLogoCircle}>
-                      <MaterialCommunityIcons name="account" size={18} color="white" />
-                    </View>
-                  </View>
-                </View>
-
-                {/* DOTS ROW: Spaced Circles */}
-                <View style={styles.pinEntryRow}>
-                  <Text style={styles.pinLabelText}>Enter your UPI PIN</Text>
-                  <View style={styles.pinDotsRow}>
-                    {[0, 1, 2, 3].map((index) => {
-                      const hasChar = enteredPin.length > index;
-                      return (
-                        <View 
-                          key={index} 
-                          style={[
-                            styles.pinDotCircle, 
-                            hasChar && styles.pinDotCircleFilled
-                          ]}
-                        />
-                      );
-                    })}
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.pinBottomContent}>
-                {/* WARNING PILL BANNER */}
-                <View style={styles.pinWarningPillContainer}>
-                  <View style={styles.pinWarningPill}>
-                    <MaterialCommunityIcons name="shield-check" size={16} color="#18A53A" />
-                    <Text style={styles.pinWarningPillText}>Never enter your UPI PIN to receive money</Text>
-                  </View>
-                </View>
-
-                {/* KEYPAD SYSTEM: Light Mode styled blocks */}
-                <View style={styles.pinKeypadContainer}>
-                {/* Numeric Row 1 */}
-                <View style={styles.pinKeypadRow}>
-                  {["1", "2", "3"].map((num) => (
-                    <TouchableOpacity 
-                      key={num} 
-                      style={styles.keypadKey}
-                      onPress={() => handleKeyPress(num)}
-                    >
-                      <Text style={styles.keypadKeyText}>{num}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                {/* Numeric Row 2 */}
-                <View style={styles.pinKeypadRow}>
-                  {["4", "5", "6"].map((num) => (
-                    <TouchableOpacity 
-                      key={num} 
-                      style={styles.keypadKey}
-                      onPress={() => handleKeyPress(num)}
-                    >
-                      <Text style={styles.keypadKeyText}>{num}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                {/* Numeric Row 3 */}
-                <View style={styles.pinKeypadRow}>
-                  {["7", "8", "9"].map((num) => (
-                    <TouchableOpacity 
-                      key={num} 
-                      style={styles.keypadKey}
-                      onPress={() => handleKeyPress(num)}
-                    >
-                      <Text style={styles.keypadKeyText}>{num}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                {/* Bottom Row: Backspace, 0, Pay/Submit checkmark key */}
-                <View style={styles.pinKeypadRow}>
-                  <TouchableOpacity 
-                    style={[styles.keypadKey, styles.greyKeyBg]}
-                    onPress={handleBackspace}
-                  >
-                    <MaterialCommunityIcons name="backspace-outline" size={24} color="#1F2937" />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity 
-                    style={styles.keypadKey}
-                    onPress={() => handleKeyPress("0")}
-                  >
-                    <Text style={styles.keypadKeyText}>0</Text>
-                  </TouchableOpacity>
-
-                  {enteredPin.length < 4 ? (
-                    <TouchableOpacity 
-                      style={[styles.keypadKey, styles.bluePayCapsule]}
-                      onPress={() => {
-                        Alert.alert("Enter UPI PIN", "Please enter your 4-digit UPI PIN first.");
-                      }}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={styles.bluePayCapsuleText}>Pay</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity 
-                      style={[styles.keypadKey, styles.navySubmitCircle]}
-                      onPress={submitPin}
-                      activeOpacity={0.8}
-                    >
-                      <MaterialCommunityIcons name="check" size={28} color="white" />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-            </View>
-          </View>
+            <UpiPinScreen
+              selectedBank={selectedBank}
+              displayTotal={displayTotal}
+              onSubmit={submitPin}
+              onClose={closeSimulation}
+            />
           )}
 
-          {/* STEP 3: PROCESSING LOADER SCREEN removed for instant booking flow */}
+          {/* STEP 3: PROCESSING SCREEN */}
+          {simStep === "processing" && (
+            <View style={styles.simProcessingBox}>
+              <ActivityIndicator size="large" color="#10B981" />
+              <Text style={styles.simProcessingTitle}>{processingMessage}</Text>
+              <Text style={styles.simProcessingSub}>Please do not close this window</Text>
+              <View style={styles.securingIndicatorCard}>
+                <MaterialCommunityIcons name="shield-check" size={16} color="#065F46" />
+                <Text style={styles.securedIndicatorText}>NPCI SECURE PAYMENT GATEWAY</Text>
+              </View>
+            </View>
+          )}
+
+          {/* STEP 4: SUCCESS OUTCOME SCREEN */}
+          {simStep === "success" && (
+            <View style={styles.outcomeContainer}>
+              <ScrollView contentContainerStyle={styles.outcomeScroll} showsVerticalScrollIndicator={false}>
+                <Animated.View style={[styles.successCelebrationBg, { transform: [{ scale: successScale }] }]}>
+                  <Animated.View style={[styles.successTickCircle, { transform: [{ scale: checkmarkScale }] }]}>
+                    <MaterialCommunityIcons name="check" size={44} color="white" />
+                  </Animated.View>
+                </Animated.View>
+                <Text style={styles.successTitleText}>Payment Successful</Text>
+                <Text style={styles.successSubtitleText}>Your ticket has been booked successfully</Text>
+
+                <Animated.View style={[styles.detailsCard, { opacity: detailsOpacity }]}>
+                  <Text style={styles.detailsCardTitle}>Transaction Details</Text>
+                  
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Transaction ID</Text>
+                    <Text style={[styles.detailVal, { fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }]}>
+                      {typedTxnId || " "}
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Bank Reference No.</Text>
+                    <Text style={styles.detailVal}>{activeBankRef}</Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Paid From</Text>
+                    <Text style={styles.detailVal}>{selectedBank === "SBI" ? "SBI Savings - 4526" : "HDFC Savings - 8972"}</Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>UPI App</Text>
+                    <Text style={styles.detailVal}>{selectedApp}</Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Amount Paid</Text>
+                    <Text style={[styles.detailVal, { color: '#10B981', fontWeight: 'bold' }]}>₹{formattedTotal}</Text>
+                  </View>
+                </Animated.View>
+
+                {/* DONE BUTTON */}
+                <Animated.View style={{ width: '100%', opacity: detailsOpacity, marginTop: 30 }}>
+                  <PrimaryButton 
+                    title="View Ticket"
+                    onPress={handleDone}
+                  />
+                </Animated.View>
+              </ScrollView>
+            </View>
+          )}
 
         </Animated.View>
       )}
+
+      {/* BRANDED UPI REDIRECTION DIALOG */}
+      <Modal transparent visible={isRedirecting} animationType="fade" statusBarTranslucent>
+        <View style={styles.redirectionOverlay}>
+          <View style={styles.redirectionCard}>
+            <View style={styles.redirectionHeader}>
+              <View style={[styles.appIconCircle, { backgroundColor: appBranding.lightColor }]}>
+                {selectedApp === "Paytm" && <PaytmIcon size={36} />}
+                {selectedApp === "PhonePe" && <PhonePeIcon size={36} />}
+                {selectedApp === "GPay" && <GPayIcon size={36} />}
+                {selectedApp === "Amazon Pay" && <AmazonPayIcon size={36} />}
+              </View>
+              <ActivityIndicator size="small" color={appBranding.color} style={styles.redirectionSpinner} />
+            </View>
+            <Text style={styles.redirectionText}>
+              Redirecting to <Text style={[styles.redirectionAppName, { color: appBranding.color }]}>{appBranding.text}</Text>...
+            </Text>
+            <Text style={styles.redirectionSubtext}>
+              Do not press back or close the app while we securely launch your payment app.
+            </Text>
+          </View>
+        </View>
+      </Modal>
 
     </Screen>
   );
@@ -941,562 +894,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     zIndex: 9999,
   },
-  confirmContainer: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    width: "100%",
-    height: "100%",
-  },
-  confirmTopBar: {
-    height: 50,
-    
-    paddingHorizontal: 16,
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "flex-start",
-    position: "relative",
-    width: "100%",
-    backgroundColor: "#ffffffff",
-  },
-  confirmBackBtn: {
-    zIndex: 10,
-  },
-  confirmAvatarContainer: {
-    marginBottom: 0,
-  },
-  confirmContentScroll: {
-    alignItems: "center",
-    paddingBottom: 40,
-    paddingHorizontal: 20,
-  },
-  confirmPurpleAvatar: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: "#F3EBF9",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  confirmTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 4,
-    marginTop: 6,
-  },
-  confirmOneDelhiTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#1F2937",
-  },
-  confirmUpiRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  confirmUpiAddress: {
-    fontSize: 14,
-    color: "#5A6270",
-    marginRight: 6,
-  },
-  phonepeMiniIconBg: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: "#5F259F",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  phonepeMiniIconText: {
-    color: "white",
-    fontSize: 9,
-    fontWeight: "bold",
-  },
-  gradientRibbonContainer: {
-    width: "100%",
-    alignItems: "center",
-    marginBottom: 16,
-    paddingHorizontal: 35,
-  },
-  gradientRibbon: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    borderWidth: 0.5,
-    borderColor: "#E0E6ED",
-    width: "100%",
-    justifyContent: "center",
-  },
-  cardLogoWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginRight: 10,
-    width: 20,
-    height: 12,
-  },
-  cardLogoCircle: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  gradientRibbonText: {
-    fontSize: 12,
-    color: "#4B5563",
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  hugeAmountContainer: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "center",
-    marginTop: 8,
-    marginBottom: 5,
-  },
-  hugeRupeeSymbol: {
-    fontSize: 32,
-    fontWeight: "normal",
-    color: "#1F2937",
-    marginTop: 0,
-    marginRight: 3,
-  },
-  hugeAmountText: {
-    fontSize: 104,
-    fontWeight: "800",
-    color: "#1F2937",
-    lineHeight: 110,
-  },
-  amountWordsText: {
-    fontSize: 13,
-    color: "#6B7280",
-    fontWeight: "500",
-    marginTop: 5,
-  },
-  confirmBottomContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-    alignItems: "center",
-  },
-  confirmRefPill: {
-    backgroundColor: "#F5F5F7",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    borderWidth: 0.5,
-    borderColor: "#E5E7EB",
-    marginBottom: 16,
-    alignSelf: "center",
-  },
-  confirmRefPillText: {
-    fontSize: 13,
-    color: "#4B5563",
-    fontWeight: "600",
-  },
-  proceedSecurelyBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#0045A5",
-    width: "100%",
-    paddingVertical: 15,
-    borderRadius: 30,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  proceedSecurelyBtnText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-
-  // --- Bank Selection Bottom Sheet ---
-  bottomSheetBackdrop: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-    justifyContent: "flex-end",
-  },
-  bottomSheetDismissArea: {
-    flex: 1,
-  },
-  bottomSheetContainer: {
-    backgroundColor: "white",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-    paddingTop: 10,
-    maxHeight: "80%",
-  },
-  bottomSheetHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#E5E7EB",
-    alignSelf: "center",
-    marginBottom: 20,
-  },
-  bottomSheetTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#1F2937",
-    marginBottom: 16,
-  },
-  bankListScroll: {
-    maxHeight: 300,
-  },
-  bankRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    marginBottom: 12,
-    backgroundColor: "white",
-  },
-  bankRowActive: {
-    borderColor: "#0045A5",
-    backgroundColor: "#F4F8FF",
-  },
-  bankRowDisabled: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    marginBottom: 12,
-    backgroundColor: "#FAFBFD",
-    opacity: 0.9,
-  },
-  bankRowLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  bankRowTextContainer: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  bankRowTitle: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#1F2937",
-  },
-  bankRowSubText: {
-    fontSize: 12,
-    color: "#0056C6",
-    fontWeight: "600",
-    marginTop: 2,
-  },
-  ppbLogoContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 6,
-    backgroundColor: "#00B9F1",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  ppbLogoText: {
-    color: "white",
-    fontSize: 10,
-    fontWeight: "bold",
-  },
-  hdfcLogoContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 6,
-    backgroundColor: "#1C3F94",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  hdfcLogoText: {
-    color: "white",
-    fontSize: 9,
-    fontWeight: "bold",
-  },
-  sbiLogoContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#00B2EC",
-    justifyContent: "center",
-    alignItems: "center",
-    position: "relative",
-  },
-  sbiLogoInner: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 3,
-    borderColor: "white",
-  },
-  sbiLogoLine: {
-    position: "absolute",
-    bottom: 2,
-    width: 3,
-    height: 10,
-    backgroundColor: "white",
-  },
-  rupayLogoContainer: {
-    width: 44,
-    height: 26,
-    borderRadius: 4,
-    backgroundColor: "#1F2937",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  rupayLogoText: {
-    color: "white",
-    fontSize: 9,
-    fontWeight: "bold",
-    fontStyle: "italic",
-  },
-  linkAccountRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 6,
-    marginBottom: 20,
-  },
-  linkAccountText: {
-    fontSize: 14,
-    color: "#0056C6",
-    fontWeight: "700",
-  },
-  paySecurelyBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#0045A5",
-    paddingVertical: 15,
-    borderRadius: 30,
-    marginTop: 10,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  paySecurelyBtnDisabled: {
-    backgroundColor: "#E5E7EB",
-    elevation: 0,
-    shadowOpacity: 0,
-  },
-  paySecurelyBtnText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  paySecurelyBtnTextDisabled: {
-    color: "#9CA3AF",
-  },
-
-  // --- High-fidelity NPCI UPI PIN Screen Styles ---
-  pinContainer: {
-    flex: 1,
-    backgroundColor: "#ffffffff",
-    justifyContent: "space-between",
-    paddingTop: 10,
-  },
-  pinTopContent: {
-    width: "100%",
-  },
-  pinBottomContent: {
-    width: "100%",
-  },
-  pinHeaderWrapper: {
-    width: "100%",
-  },
-  pinHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    height: 48,
-  },
-  upiLogoContainer: {
-    alignItems: "flex-start",
-  },
-  pinCloseBtn: {
-    padding: 4,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  pinBankIndicatorRow: {
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  pinBankIndicatorText: {
-    color: "#4B5563",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  pinPayBox: {
-    backgroundColor: "#fef9eaff",
-    borderRadius: 8,
-    padding: 16,
-    marginHorizontal: 20,
-    marginTop: 18,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderWidth: 0.5,
-    borderColor: "#E5DBC5",
-  },
-  pinPayBoxLeft: {
-    flex: 1,
-  },
-  pinPayBoxAmountTitle: {
-    fontSize: 20,
-    fontWeight: "500",
-    color: "#000000",
-  },
-  pinPayBoxToText: {
-    fontSize: 13,
-    color: "#6B7280",
-    marginRight: 6,
-  },
-  pinPayBoxMerchantName: {
-    fontSize: 13,
-    color: "#18A53A",
-    fontWeight: "700",
-  },
-  pinPayBoxRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  pinRupeeArrowText: {
-    fontSize: 16,
-    color: "#464646ff",
-    fontWeight: "bold",
-  },
-  pinUserLogoCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: "#3B82F6",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  pinEntryRow: {
-    alignItems: "center",
-    paddingVertical: 20,
-  },
-  pinLabelText: {
-    color: "#1F2937",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  pinDotsRow: {
-    flexDirection: "row",
-    marginTop: 20,
-    gap: 20,
-  },
-  pinDotCircle: {
-    width: 18,
-    height: 18,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: "#000000",
-    backgroundColor: "transparent",
-  },
-  pinDotCircleFilled: {
-    backgroundColor: "#0A255C",
-    borderColor: "#0A255C",
-  },
-  pinWarningPillContainer: {
-    alignItems: "center",
-    width: "100%",
-    paddingVertical: 5,
-  },
-  pinWarningPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    gap: 6,
-  },
-  pinWarningPillText: {
-    fontSize: 11,
-    color: "#1F2937",
-    fontWeight: "600",
-  },
-  pinKeypadContainer: {
-    backgroundColor: "#F3F4F6",
-    paddingVertical: 5,
-    paddingHorizontal: 12,
-  },
-  pinKeypadRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 6,
-  },
-  keypadKey: {
-    flex: 1,
-    height: 52,
-    marginHorizontal: 5,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 28,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 1,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 1,
-  },
-  keypadKeyText: {
-    color: "#1F2937",
-    fontSize: 26,
-    fontWeight: "600",
-  },
-  greyKeyBg: {
-    backgroundColor: "#E9E9EE",
-  },
-  bluePayCapsule: {
-    backgroundColor: "#0066FF",
-    borderRadius: 28,
-    elevation: 2,
-  },
-  bluePayCapsuleText: {
-    color: "#FFFFFF",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  navySubmitCircle: {
-    backgroundColor: "#1253e0ff",
-    borderRadius: 26,
-    elevation: 2,
-  },
-  cancelPinTextBtn: {
-    alignSelf: "center",
-    paddingVertical: 8,
-  },
-  cancelPinText: {
-    color: "#EF4444",
-    fontSize: 13,
-    fontWeight: "bold",
-  },
-
   // --- Processing state styles ---
   simProcessingBox: {
     flex: 1,
@@ -1756,4 +1153,85 @@ const styles = StyleSheet.create({
     flexDirection: "row",
   },
   clearHistoryBtnText: { color: "#EF4444", fontSize: 14, fontWeight: "bold" },
+  gatewayLoaderOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    zIndex: 100000,
+    elevation: 100000,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  gatewayLoaderCard: {
+    backgroundColor: "#FFFFFF",
+    width: "88%",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 24,
+    paddingHorizontal: 24,
+    borderRadius: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  gatewayLoaderSpinner: {
+    marginRight: 20,
+  },
+  gatewayLoaderText: {
+    fontSize: 16,
+    color: "#666666",
+    flex: 1,
+  },
+  redirectionOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  redirectionCard: {
+    backgroundColor: "#FFFFFF",
+    width: "88%",
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  redirectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  appIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  redirectionSpinner: {
+    marginLeft: 16,
+  },
+  redirectionText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1F2937",
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  redirectionAppName: {
+    fontWeight: "800",
+  },
+  redirectionSubtext: {
+    fontSize: 12,
+    color: "#6B7280",
+    textAlign: "center",
+    lineHeight: 18,
+    paddingHorizontal: 10,
+  },
 });
