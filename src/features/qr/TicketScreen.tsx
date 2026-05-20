@@ -194,7 +194,7 @@ export const TicketScreen = ({ navigation, route }: any) => {
                 {activeTicket.tid || activeTicket.id || "T0000000000"}
               </Text>
 
-              <PrimaryButton 
+              <PrimaryButton
                 title="Show QR code"
                 onPress={() => setShowQR(true)}
                 accessibilityLabel="Show QR code"
@@ -214,10 +214,10 @@ export const TicketScreen = ({ navigation, route }: any) => {
             </View>
           ) : (
             <TouchableOpacity
-                onPress={() => setShowQR(false)}
-                style={[styles.qrCardMain, { backgroundColor: 'white' }]}
-                activeOpacity={0.9}
-              >
+              onPress={() => setShowQR(false)}
+              style={[styles.qrCardMain, { backgroundColor: 'white' }]}
+              activeOpacity={0.9}
+            >
               <QRCode
                 value={`TRANSPORT_DEPT_OF_DELHI|ID:${activeTicket.tid || activeTicket.id}|ROUTE:${activeTicket.route}|FROM:${activeTicket.source || activeTicket.src}|TO:${activeTicket.dest || activeTicket.dst}|TIME:${activeTicket.time}|QTY:${activeTicket.qty}|FARE:${activeTicket.total}|STATUS:VALIDATED|AUTH:ONDC_NETWORK|SECURE_HASH:${(activeTicket.tid || activeTicket.id || "").slice(-8)}`}
                 size={280}
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     justifyContent: "center", // Center vertically when QR is open to push it higher up
     paddingBottom: 0,
   },
-  mainWrapper: { alignItems: "center", width: "100%"},
+  mainWrapper: { alignItems: "center", width: "100%" },
 
   ticketCard: {
     backgroundColor: "#FFFFFF",
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
   validatedLabel: {
     color: "#000000cb",
     fontSize: 18,
-    fontWeight: "500",
+    fontWeight: "400",
     letterSpacing: 0.5,
   },
   validatedValue: { color: "#000", fontSize: 18, fontWeight: "400" },
