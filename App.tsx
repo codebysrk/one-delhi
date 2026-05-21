@@ -14,6 +14,7 @@ import * as SplashScreen from 'expo-splash-screen';
 
 import { Asset } from 'expo-asset';
 import { NotificationListener } from './src/components/feedback/NotificationListener';
+import { checkForUpdate } from './src/utils/checkForUpdate';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -57,6 +58,12 @@ export default function App() {
     }
     prepare();
   }, [fontsLoaded]);
+
+  useEffect(() => {
+    if (appIsReady) {
+      checkForUpdate();
+    }
+  }, [appIsReady]);
 
   if (!fontsLoaded || !appIsReady) {
     return null;
