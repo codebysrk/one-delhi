@@ -21,8 +21,8 @@ export const SettingsScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
 
-  const [name, setName] = useState(user?.displayName || "Shah Rukh Khan");
-  const [email, setEmail] = useState(user?.email || "shahrukh@example.com");
+  const [name, setName] = useState(user?.displayName || "");
+  const [email, setEmail] = useState(user?.email || "");
   const [gender, setGender] = useState("Male");
   const [phone, setPhone] = useState("9876543210");
 
