@@ -28,9 +28,19 @@ import Animated, {
 } from "react-native-reanimated";
 import { FlashList } from "@shopify/flash-list";
 import { ANIMATIONS } from "../../core/theme";
-import rawStops from "../../../assets/stops.json";
 
-const findCoordinatesForStops = (stopNames: string[]) => {
+// Lazy-loaded stops data — loaded only when first route is displayed.
+// Cached in module scope so repeated calls don't re-parse the 1.9MB JSON.
+let _stopsCache: any[] | null = null;
+const getStopsData = async (): Promise<any[]> => {
+  if (_stopsCache) return _stopsCache;
+  // Use require() inside async for Metro-compatible lazy loading (avoids TS1323 error)
+  _stopsCache = require("../../../assets/stops.json") as any[];
+  return _stopsCache;
+};
+
+const findCoordinatesForStops = async (stopNames: string[]): Promise<{ latitude: number; longitude: number }[]> => {
+  const rawStops = await getStopsData();
   const coords: { latitude: number; longitude: number }[] = [];
   let lastValid = { latitude: 28.6139, longitude: 77.2090 };
   let hasValidAnchor = false;
@@ -309,7 +319,7 @@ const SHEET_FULL_HEIGHT = SCREEN_HEIGHT * 0.98;
     const unsubscribe = db
       .collection("routes")
       .doc(routeId)
-      .onSnapshot((docSnap) => {
+      .onSnapshot(async (docSnap) => {
         if (docSnap && docSnap.exists) {
           const data = docSnap.data();
         let formattedData: RouteData;
@@ -317,7 +327,7 @@ const SHEET_FULL_HEIGHT = SCREEN_HEIGHT * 0.98;
         if (data.stops && Array.isArray(data.stops)) {
           const coords = data.polylineCoordinates && data.polylineCoordinates.length > 0
             ? data.polylineCoordinates
-            : findCoordinatesForStops(data.stops);
+            : await findCoordinatesForStops(data.stops);
 
           formattedData = {
             routeNumber: data.routeNumber || routeId,
@@ -342,7 +352,7 @@ const SHEET_FULL_HEIGHT = SCREEN_HEIGHT * 0.98;
           const stopNames = dirData?.stops || [];
           const coords = dirData?.stop_coordinates && dirData.stop_coordinates.length > 0
             ? dirData.stop_coordinates
-            : findCoordinatesForStops(stopNames);
+            : await findCoordinatesForStops(stopNames);
 
           formattedData = {
             routeNumber: data.route || routeId.replace(/UP|DOWN/g, ''),

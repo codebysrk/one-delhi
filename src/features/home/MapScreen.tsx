@@ -35,7 +35,6 @@ import { useAppStore } from "../../store/useAppStore";
 import { BottomSheet } from "../../components/layout/BottomSheet";
 import { MainHeader } from "../../components/layout/Header";
 import { ANIMATIONS } from "../../core/theme";
-import rawStops from "../../../assets/stops.json";
 
 const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
   const dLat = lat1 - lat2;
@@ -213,35 +212,45 @@ export const MapScreen = ({ navigation }: any) => {
   // mapHtml removed since we now use the unified GoogleMap component
 
   useEffect(() => {
-    const lat = location?.coords.latitude || 28.6139;
-    const lng = location?.coords.longitude || 77.2090;
+    if (!location) return;
 
-    const sortedStops = (rawStops as any[])
-      .map((stop) => ({
-        id: stop.stop_id,
-        name: stop.stop_name,
-        lat: stop.stop_lat,
-        lng: stop.stop_lon,
-        distance: getDistance(lat, lng, stop.stop_lat, stop.stop_lon),
-      }))
-      .sort((a, b) => a.distance - b.distance);
+    // Lazy load stops.json only when location is available (deferred from startup)
+    const loadStops = async () => {
+      // Use require() inside async for Metro-compatible lazy loading
+      const rawStops: any[] = require("../../../assets/stops.json");
 
-    const seenNames = new Set<string>();
-    const uniqueSortedStops: any[] = [];
+      const lat = location.coords.latitude;
+      const lng = location.coords.longitude;
 
-    for (let i = 0; i < sortedStops.length; i++) {
-      const stop = sortedStops[i];
-      const cleanName = stop.name.toLowerCase().trim();
-      if (!seenNames.has(cleanName)) {
-        seenNames.add(cleanName);
-        uniqueSortedStops.push(stop);
-        if (uniqueSortedStops.length === 5) {
-          break;
+      const sortedStops = rawStops
+        .map((stop) => ({
+          id: stop.stop_id,
+          name: stop.stop_name,
+          lat: stop.stop_lat,
+          lng: stop.stop_lon,
+          distance: getDistance(lat, lng, stop.stop_lat, stop.stop_lon),
+        }))
+        .sort((a, b) => a.distance - b.distance);
+
+      const seenNames = new Set<string>();
+      const uniqueSortedStops: any[] = [];
+
+      for (let i = 0; i < sortedStops.length; i++) {
+        const stop = sortedStops[i];
+        const cleanName = stop.name.toLowerCase().trim();
+        if (!seenNames.has(cleanName)) {
+          seenNames.add(cleanName);
+          uniqueSortedStops.push(stop);
+          if (uniqueSortedStops.length === 5) {
+            break;
+          }
         }
       }
-    }
 
-    setStopsToShow(uniqueSortedStops);
+      setStopsToShow(uniqueSortedStops);
+    };
+
+    loadStops();
   }, [location]);
 
   // Nearby stops markers are no longer drawn on the map as per user request to keep only intended visuals.

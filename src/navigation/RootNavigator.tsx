@@ -354,30 +354,6 @@ export const RootNavigator = () => {
 };
 
 const styles = StyleSheet.create({
-  footerContainer: {
-    backgroundColor: '#FFF',
-  },
-  footerShadow: {
-    height: 1,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
-    elevation: 8,
-  },
-  globalFooter: { 
-    backgroundColor: '#D32F2F', // Standardized Rail Red
-    paddingVertical: 2, 
-    alignItems: 'center', 
-    justifyContent: 'center',
-    borderTopWidth: 1.5,
-    borderBottomWidth: 1.5,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderColor: 'rgba(0,0,0,0.25)', // Inner shadow simulation
-  },
-  footerText: { color: 'white', fontSize: 10, fontWeight: '500' },
   initializingContainer: {
     flex: 1,
     backgroundColor: '#D32F2F',
@@ -385,3 +361,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
+

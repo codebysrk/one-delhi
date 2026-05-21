@@ -13,7 +13,11 @@
       "backgroundColor": "#D32F2F"
     },
     "assetBundlePatterns": [
-      "**/*"
+      "assets/fonts/*.otf",
+      "assets/images/*.png",
+      "assets/images/*.webp",
+      "assets/icons/*.svg",
+      "assets/stops.json"
     ],
     "ios": {
       "supportsTablet": true,
@@ -42,7 +46,10 @@
         {
           "android": {
             "enableShrinkResourcesInReleaseBuilds": true,
-            "enableProguardInReleaseBuilds": true
+            "enableProguardInReleaseBuilds": true,
+            "minSdkVersion": 23,
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34
           }
         }
       ]
