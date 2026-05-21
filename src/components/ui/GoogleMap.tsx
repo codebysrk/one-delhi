@@ -89,6 +89,17 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
         body { margin: 0; padding: 0; }
         #map { height: 100vh; width: 100vw; background: #f8f9fa; }
         
+        /* Optimize rendering quality and text clarity */
+        .leaflet-tile {
+          image-rendering: -webkit-optimize-contrast;
+          image-rendering: crisp-edges;
+        }
+        
+        .leaflet-container {
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+        
         /* Glowing User Blue Dot */
         .user-marker {
           width: 10px;
@@ -192,9 +203,26 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
 
         var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([${mapStartLat}, ${mapStartLng}], ${mapStartZoom});
         
-        // Unified premium Google Maps tilelayer with HD scale=2 support
-        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&scale=2', {
+        // Detect device pixel ratio to dynamically select Google Maps tile scale (1x, 2x, 3x, 4x)
+        // This ensures pixel-perfect sharpness on high-density Retina/DPI screens.
+        var pr = window.devicePixelRatio || 1;
+        var mapScale = 2; // Default to 2x (Retina)
+        if (pr > 3) {
+          mapScale = 4;
+        } else if (pr > 2) {
+          mapScale = 3;
+        } else if (pr > 1) {
+          mapScale = 2;
+        } else {
+          mapScale = 1;
+        }
+
+        window.log("Device Pixel Ratio: " + pr + " -> Chosen Map Scale: " + mapScale);
+
+        // Unified premium Google Maps tilelayer with dynamic HD scale support
+        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&scale=' + mapScale, {
           maxZoom: 20,
+          tileSize: 256, // Leaflet tile size in CSS pixels
         }).addTo(map);
 
         window.log("Map object created successfully.");
@@ -365,6 +393,7 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
         scrollEnabled={true}
         showsVerticalScrollIndicator={false}
         showsHorizontalScrollIndicator={false}
+        scalesPageToFit={false}
       />
     </View>
   );
