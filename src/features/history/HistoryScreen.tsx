@@ -25,7 +25,7 @@ export const HistoryScreen = ({ navigation }: any) => {
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !user.uid) return;
 
     const unsubscribe = db
       .collection("tickets")

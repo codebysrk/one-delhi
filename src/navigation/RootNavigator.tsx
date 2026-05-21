@@ -130,7 +130,7 @@ export const RootNavigator = () => {
           isAuthReady 
         });
 
-        if (!user || isVerifying || !userProfile || !isAuthReady) return;
+        if (!user || !user.uid || isVerifying || !userProfile || !isAuthReady) return;
         
         try {
           const currentState = useAppStore.getState();
