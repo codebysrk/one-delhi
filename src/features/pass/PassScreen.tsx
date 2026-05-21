@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
   TouchableOpacity, 
   TextInput, 
-  ScrollView, 
   Modal,
   FlatList,
   Platform
@@ -49,7 +48,7 @@ export const PassScreen = ({ navigation }: any) => {
     setShowPicker(false);
   };
 
-  const onDateChange = (event: any, selectedDate?: Date) => {
+  const onDateChange = (_event: any, selectedDate?: Date) => {
     setShowDatePicker(false);
     if (selectedDate) {
       const day = selectedDate.getDate().toString().padStart(2, '0');

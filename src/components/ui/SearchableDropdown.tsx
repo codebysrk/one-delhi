@@ -42,7 +42,6 @@ export interface SearchableDropdownProps<T> {
   editable?: boolean;
   storageKey?: string;
   maxHeight?: number;
-  keyboardOpenMaxHeight?: number;
   keyboardBuffer?: number;
   dropdownGap?: number;
   onFocus?: () => void;
@@ -64,9 +63,8 @@ function SearchableDropdownInner<T>(
     editable = true,
     storageKey,
     maxHeight,
-    keyboardOpenMaxHeight,
     keyboardBuffer = 0,
-    dropdownGap = 6,
+    dropdownGap = 0,
     onFocus,
   }: SearchableDropdownProps<T>,
   ref: React.Ref<{ focus: () => void; blur: () => void }>,

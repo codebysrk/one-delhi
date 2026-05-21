@@ -6,13 +6,12 @@ import {
   TouchableOpacity,
   Alert,
   StatusBar,
-  Platform,
   Animated,
 } from "react-native";
-import { MaterialCommunityIcons, Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { UPILogo } from "../../components/icons/PaymentIcons";
 import * as Haptics from "expo-haptics";
+import { MaterialCommunityIcons, Feather } from "@expo/vector-icons";
 
 interface UpiPinScreenProps {
   selectedBank: string | null;
@@ -43,7 +42,7 @@ export const UpiPinScreen = ({
     for (let i = 0; i < pinLength; i++) {
       if (i < len) {
         Animated.spring(dotScales[i], {
-          toValue: 1.3,
+          toValue: 1,
           friction: 4,
           tension: 40,
           useNativeDriver: true,
@@ -80,7 +79,12 @@ export const UpiPinScreen = ({
     onSubmit();
   };
 
-  const displayBank = selectedBank === "SBI" ? "State Bank of India" : "HDFC Bank";
+  const displayBank =
+    selectedBank === "SBI"
+      ? "State Bank of India"
+      : selectedBank === "HDFC"
+      ? "HDFC Bank"
+      : "Central Bank of India";
 
   return (
     <View style={styles.container}>
@@ -97,7 +101,7 @@ export const UpiPinScreen = ({
           </TouchableOpacity>
         </View>
         <Text style={styles.savingsText}>
-          <Text style={styles.savingsBold}>SAVINGS: </Text>
+          <Text style={styles.savingsBold}> </Text>
           {displayBank}
         </Text>
       </View>
@@ -296,7 +300,6 @@ const styles = StyleSheet.create({
   dotFilled: {
     backgroundColor: "#111827",
     borderColor: "#111827",
-    borderWidth: 0,
   },
   keypadContainer: {
     backgroundColor: "#F4F5F7",

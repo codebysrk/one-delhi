@@ -14,7 +14,7 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ visible, message
     <Modal transparent animationType="fade" visible={visible} statusBarTranslucent>
       <View style={styles.overlay}>
         <View style={styles.card}>
-          <ActivityIndicator size="large" color="#D32F2F" style={styles.spinner} />
+          <ActivityIndicator size="large" color="#00796B" style={styles.spinner} />
           {message ? <Text style={styles.message}>{message}</Text> : null}
         </View>
       </View>

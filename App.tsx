@@ -4,7 +4,6 @@ import 'fast-text-encoding';
 import React, { useState, useEffect } from 'react';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { StatusBar } from 'expo-status-bar';
-import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -29,7 +28,6 @@ function cacheImages(images: any[]) {
 }
 
 export default function App() {
-  const { width, height } = useWindowDimensions();
   const [appIsReady, setAppIsReady] = useState(false);
   const [fontsLoaded] = useFonts({
     'StencilBold': require('./assets/fonts/OPTIStencil-Bold.otf'),
@@ -79,5 +77,3 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({});

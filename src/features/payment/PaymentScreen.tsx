@@ -1,76 +1,40 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
-  StatusBar,
   Platform,
-  Modal,
-  ActivityIndicator,
   ToastAndroid,
   Alert,
   Animated,
   Easing,
+  ScrollView,
+  StatusBar,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { Screen } from "../../components/layout/Screen";
 import { Header } from "../../components/layout/Header";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { COLORS } from "../../core/theme";
 import { useAppStore } from "../../store/useAppStore";
-import { generateTicketId, getRouteNumberOnly } from "../../utils/ticketHelper";
+import { generateTicketId } from "../../utils/ticketHelper";
 import { db, auth } from "../../services/firebase";
 import firestore from "@react-native-firebase/firestore";
 import {
   PaytmIcon,
   PhonePeIcon,
   GPayIcon,
-  AmazonPayIcon,
-  UPILogo,
 } from "../../components/icons/PaymentIcons";
 import { sanitizePayload } from "../../utils/firebaseUtils";
 import { logAction } from "../../services/logService";
-import { moderateScale, responsiveFontSize, scale } from "../../core/responsive";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { UpiConfirmScreen } from "./UpiConfirmScreen";
 import { UpiPinScreen } from "./UpiPinScreen";
-import { LoadingOverlay } from "../../components/ui/LoadingOverlay";
+import { PhonePeConfirmScreen } from "./PhonePeConfirmScreen";
+import { moderateScale, responsiveFontSize } from "../../core/responsive";
 import * as Haptics from "expo-haptics";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { PrimaryButton } from "../../components/ui/PrimaryButton";
-
-interface SimulatedTransaction {
-  id: string;
-  app: string;
-  amount: string;
-  status: "success" | "failed_pin" | "failed_balance" | "failed_timeout" | "failed_network";
-  timestamp: string;
-  txnId: string;
-  bankRef: string;
-  ticketRoute?: string;
-}
-
-const amountToWords = (num: number): string => {
-  const integerPart = Math.floor(num);
-  const wordsMap: { [key: number]: string } = {
-    5: "Five",
-    9: "Nine",
-    10: "Ten",
-    15: "Fifteen",
-    18: "Eighteen",
-    20: "Twenty",
-    25: "Twenty Five",
-    30: "Thirty",
-    35: "Thirty Five",
-    40: "Forty",
-    45: "Forty Five",
-    50: "Fifty",
-    1001: "One Thousand One"
-  };
-  return `Rupees ${wordsMap[integerPart] || integerPart.toString()} Only`;
-};
+import { LoadingOverlay } from "../../components/ui/LoadingOverlay";
 
 export const PaymentScreen = ({ navigation, route }: any) => {
   const { ticketData = {}, timeLeft: initialTimeLeft = 180 } = route.params || {};
@@ -94,9 +58,8 @@ export const PaymentScreen = ({ navigation, route }: any) => {
 
   // --- UPI Payment Simulation State Machine ---
   const [isSimulating, setIsSimulating] = useState(false);
-  const [selectedApp, setSelectedApp] = useState<"Paytm" | "PhonePe" | "GPay" | "Amazon Pay" | "BHIM">("GPay");
+  const [selectedApp, setSelectedApp] = useState<"Paytm" | "PhonePe" | "GPay" | "BHIM">("GPay");
   const [simStep, setSimStep] = useState<"confirmation" | "pin_entry" | "processing" | "success" | "failed">("confirmation");
-  const [paymentGatewayLoading, setPaymentGatewayLoading] = useState(false);
   const [processingMessage, setProcessingMessage] = useState("Securing connection...");
   const [selectedBank, setSelectedBank] = useState<string | null>("SBI"); // SBI selected by default
   const simAnimProgress = React.useRef(new Animated.Value(0)).current;
@@ -108,6 +71,14 @@ export const PaymentScreen = ({ navigation, route }: any) => {
   const successScale = React.useRef(new Animated.Value(0)).current;
   const checkmarkScale = React.useRef(new Animated.Value(0)).current;
   const detailsOpacity = React.useRef(new Animated.Value(0)).current;
+  const phonepeLoaderAnim = React.useRef(new Animated.Value(0.4)).current;
+  const paytmSpinAnim = React.useRef(new Animated.Value(0)).current;
+  const paytmPulseAnim = React.useRef(new Animated.Value(1)).current;
+  const paytmSuccessRingAnim = React.useRef(new Animated.Value(0)).current;
+  const paytmRing1 = React.useRef(new Animated.Value(0)).current;
+  const paytmRing2 = React.useRef(new Animated.Value(0)).current;
+  const paytmRing3 = React.useRef(new Animated.Value(0)).current;
+  const paytmGlowAnim = React.useRef(new Animated.Value(0.6)).current;
 
   // Fake generated IDs for active simulation
   const [activeTxnId, setActiveTxnId] = useState("");
@@ -298,7 +269,7 @@ export const PaymentScreen = ({ navigation, route }: any) => {
         .then(() => {
           console.log("[PaymentScreen] Ticket synced online successfully.");
         })
-        .catch((err: any) => {
+        .catch(() => {
           console.log(
             "[OfflineSync] Offline mode active. Ticket saved locally and will sync when online.",
           );
@@ -374,90 +345,162 @@ export const PaymentScreen = ({ navigation, route }: any) => {
     });
   };
 
-  const handleFinalize = async () => {
-    setIsSimulating(false);
-    try {
-      const now = new Date();
-      const dateStr = `${now.getDate().toString().padStart(2, "0")} ${now.toLocaleString("en-GB", { month: "short" })}, ${now.getFullYear()}`;
-      const timeStr = now.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      });
-      const tid = generateTicketId();
-
-      const finalTicket = {
-        ...ticketData,
-        baseFare: ticketData.baseFare || 10,
-        date: dateStr,
-        time: timeStr,
-        timestamp: firestore.Timestamp.now(),
-        userId: auth.currentUser?.uid,
-        deviceId: useAppStore.getState().deviceId,
-        status: "Active",
-        tid: tid,
-      };
-
-      // 1. Add to Local Store Immediately
-      addTicket({
-        ...finalTicket,
-        timestamp: finalTicket.timestamp.toMillis(),
-        fare: ticketData.total,
-        status: "Active" as any,
-        tid: tid,
-      });
-
-      // 2. Save to Firestore in background
-      db.collection("tickets").doc(tid).set(sanitizePayload(finalTicket))
-        .then(() => {
-          console.log("[PaymentScreen] Ticket synced online successfully.");
-        })
-        .catch((err: any) => {
-          console.log(
-            "[OfflineSync] Offline mode active. Ticket saved locally and will sync when online.",
-          );
-          if (Platform.OS === "android") {
-            ToastAndroid.show(
-              "Ticket booked locally (Offline Mode) 🎫",
-              ToastAndroid.LONG,
-            );
-          } else {
-            Alert.alert(
-              "Offline Ticket",
-              "Your ticket has been booked locally and is valid for travel! It will sync when internet is restored.",
-            );
-          }
-        });
-
-      // 3. Log Action (Background)
-      logAction({
-        userId: auth.currentUser?.uid || "anonymous",
-        userName: useAppStore.getState().userProfile?.name || "User",
-        userEmail: auth.currentUser?.email || "",
-        action: "BUY_TICKET",
-        details: `Ticket purchased for route ${ticketData.route}: ₹${ticketData.total}`,
-        type: "USER",
-        targetType: "TICKET",
-        targetId: tid,
-        deviceId: useAppStore.getState().deviceId || undefined,
-      }).catch(() => {});
-
-      navigation.navigate("Ticket", {
-        ticket: {
-          ...finalTicket,
-          timestamp: finalTicket.timestamp.toMillis(),
-          fare: ticketData.total,
-          tid,
-        },
-        isRedirect: true,
-      });
-    } catch (error) {
-      console.error(error);
-      setIsSimulating(false);
-    }
+  const getPhonePeSuccessTime = () => {
+    const d = new Date();
+    const day = d.getDate();
+    const month = d.toLocaleString("en-US", { month: "short" });
+    const year = d.getFullYear();
+    let hours = d.getHours();
+    const minutes = d.getMinutes().toString().padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const strTime = `${hours.toString().padStart(2, "0")}:${minutes} ${ampm}`;
+    return `${day} ${month} ${year} at ${strTime}`;
   };
 
-  const insets = useSafeAreaInsets();
+  useEffect(() => {
+    if (simStep === "processing") {
+      if (selectedApp === "PhonePe") {
+        phonepeLoaderAnim.setValue(0.4);
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(phonepeLoaderAnim, {
+              toValue: 1.0,
+              duration: 1000,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(phonepeLoaderAnim, {
+              toValue: 0.4,
+              duration: 1000,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ])
+        ).start();
+      } else if (selectedApp === "Paytm") {
+        paytmSpinAnim.setValue(0);
+        paytmPulseAnim.setValue(1);
+        paytmGlowAnim.setValue(0.6);
+        
+        Animated.loop(
+          Animated.timing(paytmSpinAnim, {
+            toValue: 1,
+            duration: 1200,
+            easing: Easing.linear,
+            useNativeDriver: true,
+          })
+        ).start();
+
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(paytmPulseAnim, {
+              toValue: 1.12,
+              duration: 750,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(paytmPulseAnim, {
+              toValue: 0.95,
+              duration: 750,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ])
+        ).start();
+
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(paytmGlowAnim, {
+              toValue: 1.0,
+              duration: 1000,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(paytmGlowAnim, {
+              toValue: 0.6,
+              duration: 1000,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ])
+        ).start();
+      }
+    }
+  }, [simStep, selectedApp]);
+
+  useEffect(() => {
+    if (simStep === "success" && selectedApp === "Paytm") {
+      paytmSuccessRingAnim.setValue(0);
+      paytmRing1.setValue(0);
+      paytmRing2.setValue(0);
+      paytmRing3.setValue(0);
+
+      Animated.loop(
+        Animated.timing(paytmSuccessRingAnim, {
+          toValue: 1,
+          duration: 1600,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        })
+      ).start();
+
+      const loop1 = Animated.loop(
+        Animated.timing(paytmRing1, {
+          toValue: 1,
+          duration: 1800,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        })
+      );
+
+      const loop2 = Animated.loop(
+        Animated.sequence([
+          Animated.delay(600),
+          Animated.timing(paytmRing2, {
+            toValue: 1,
+            duration: 1800,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+        ])
+      );
+
+      const loop3 = Animated.loop(
+        Animated.sequence([
+          Animated.delay(1200),
+          Animated.timing(paytmRing3, {
+            toValue: 1,
+            duration: 1800,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+        ])
+      );
+
+      loop1.start();
+      loop2.start();
+      loop3.start();
+
+      return () => {
+        loop1.stop();
+        loop2.stop();
+        loop3.stop();
+      };
+    }
+  }, [simStep, selectedApp]);
+
+  useEffect(() => {
+    if (simStep === "success" && (selectedApp === "PhonePe" || selectedApp === "Paytm")) {
+      const timer = setTimeout(() => {
+        handleDone();
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [simStep, selectedApp, finalCreatedTicket]);
+
+    const insets = useSafeAreaInsets();
   const timerScale = React.useRef(new Animated.Value(1)).current;
 
   // Pulse animation when only a short time remains
@@ -478,20 +521,20 @@ export const PaymentScreen = ({ navigation, route }: any) => {
     return () => { if (loop) loop.stop(); };
   }, [timeLeft, timerScale]);
 
-  // --- Dynamic Color Customizations based on Chosen UPI App ---
-  const appBranding = useMemo(() => {
-    switch (selectedApp) {
-      case "PhonePe":
-        return { color: "#5F259F", lightColor: "#F3EBF9", text: "PhonePe" };
-      case "Paytm":
-        return { color: "#002E6E", lightColor: "#EAF5FF", text: "Paytm" };
-      case "Amazon Pay":
-        return { color: "#FF9900", lightColor: "#FFF3E0", text: "Amazon Pay" };
-      case "GPay":
-      default:
-        return { color: "#1A73E8", lightColor: "#E8F0FE", text: "Google Pay" };
-    }
-  }, [selectedApp]);
+
+
+  const paytmCardTranslateY = detailsOpacity.interpolate({
+    inputRange: [0, 1],
+    outputRange: [35, 0],
+  });
+  const paytmCardScale = detailsOpacity.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.96, 1],
+  });
+  const paytmTextTranslateY = detailsOpacity.interpolate({
+    inputRange: [0, 1],
+    outputRange: [15, 0],
+  });
 
   return (
     <Screen noPadding ignoreTopSafe style={{ backgroundColor: "#FFFFFF" }}>
@@ -550,7 +593,7 @@ export const PaymentScreen = ({ navigation, route }: any) => {
           <Text style={styles.sectionTitle}>UPI</Text>
         </View>
 
-        {/* --- 2. Four UPI Selection Grid --- */}
+        {/* --- 2. Three UPI Selection Grid --- */}
         <View style={styles.upiGrid}>
           <TouchableOpacity style={styles.upiCard} onPress={() => openSimulation("Paytm")} disabled={isRedirecting || isSimulating} accessibilityLabel="Pay with Paytm" activeOpacity={0.7}>
             <View style={{ alignItems: 'center' }}>
@@ -568,12 +611,6 @@ export const PaymentScreen = ({ navigation, route }: any) => {
             <View style={{ alignItems: 'center' }}>
               <GPayIcon size={42} />
               <Text style={styles.upiLabel}>GPay</Text>
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.upiCard} onPress={() => openSimulation("Amazon Pay")} disabled={isRedirecting || isSimulating} accessibilityLabel="Pay with Amazon Pay" activeOpacity={0.7}>
-            <View style={{ alignItems: 'center' }}>
-              <AmazonPayIcon size={42} />
-              <Text style={styles.upiLabel}>Amazon</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -635,16 +672,27 @@ export const PaymentScreen = ({ navigation, route }: any) => {
           
           {/* STEP 1: SPECIFIC APP CONFIRMATION SCREEN */}
           {simStep === "confirmation" && (
-            <UpiConfirmScreen
-              selectedApp={selectedApp}
-              activeTxnId={activeTxnId}
-              formattedTotal={formattedTotal}
-              displayTotal={displayTotal}
-              selectedBank={selectedBank}
-              setSelectedBank={setSelectedBank}
-              onProceed={() => setSimStep("pin_entry")}
-              onClose={closeSimulation}
-            />
+            selectedApp === "PhonePe" ? (
+              <PhonePeConfirmScreen
+                activeTxnId={activeTxnId}
+                formattedTotal={formattedTotal}
+                selectedBank={selectedBank}
+                setSelectedBank={setSelectedBank}
+                onProceed={() => setSimStep("pin_entry")}
+                onClose={closeSimulation}
+              />
+            ) : (
+              <UpiConfirmScreen
+                selectedApp={selectedApp}
+                activeTxnId={activeTxnId}
+                formattedTotal={formattedTotal}
+                displayTotal={displayTotal}
+                selectedBank={selectedBank}
+                setSelectedBank={setSelectedBank}
+                onProceed={() => setSimStep("pin_entry")}
+                onClose={closeSimulation}
+              />
+            )
           )}
 
           {/* STEP 2: HIGH-FIDELITY NPCI SECURE UPI PIN ENTRY SCREEN */}
@@ -659,96 +707,299 @@ export const PaymentScreen = ({ navigation, route }: any) => {
 
           {/* STEP 3: PROCESSING SCREEN */}
           {simStep === "processing" && (
-            <View style={styles.simProcessingBox}>
-              <ActivityIndicator size="large" color="#10B981" />
-              <Text style={styles.simProcessingTitle}>{processingMessage}</Text>
-              <Text style={styles.simProcessingSub}>Please do not close this window</Text>
-              <View style={styles.securingIndicatorCard}>
-                <MaterialCommunityIcons name="shield-check" size={16} color="#065F46" />
-                <Text style={styles.securedIndicatorText}>NPCI SECURE PAYMENT GATEWAY</Text>
+            selectedApp === "PhonePe" ? (
+              <View style={styles.phonepeProcessingBox}>
+                <StatusBar barStyle="light-content" backgroundColor="#0f0f0f" translucent={true} />
+                <Animated.View
+                  style={[
+                    styles.phonepeLoaderPill,
+                    {
+                      opacity: phonepeLoaderAnim,
+                      transform: [
+                        {
+                          scale: phonepeLoaderAnim.interpolate({
+                            inputRange: [0.4, 1.0],
+                            outputRange: [0.9, 1.15],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
+                />
+                <Text style={styles.phonepeProcessingTitle}>Connecting Securely</Text>
               </View>
-            </View>
+            ) : selectedApp === "Paytm" ? (
+              <View style={styles.paytmProcessingBox}>
+                <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent={true} />
+                <View style={styles.paytmSpinnerContainer}>
+                  <Animated.View
+                    style={[
+                      styles.paytmSpinnerGlow,
+                      {
+                        transform: [{ scale: paytmGlowAnim }],
+                        opacity: paytmGlowAnim.interpolate({
+                          inputRange: [0.6, 1.0],
+                          outputRange: [0.08, 0.22],
+                        }),
+                      },
+                    ]}
+                  />
+                  <View style={styles.paytmSpinnerBgRing} />
+                  <Animated.View
+                    style={[
+                      styles.paytmSpinnerRing,
+                      {
+                        transform: [
+                          {
+                            rotate: paytmSpinAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: ["0deg", "360deg"],
+                            }),
+                          },
+                        ],
+                      },
+                    ]}
+                  />
+                  <Animated.View
+                    style={[
+                      styles.paytmLockIcon,
+                      {
+                        transform: [{ scale: paytmPulseAnim }],
+                      },
+                    ]}
+                  >
+                    <MaterialCommunityIcons name="lock" size={32} color="#00b9f1" />
+                  </Animated.View>
+                </View>
+                <Text style={styles.paytmProcessingTitle}>Processing Payment</Text>
+                <Text style={styles.paytmProcessingSub}>
+                  Paying One Delhi{"\n"}
+                  <Text style={{ fontWeight: "bold", color: "#002e6e" }}>₹{formattedTotal}</Text>
+                </Text>
+                <View style={styles.paytmSecuredBadge}>
+                  <MaterialCommunityIcons name="shield-check" size={16} color="#002e6e" />
+                  <Text style={styles.paytmSecuredText}>paytm Secured</Text>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.simProcessingBox}>
+                <ActivityIndicator size="large" color="#10B981" />
+                <Text style={styles.simProcessingTitle}>{processingMessage}</Text>
+                <Text style={styles.simProcessingSub}>Please do not close this window</Text>
+                <View style={styles.securingIndicatorCard}>
+                  <MaterialCommunityIcons name="shield-check" size={16} color="#065F46" />
+                  <Text style={styles.securedIndicatorText}>NPCI SECURE PAYMENT GATEWAY</Text>
+                </View>
+              </View>
+            )
           )}
 
           {/* STEP 4: SUCCESS OUTCOME SCREEN */}
           {simStep === "success" && (
-            <View style={styles.outcomeContainer}>
-              <ScrollView contentContainerStyle={styles.outcomeScroll} showsVerticalScrollIndicator={false}>
-                <Animated.View style={[styles.successCelebrationBg, { transform: [{ scale: successScale }] }]}>
-                  <Animated.View style={[styles.successTickCircle, { transform: [{ scale: checkmarkScale }] }]}>
-                    <MaterialCommunityIcons name="check" size={44} color="white" />
-                  </Animated.View>
+            selectedApp === "PhonePe" ? (
+              <View style={styles.phonepeSuccessContainer}>
+                <StatusBar barStyle="light-content" backgroundColor="#249b4f" translucent={true} />
+                <View style={styles.phonepeSuccessDot} />
+                <Animated.View style={[styles.phonepeSuccessCircle, { transform: [{ scale: checkmarkScale }] }]}>
+                  <MaterialCommunityIcons name="check" size={50} color="#249b4f" />
                 </Animated.View>
-                <Text style={styles.successTitleText}>Payment Successful</Text>
-                <Text style={styles.successSubtitleText}>Your ticket has been booked successfully</Text>
-
-                <Animated.View style={[styles.detailsCard, { opacity: detailsOpacity }]}>
-                  <Text style={styles.detailsCardTitle}>Transaction Details</Text>
-                  
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Transaction ID</Text>
-                    <Text style={[styles.detailVal, { fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }]}>
-                      {typedTxnId || " "}
+                <Animated.Text style={[styles.phonepeSuccessTitle, { opacity: detailsOpacity }]}>Payment Successful</Animated.Text>
+                <Animated.Text style={[styles.phonepeSuccessTime, { opacity: detailsOpacity }]}>{getPhonePeSuccessTime()}</Animated.Text>
+              </View>
+            ) : selectedApp === "Paytm" ? (
+              <View style={styles.paytmSuccessContainer}>
+                <StatusBar barStyle="dark-content" backgroundColor="#F4F8FD" translucent={true} />
+                <View style={styles.paytmSuccessHeader}>
+                  <Text style={{ fontSize: 18, fontWeight: "bold", color: "#002e6e" }}>paytm</Text>
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: "#00b9f1" }}>Help</Text>
+                </View>
+                <View style={styles.paytmSuccessTickContainer}>
+                  {/* Staggered concentric ripple rings */}
+                  <Animated.View
+                    style={[
+                      styles.paytmSuccessRing,
+                      {
+                        transform: [
+                          {
+                            scale: paytmRing1.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [1, 2.2],
+                            }),
+                          },
+                        ],
+                        opacity: paytmRing1.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.6, 0],
+                        }),
+                      },
+                    ]}
+                  />
+                  <Animated.View
+                    style={[
+                      styles.paytmSuccessRing,
+                      {
+                        transform: [
+                          {
+                            scale: paytmRing2.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [1, 1.8],
+                            }),
+                          },
+                        ],
+                        opacity: paytmRing2.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.5, 0],
+                        }),
+                      },
+                    ]}
+                  />
+                  <Animated.View
+                    style={[
+                      styles.paytmSuccessRing,
+                      {
+                        transform: [
+                          {
+                            scale: paytmRing3.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [1, 1.4],
+                            }),
+                          },
+                        ],
+                        opacity: paytmRing3.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.4, 0],
+                        }),
+                      },
+                    ]}
+                  />
+                  <Animated.View
+                    style={[
+                      styles.paytmSuccessCircle,
+                      {
+                        transform: [{ scale: checkmarkScale }],
+                      },
+                    ]}
+                  >
+                    <MaterialCommunityIcons name="check" size={48} color="white" />
+                  </Animated.View>
+                </View>
+                <Animated.Text
+                  style={[
+                    styles.paytmSuccessTitle,
+                    {
+                      opacity: detailsOpacity,
+                      transform: [{ translateY: paytmTextTranslateY }],
+                    },
+                  ]}
+                >
+                  ₹{formattedTotal} Paid Successfully
+                </Animated.Text>
+                <Animated.Text
+                  style={[
+                    styles.paytmSuccessSubtitle,
+                    {
+                      opacity: detailsOpacity,
+                      transform: [{ translateY: paytmTextTranslateY }],
+                    },
+                  ]}
+                >
+                  to One Delhi
+                </Animated.Text>
+                <Animated.View
+                  style={[
+                    styles.paytmDetailsCard,
+                    {
+                      opacity: detailsOpacity,
+                      transform: [
+                        { translateY: paytmCardTranslateY },
+                        { scale: paytmCardScale },
+                      ],
+                    },
+                  ]}
+                >
+                  <Text style={styles.paytmDetailsHeader}>Transaction Details</Text>
+                  <View style={styles.paytmDetailRow}>
+                    <Text style={styles.paytmDetailLabel}>Ticket Route</Text>
+                    <Text style={styles.paytmDetailVal}>{ticketData?.route || "Bus Route"}</Text>
+                  </View>
+                  <View style={styles.paytmDetailRow}>
+                    <Text style={styles.paytmDetailLabel}>Transaction ID</Text>
+                    <Text style={[styles.paytmDetailVal, { fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 11 }]}>
+                      {activeTxnId}
                     </Text>
                   </View>
-
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Bank Reference No.</Text>
-                    <Text style={styles.detailVal}>{activeBankRef}</Text>
+                  <View style={styles.paytmDetailRow}>
+                    <Text style={styles.paytmDetailLabel}>Bank Ref No.</Text>
+                    <Text style={styles.paytmDetailVal}>{activeBankRef}</Text>
                   </View>
-
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Paid From</Text>
-                    <Text style={styles.detailVal}>{selectedBank === "SBI" ? "SBI Savings - 4526" : "HDFC Savings - 8972"}</Text>
-                  </View>
-
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>UPI App</Text>
-                    <Text style={styles.detailVal}>{selectedApp}</Text>
-                  </View>
-
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Amount Paid</Text>
-                    <Text style={[styles.detailVal, { color: '#10B981', fontWeight: 'bold' }]}>₹{formattedTotal}</Text>
+                  <View style={styles.paytmDetailRow}>
+                    <Text style={styles.paytmDetailLabel}>Date & Time</Text>
+                    <Text style={styles.paytmDetailVal}>{activeTimestamp}</Text>
                   </View>
                 </Animated.View>
+                <View style={styles.paytmSuccessFooter}>
+                  <Text style={{ fontSize: 11, color: "#687B95", fontWeight: "600" }}>Secured by Paytm UPI</Text>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.outcomeContainer}>
+                <ScrollView contentContainerStyle={styles.outcomeScroll} showsVerticalScrollIndicator={false}>
+                  <Animated.View style={[styles.successCelebrationBg, { transform: [{ scale: successScale }] }]}>
+                    <Animated.View style={[styles.successTickCircle, { transform: [{ scale: checkmarkScale }] }]}>
+                      <MaterialCommunityIcons name="check" size={44} color="white" />
+                    </Animated.View>
+                  </Animated.View>
+                  <Text style={styles.successTitleText}>Payment Successful</Text>
+                  <Text style={styles.successSubtitleText}>Your ticket has been booked successfully</Text>
 
-                {/* DONE BUTTON */}
-                <Animated.View style={{ width: '100%', opacity: detailsOpacity, marginTop: 30 }}>
-                  <PrimaryButton 
-                    title="View Ticket"
-                    onPress={handleDone}
-                  />
-                </Animated.View>
-              </ScrollView>
-            </View>
+                  <Animated.View style={[styles.detailsCard, { opacity: detailsOpacity }]}>
+                    <Text style={styles.detailsCardTitle}>Transaction Details</Text>
+                    
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Transaction ID</Text>
+                      <Text style={[styles.detailVal, { fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }]}>
+                        {typedTxnId || " "}
+                      </Text>
+                    </View>
+
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Bank Reference No.</Text>
+                      <Text style={styles.detailVal}>{activeBankRef}</Text>
+                    </View>
+
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Paid From</Text>
+                      <Text style={styles.detailVal}>{selectedBank === "SBI" ? "SBI Savings - 4526" : "HDFC Savings - 8972"}</Text>
+                    </View>
+
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>UPI App</Text>
+                      <Text style={styles.detailVal}>{selectedApp}</Text>
+                    </View>
+
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Amount Paid</Text>
+                      <Text style={[styles.detailVal, { color: '#10B981', fontWeight: 'bold' }]}>₹{formattedTotal}</Text>
+                    </View>
+                  </Animated.View>
+
+                  {/* DONE BUTTON */}
+                  <Animated.View style={{ width: '100%', opacity: detailsOpacity, marginTop: 30 }}>
+                    <PrimaryButton 
+                      title="View Ticket"
+                      onPress={handleDone}
+                    />
+                  </Animated.View>
+                </ScrollView>
+              </View>
+            )
           )}
 
         </Animated.View>
       )}
 
-      {/* BRANDED UPI REDIRECTION DIALOG */}
-      <Modal transparent visible={isRedirecting} animationType="fade" statusBarTranslucent>
-        <View style={styles.redirectionOverlay}>
-          <View style={styles.redirectionCard}>
-            <View style={styles.redirectionHeader}>
-              <View style={[styles.appIconCircle, { backgroundColor: appBranding.lightColor }]}>
-                {selectedApp === "Paytm" && <PaytmIcon size={36} />}
-                {selectedApp === "PhonePe" && <PhonePeIcon size={36} />}
-                {selectedApp === "GPay" && <GPayIcon size={36} />}
-                {selectedApp === "Amazon Pay" && <AmazonPayIcon size={36} />}
-              </View>
-              <ActivityIndicator size="small" color={appBranding.color} style={styles.redirectionSpinner} />
-            </View>
-            <Text style={styles.redirectionText}>
-              Redirecting to <Text style={[styles.redirectionAppName, { color: appBranding.color }]}>{appBranding.text}</Text>...
-            </Text>
-            <Text style={styles.redirectionSubtext}>
-              Do not press back or close the app while we securely launch your payment app.
-            </Text>
-          </View>
-        </View>
-      </Modal>
+      {/* SIMPLE LOADING OVERLAY */}
+      <LoadingOverlay visible={isRedirecting} message="Loading payment, please wait." />
 
     </Screen>
   );
@@ -816,7 +1067,7 @@ const styles = StyleSheet.create({
     borderColor: "#F3F4F6",
     padding: moderateScale(12),
     alignItems: "center",
-    width: "22%",
+    width: "30%",
     elevation: 3,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -1233,5 +1484,226 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 18,
     paddingHorizontal: 10,
+  },
+  phonepeProcessingBox: {
+    flex: 1,
+    backgroundColor: "#161616",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  phonepeLoaderPill: {
+    width: 60,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#ECE3F5",
+    marginBottom: 24,
+  },
+  phonepeProcessingTitle: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  phonepeSuccessContainer: {
+    flex: 1,
+    backgroundColor: "#249b4f",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  phonepeSuccessDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(255, 255, 255, 0.4)",
+    marginBottom: 40,
+  },
+  phonepeSuccessCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  phonepeSuccessTitle: {
+    color: "#FFFFFF",
+    fontSize: 22,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  phonepeSuccessTime: {
+    color: "#EBF4D0",
+    fontSize: 15,
+    fontWeight: "500",
+  },
+  paytmProcessingBox: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+  paytmSpinnerContainer: {
+    width: 90,
+    height: 90,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 32,
+    position: "relative",
+  },
+  paytmSpinnerGlow: {
+    position: "absolute",
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: "#00b9f1",
+  },
+  paytmSpinnerBgRing: {
+    position: "absolute",
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 4,
+    borderColor: "#E1F0FC",
+  },
+  paytmSpinnerRing: {
+    position: "absolute",
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 4,
+    borderColor: "transparent",
+    borderTopColor: "#00b9f1",
+    borderRightColor: "#00b9f1",
+  },
+  paytmLockIcon: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  paytmProcessingTitle: {
+    color: "#002e6e",
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  paytmProcessingSub: {
+    color: "#687B95",
+    fontSize: 14,
+    fontWeight: "500",
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  paytmSecuredBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 60,
+    backgroundColor: "#F3F8FE",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    gap: 6,
+  },
+  paytmSecuredText: {
+    color: "#002e6e",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  paytmSuccessContainer: {
+    flex: 1,
+    backgroundColor: "#F4F8FD",
+    paddingTop: 50,
+    paddingHorizontal: 20,
+    alignItems: "center",
+  },
+  paytmSuccessHeader: {
+    width: "100%",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    marginBottom: 40,
+  },
+  paytmSuccessTickContainer: {
+    width: 100,
+    height: 100,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+    position: "relative",
+  },
+  paytmSuccessRing: {
+    position: "absolute",
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: "#D4F4E2",
+  },
+  paytmSuccessCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#0db14b",
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+  paytmSuccessTitle: {
+    color: "#002e6e",
+    fontSize: 22,
+    fontWeight: "800",
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  paytmSuccessSubtitle: {
+    color: "#4A5A72",
+    fontSize: 15,
+    fontWeight: "600",
+    textAlign: "center",
+    marginBottom: 30,
+  },
+  paytmDetailsCard: {
+    width: "100%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: "#EBF1F9",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+  },
+  paytmDetailsHeader: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#002e6e",
+    marginBottom: 12,
+  },
+  paytmDetailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 8,
+    borderBottomWidth: 0.5,
+    borderColor: "#F0F4FA",
+  },
+  paytmDetailLabel: {
+    fontSize: 13,
+    color: "#687B95",
+  },
+  paytmDetailVal: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1F2937",
+  },
+  paytmSuccessFooter: {
+    position: "absolute",
+    bottom: 30,
+    alignItems: "center",
   },
 });

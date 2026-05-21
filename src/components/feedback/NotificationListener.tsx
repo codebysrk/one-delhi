@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { db } from '../../services/firebase';
 import { useAppStore } from '../../store/useAppStore';
 
@@ -21,7 +21,7 @@ export const NotificationListener = () => {
             }
           }
         },
-        (error) => {
+        (error: any) => {
           if (error.code === 'permission-denied') {
             // This is expected when a user is banned or logged out
             return;

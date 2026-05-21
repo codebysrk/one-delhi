@@ -7,10 +7,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   StatusBar,
-  ActivityIndicator,
   Platform,
   useWindowDimensions,
-  Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Screen } from "../../components/layout/Screen";
@@ -195,12 +193,7 @@ interface RouteData {
   stops: string[];
 }
 
-const DEFAULT_REGION = {
-  latitude: 28.6139,
-  longitude: 77.2090,
-  latitudeDelta: 0.15,
-  longitudeDelta: 0.15,
-};
+
 
 
 
@@ -215,16 +208,7 @@ const RouteInfo = memo(({ origin, destination }: { origin: string; destination: 
   </View>
 ));
 
-const FloatingButtons = memo(({ onLocate }: { onLocate: () => void }) => (
-  <>
-    <TouchableOpacity style={styles.floatingDirectionBtn} activeOpacity={0.8}>
-      <MaterialCommunityIcons name="navigation" size={22} color="#FFF" />
-    </TouchableOpacity>
-    <TouchableOpacity style={styles.floatingLocateBtn} onPress={onLocate} activeOpacity={0.8}>
-      <MaterialCommunityIcons name="crosshairs-gps" size={22} color="#111" />
-    </TouchableOpacity>
-  </>
-));
+
 
 const StopTimelineItem = memo(({ 
   item, 

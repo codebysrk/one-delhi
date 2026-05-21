@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity,
-  StatusBar, Platform, FlatList, ActivityIndicator, RefreshControl
+  View, Text, StyleSheet,
+  StatusBar, Platform, FlatList, ActivityIndicator
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '../../components/layout/Screen';

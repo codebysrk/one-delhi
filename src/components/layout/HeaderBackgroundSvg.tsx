@@ -57,60 +57,74 @@ export const HeaderBackgroundSvg = () => (
       {/* r0_i0: Far-Left Overflow ▼ (Deep Dark Violet) */}
       <LinearGradient id="r0_i0" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#751b40" />
+        <Stop offset="100%" stopColor="#751b40" />
       </LinearGradient>
       {/* r0_i1: Inner-Left ▼ (Dark Orchid) */}
       <LinearGradient id="r0_i1" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#6c1a41" />
+        <Stop offset="100%" stopColor="#6c1a41" />
       </LinearGradient>
       {/* r0_i2: Mid-Left ▼ (Plum Berry) */}
       <LinearGradient id="r0_i2" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#8c1d39" />
+        <Stop offset="100%" stopColor="#8c1d39" />
       </LinearGradient>
       {/* r0_i3: Center ▼ (Crimson Red) */}
       <LinearGradient id="r0_i3" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#a72034" />
+        <Stop offset="100%" stopColor="#a72034" />
       </LinearGradient>
       {/* r0_i4: Mid-Right ▼ (Warm Ruby) */}
       <LinearGradient id="r0_i4" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#b92840" />
+        <Stop offset="100%" stopColor="#b92840" />
       </LinearGradient>
       {/* r0_i5: Inner-Right ▼ (Ruby Scarlet) */}
       <LinearGradient id="r0_i5" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#a6223f" />
+        <Stop offset="100%" stopColor="#a6223f" />
       </LinearGradient>
       {/* r0_i6: Far-Right Overflow ▼ (Vibrant Red) */}
       <LinearGradient id="r0_i6" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#af2934" />
+        <Stop offset="100%" stopColor="#af2934" />
       </LinearGradient>
 
       {/* Row 0 - Upright (Pointing Up ▲) Gradients */}
       {/* r0_u0: Far-Left Overflow ▲ (Very Dark Violet) */}
       <LinearGradient id="r0_u0" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#761c41" />
+        <Stop offset="100%" stopColor="#761c41" />
       </LinearGradient>
       {/* r0_u1: Inner-Left ▲ (Deep Eggplant) */}
       <LinearGradient id="r0_u1" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#761c41" />
+        <Stop offset="100%" stopColor="#761c41" />
       </LinearGradient>
       {/* r0_u2: Mid-Left ▲ (Deep Wine Red) */}
       <LinearGradient id="r0_u2" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#a01d33" />
+        <Stop offset="100%" stopColor="#a01d33" />
       </LinearGradient>
       {/* r0_u3: Center ▲ (Cherry Maroon) */}
       <LinearGradient id="r0_u3" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#a81e33" />
+        <Stop offset="100%" stopColor="#a81e33" />
       </LinearGradient>
       {/* r0_u4: Mid-Right ▲ (Brick Red) */}
       <LinearGradient id="r0_u4" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#bf2230" />
+        <Stop offset="100%" stopColor="#bf2230" />
       </LinearGradient>
       {/* r0_u5: Inner-Right ▲ (Bright Crimson) */}
       <LinearGradient id="r0_u5" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#c62e30" />
+        <Stop offset="100%" stopColor="#c62e30" />
       </LinearGradient>
       {/* r0_u6: Far-Right Overflow ▲ (Fiery Red) */}
       <LinearGradient id="r0_u6" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#be2330" />
+        <Stop offset="100%" stopColor="#be2330" />
       </LinearGradient>
 
       {/* ==============================================
@@ -121,60 +135,74 @@ export const HeaderBackgroundSvg = () => (
       {/* r1_i0: Far-Left Overflow ▼ (Dark Violet-Magenta) */}
       <LinearGradient id="r1_i0" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#8b1b38" />
+        <Stop offset="100%" stopColor="#8b1b38" />
       </LinearGradient>
       {/* r1_i1: Inner-Left ▼ (Deep Wine) */}
       <LinearGradient id="r1_i1" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#bb212e" />
+        <Stop offset="100%" stopColor="#bb212e" />
       </LinearGradient>
       {/* r1_i2: Mid-Left ▼ (Dark Raspberry) */}
       <LinearGradient id="r1_i2" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#c7272d" />
+        <Stop offset="100%" stopColor="#c7272d" />
       </LinearGradient>
       {/* r1_i3: Center ▼ (Crimson-Red) */}
       <LinearGradient id="r1_i3" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#d23231" />
+        <Stop offset="100%" stopColor="#d23231" />
       </LinearGradient>
       {/* r1_i4: Mid-Right ▼ (Coral-Red) */}
       <LinearGradient id="r1_i4" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#d63a2f" />
+        <Stop offset="100%" stopColor="#d63a2f" />
       </LinearGradient>
       {/* r1_i5: Inner-Right ▼ (Vibrant Coral) */}
       <LinearGradient id="r1_i5" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#d94736" />
+        <Stop offset="100%" stopColor="#d94736" />
       </LinearGradient>
       {/* r1_i6: Far-Right Overflow ▼ (Vibrant Orange-Red) */}
       <LinearGradient id="r1_i6" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#d54834" />
+        <Stop offset="100%" stopColor="#d54834" />
       </LinearGradient>
 
       {/* Row 1 - Upright (Pointing Up ▲) Gradients */}
       {/* r1_u0: Far-Left Overflow ▲ (Dark Purple) */}
       <LinearGradient id="r1_u0" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#961d3b" />
+        <Stop offset="100%" stopColor="#961d3b" />
       </LinearGradient>
       {/* r1_u1: Inner-Left ▲ (Deep Plum) */}
       <LinearGradient id="r1_u1" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#bd202d" />
+        <Stop offset="100%" stopColor="#bd202d" />
       </LinearGradient>
       {/* r1_u2: Mid-Left ▲ (Deep Burgundy) */}
       <LinearGradient id="r1_u2" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#cc252b" />
+        <Stop offset="100%" stopColor="#cc252b" />
       </LinearGradient>
       {/* r1_u3: Center ▲ (Vibrant Scarlet) */}
       <LinearGradient id="r1_u3" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#d33b2a" />
+        <Stop offset="100%" stopColor="#d33b2a" />
       </LinearGradient>
       {/* r1_u4: Mid-Right ▲ (Electric Red) */}
       <LinearGradient id="r1_u4" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#e05131" />
+        <Stop offset="100%" stopColor="#e05131" />
       </LinearGradient>
       {/* r1_u5: Inner-Right ▲ (Fiery Orange-Red) */}
       <LinearGradient id="r1_u5" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#ec7741" />
+        <Stop offset="100%" stopColor="#ec7741" />
       </LinearGradient>
       {/* r1_u6: Far-Right Overflow ▲ (Neon Orange) */}
       <LinearGradient id="r1_u6" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#f54323" />
+        <Stop offset="100%" stopColor="#f54323" />
       </LinearGradient>
 
       {/* ==============================================
@@ -185,60 +213,74 @@ export const HeaderBackgroundSvg = () => (
       {/* r2_i0: Far-Left Overflow ▼ (Dark Violet-Wine) */}
       <LinearGradient id="r2_i0" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#11443cff" />
+        <Stop offset="100%" stopColor="#11443cff" />
       </LinearGradient>
       {/* r2_i1: Inner-Left ▼ (Mulberry Purple) */}
       <LinearGradient id="r2_i1" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#6f1a3e" />
+        <Stop offset="100%" stopColor="#6f1a3e" />
       </LinearGradient>
       {/* r2_i2: Mid-Left ▼ (Bright Rose) */}
       <LinearGradient id="r2_i2" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#a12637" />
+        <Stop offset="100%" stopColor="#a12637" />
       </LinearGradient>
       {/* r2_i3: Center ▼ (Tomato Orange-Red) */}
       <LinearGradient id="r2_i3" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#d7312c" />
+        <Stop offset="100%" stopColor="#d7312c" />
       </LinearGradient>
       {/* r2_i4: Mid-Right ▼ (Sunset Orange) */}
       <LinearGradient id="r2_i4" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#fb5520" />
+        <Stop offset="100%" stopColor="#fb5520" />
       </LinearGradient>
       {/* r2_i5: Inner-Right ▼ (Tangerine Orange) */}
       <LinearGradient id="r2_i5" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#fb5520" />
+        <Stop offset="100%" stopColor="#fb5520" />
       </LinearGradient>
       {/* r2_i6: Far-Right Overflow ▼ (Vibrant Gold-Orange) */}
       <LinearGradient id="r2_i6" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#fb5520" />
+        <Stop offset="100%" stopColor="#fb5520" />
       </LinearGradient>
 
       {/* Row 2 - Upright (Pointing Up ▲) Gradients */}
       {/* r2_u0: Far-Left Overflow ▲ (Dark Magenta) */}
       <LinearGradient id="r2_u0" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#330c30" />
+        <Stop offset="100%" stopColor="#330c30" />
       </LinearGradient>
       {/* r2_u1: Inner-Left ▲ (Deep Fuchsia) */}
       <LinearGradient id="r2_u1" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#5a163e" />
+        <Stop offset="100%" stopColor="#5a163e" />
       </LinearGradient>
       {/* r2_u2: Mid-Left ▲ (Ruby Maroon) */}
       <LinearGradient id="r2_u2" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#88203c" />
+        <Stop offset="100%" stopColor="#88203c" />
       </LinearGradient>
       {/* r2_u3: Center ▲ (Bright Brick Red) */}
       <LinearGradient id="r2_u3" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#be2c31" />
+        <Stop offset="100%" stopColor="#be2c31" />
       </LinearGradient>
       {/* r2_u4: Mid-Right ▲ (Flame Orange) */}
       <LinearGradient id="r2_u4" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#ed3926" />
+        <Stop offset="100%" stopColor="#ed3926" />
       </LinearGradient>
       {/* r2_u5: Inner-Right ▲ (Bright Sunburst Gold) */}
       <LinearGradient id="r2_u5" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#ff6e19" />
+        <Stop offset="100%" stopColor="#ff6e19" />
       </LinearGradient>
       {/* r2_u6: Far-Right Overflow ▲ (Vibrant Gold) */}
       <LinearGradient id="r2_u6" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#ff6e19" />
+        <Stop offset="100%" stopColor="#ff6e19" />
       </LinearGradient>
 
       {/* ==============================================
@@ -249,60 +291,74 @@ export const HeaderBackgroundSvg = () => (
       {/* r3_i0: Far-Left Overflow ▼ (Mid-Left Plum) */}
       <LinearGradient id="r3_i0" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#5d163f" />
+        <Stop offset="100%" stopColor="#5d163f" />
       </LinearGradient>
       {/* r3_i1: Inner-Left ▼ (Bright Rose Scarlet) */}
       <LinearGradient id="r3_i1" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#932339" />
+        <Stop offset="100%" stopColor="#932339" />
       </LinearGradient>
       {/* r3_i2: Mid-Left ▼ (Bright Red-Orange) */}
       <LinearGradient id="r3_i2" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#d2302d" />
+        <Stop offset="100%" stopColor="#d2302d" />
       </LinearGradient>
       {/* r3_i3: Center ▼ (Tangerine Yellow) */}
       <LinearGradient id="r3_i3" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#fc4d1f" />
+        <Stop offset="100%" stopColor="#fc4d1f" />
       </LinearGradient>
       {/* r3_i4: Mid-Right ▼ (Golden Amber) */}
       <LinearGradient id="r3_i4" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#ff8219" />
+        <Stop offset="100%" stopColor="#ff8219" />
       </LinearGradient>
       {/* r3_i5: Inner-Right ▼ (Vibrant Amber) */}
       <LinearGradient id="r3_i5" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#ff8219" />
+        <Stop offset="100%" stopColor="#ff8219" />
       </LinearGradient>
       {/* r3_i6: Far-Right Overflow ▼ (Sunny Amber) */}
       <LinearGradient id="r3_i6" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#ff8219" />
+        <Stop offset="100%" stopColor="#ff8219" />
       </LinearGradient>
 
       {/* Row 3 - Upright (Pointing Up ▲) Gradients */}
       {/* r3_u0: Far-Left Overflow ▲ (Dark Berry) */}
       <LinearGradient id="r3_u0" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#47123a" />
+        <Stop offset="100%" stopColor="#47123a" />
       </LinearGradient>
       {/* r3_u1: Inner-Left ▲ (Bright Crimson-Plum) */}
       <LinearGradient id="r3_u1" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#781c3d" />
+        <Stop offset="100%" stopColor="#781c3d" />
       </LinearGradient>
       {/* r3_u2: Mid-Left ▲ (Vibrant Scarlet) */}
       <LinearGradient id="r3_u2" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#b22933" />
+        <Stop offset="100%" stopColor="#b22933" />
       </LinearGradient>
       {/* r3_u3: Center ▲ (Fiery Orange-Yellow) */}
       <LinearGradient id="r3_u3" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#ec3827" />
+        <Stop offset="100%" stopColor="#ec3827" />
       </LinearGradient>
       {/* r3_u4: Mid-Right ▲ (Bright Sunlit Orange) */}
       <LinearGradient id="r3_u4" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#ff6c18" />
+        <Stop offset="100%" stopColor="#ff6c18" />
       </LinearGradient>
       {/* r3_u5: Inner-Right ▲ (Warm Golden Yellow) */}
       <LinearGradient id="r3_u5" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#ff9c1a" />
+        <Stop offset="100%" stopColor="#ff9c1a" />
       </LinearGradient>
       {/* r3_u6: Far-Right Overflow ▲ (Sunny Yellow) */}
       <LinearGradient id="r3_u6" x1="0%" y1="0%" x2="100%" y2="100%">
         <Stop offset="0%" stopColor="#ff9c1a" />
+        <Stop offset="100%" stopColor="#ff9c1a" />
       </LinearGradient>
     </Defs>
 

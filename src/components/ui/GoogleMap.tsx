@@ -2,6 +2,7 @@ import React, { useMemo, forwardRef, useImperativeHandle, useRef, useEffect } fr
 import { StyleSheet, View } from "react-native";
 import { WebView } from "react-native-webview";
 import * as Location from "expo-location";
+import { LEAFLET_CSS, LEAFLET_JS } from "./leafletAssets";
 
 export interface GoogleMapRef {
   centerMap: (lat: number, lng: number, zoom?: number) => void;
@@ -9,6 +10,7 @@ export interface GoogleMapRef {
   updateNearbyStops: (stops: { lat: number; lng: number; name: string }[]) => void;
   drawRoute: (polyline: { latitude: number; longitude: number }[], routeNumber?: string) => void;
   drawEVStations: (stations: { lat: number; lng: number; name: string }[]) => void;
+  triggerFocusAnimation: (lat: number, lng: number, zoom?: number) => void;
 }
 
 interface GoogleMapProps {
@@ -17,6 +19,7 @@ interface GoogleMapProps {
   userLocation?: Location.LocationObject | null;
   onMapLoaded?: () => void;
   style?: any;
+  animateOnLoad?: boolean;
 }
 
 export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
@@ -25,6 +28,7 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
   userLocation,
   onMapLoaded,
   style,
+  animateOnLoad = false,
 }, ref) => {
   const webViewRef = useRef<WebView>(null);
 
@@ -53,6 +57,10 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
       const js = `window.drawEVStations('${stationsJson.replace(/'/g, "\\'")}'); true;`;
       webViewRef.current?.injectJavaScript(js);
     },
+    triggerFocusAnimation: (lat: number, lng: number, zoom?: number) => {
+      const js = `window.triggerFocusAnimation(${lat}, ${lng}, ${zoom || 15}); true;`;
+      webViewRef.current?.injectJavaScript(js);
+    },
   }));
 
   // Update user location on the map whenever userLocation prop changes
@@ -66,14 +74,17 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
   const mapHtml = useMemo(() => {
     const centerLat = userLocation?.coords.latitude || initialCenter.latitude;
     const centerLng = userLocation?.coords.longitude || initialCenter.longitude;
+    const mapStartLat = animateOnLoad ? 54.5260 : centerLat;
+    const mapStartLng = animateOnLoad ? 15.2551 : centerLng;
+    const mapStartZoom = animateOnLoad ? 6 : (userLocation ? 15 : initialZoom);
 
     return `
     <!DOCTYPE html>
     <html>
     <head>
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+      <style>${LEAFLET_CSS}</style>
+      <script>${LEAFLET_JS}</script>
       <style>
         body { margin: 0; padding: 0; }
         #map { height: 100vh; width: 100vw; background: #f8f9fa; }
@@ -157,12 +168,36 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
     <body>
       <div id="map"></div>
       <script>
-        var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([${centerLat}, ${centerLng}], ${initialZoom});
+        // Error handling & logging back to React Native
+        window.onerror = function(message, source, lineno, colno, error) {
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'error',
+              message: message + ' at ' + source + ':' + lineno + ':' + colno
+            }));
+          }
+          return true;
+        };
+        
+        window.log = function(msg) {
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'log',
+              message: msg
+            }));
+          }
+        };
+
+        window.log("HTML scripts started initializing...");
+
+        var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([${mapStartLat}, ${mapStartLng}], ${mapStartZoom});
         
         // Unified premium Google Maps tilelayer with HD scale=2 support
         L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&scale=2', {
           maxZoom: 20,
         }).addTo(map);
+
+        window.log("Map object created successfully.");
 
         var userMarker = null;
         var stopMarkers = L.layerGroup().addTo(map);
@@ -176,7 +211,34 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
           userMarker = L.marker([${userLocation.coords.latitude}, ${userLocation.coords.longitude}], {
             icon: L.divIcon({ className: '', html: '<div class="user-marker"></div>', iconSize: [10, 10] })
           }).addTo(map);
+
+          if (${animateOnLoad}) {
+            setTimeout(function() {
+              window.log("Running onload flyTo from Europe...");
+              map.flyTo([${userLocation.coords.latitude}, ${userLocation.coords.longitude}], 15, { duration: 0.8, easeLinearity: 1 });
+            }, 300);
+          }
         ` : ""}
+
+        // Helper: Trigger Flying/Panning Focus Animation
+        window.triggerFocusAnimation = function(lat, lng, zoom) {
+          var targetZoom = zoom || 15;
+          window.log("triggerFocusAnimation called for: " + lat + ", " + lng);
+          // तुरंत बिना एनीमेशन के यूरोप (lat: 54.5260, lng: 15.2551) पर ज़ूम 0 सेट करें
+          map.setView([54.5260, 15.2551], 0, { animate: false });
+          
+          // 150ms बाद सुचारू रूप से फ़्लाई-इन (flyTo) करें
+          setTimeout(function() {
+            window.log("flyTo animating from Europe to user location...");
+            map.flyTo([lat, lng], targetZoom, { duration: 0.5, easeLinearity: 0.25 });
+          }, 150);
+        };
+
+        // Notify React Native that map is ready
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'MAP_READY' }));
+          window.log("Sent MAP_READY to React Native.");
+        }
 
         // Helper 1: Center Map (With premium distance-aware transitions to completely prevent Leaflet's shaking/vibration bug)
         window.centerMap = function(lat, lng, zoom) {
@@ -274,7 +336,24 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
     </body>
     </html>
     `;
-  }, []); // Only compile HTML once to keep WebView fast and smooth
+  }, [animateOnLoad]); // Only compile HTML once to keep WebView fast and smooth
+
+  const handleMessage = (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.type === "MAP_READY") {
+        if (onMapLoaded) {
+          onMapLoaded();
+        }
+      } else if (data.type === "log") {
+        console.log("[Leaflet Map Log]:", data.message);
+      } else if (data.type === "error") {
+        console.error("[Leaflet Map Error]:", data.message);
+      }
+    } catch (e) {
+      console.log("[WebView Message]:", event.nativeEvent.data);
+    }
+  };
 
   return (
     <View style={[styles.container, style]}>
@@ -282,7 +361,7 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
         ref={webViewRef}
         source={{ html: mapHtml }}
         style={styles.webView}
-        onLoad={onMapLoaded}
+        onMessage={handleMessage}
         scrollEnabled={true}
         showsVerticalScrollIndicator={false}
         showsHorizontalScrollIndicator={false}

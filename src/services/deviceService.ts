@@ -2,7 +2,7 @@ import * as Device from 'expo-device';
 import * as Network from 'expo-network';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert } from 'react-native';
+
 
 import { db } from './firebase';
 import { sanitizePayload } from '../utils/firebaseUtils';

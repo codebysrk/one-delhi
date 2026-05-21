@@ -3,9 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   Animated,
-  Platform,
   Alert,
   TouchableOpacity,
 } from "react-native";
@@ -50,8 +48,8 @@ export const TicketScreen = ({ navigation, route }: any) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   // Deep-link dynamic handover states
-  const isRedirectParam = route?.params?.isRedirect;
-  const [showRedirect, setShowRedirect] = useState(!!isRedirectParam);
+
+  const [showRedirect, setShowRedirect] = useState(false);
 
   useEffect(() => {
     // 1. Alert and Log on screenshot attempt

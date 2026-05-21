@@ -5,9 +5,7 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  StatusBar,
   ActivityIndicator,
-  Platform,
   Animated,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -37,7 +35,7 @@ interface Route {
 }
 
 export const SearchScreen = ({ navigation }: any) => {
-  const { recentRoutes, addRecentRoute, clearRecentRoutes, removeRecentRoute } = useAppStore();
+  const { recentRoutes, addRecentRoute, removeRecentRoute } = useAppStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [routes, setRoutes] = useState<Route[]>([]);
   const [loading, setLoading] = useState(true);
@@ -200,7 +198,7 @@ export const SearchScreen = ({ navigation }: any) => {
 
   const renderRecentRouteItem = useCallback(({ item }: { item: Route }) => {
     const renderRightActions = (
-      progress: Animated.AnimatedInterpolation<number>,
+      _progress: Animated.AnimatedInterpolation<number>,
       dragX: Animated.AnimatedInterpolation<number>
     ) => {
       const trans = dragX.interpolate({

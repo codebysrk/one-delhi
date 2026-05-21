@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, useWindowDimensions, Platform, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, Platform, Alert, BackHandler, ToastAndroid } from 'react-native';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthNavigator } from './navigators/AuthNavigator';
@@ -20,9 +20,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { registerDevice, listenToDeviceSecurity, clearForceLogout } from '../services/deviceService';
 import { logAction } from '../services/logService';
 
-import { Alert, BackHandler, ToastAndroid } from 'react-native';
 import { Image } from 'expo-image';
-import * as Haptics from 'expo-haptics';
 
 import { Screen } from '../components/layout/Screen';
 import { Header } from '../components/layout/Header';
@@ -53,26 +51,11 @@ export const ComingSoon = ({ navigation }: any) => (
 
 
 export const RootNavigator = () => {
-  const { width } = useWindowDimensions();
   const navigationRef = useNavigationContainerRef();
-  const { user, setUser, userProfile, setUserProfile, setTickets, resetStore, showFooter, isVerifying, isAuthReady, setIsAuthReady } = useAppStore();
+  const { user, setUser, userProfile, setUserProfile, setTickets, resetStore, isVerifying, isAuthReady, setIsAuthReady } = useAppStore();
   const [initializing, setInitializing] = useState(true);
 
-  const fetchUserProfile = useCallback(async (userId: string) => {
-    try {
-      const docSnap = await db.collection("users").doc(userId).get();
-      if (docSnap.exists) {
-        setUserProfile(docSnap.data());
-      }
-    } catch (error: any) {
-      const isOffline = error.message?.includes('offline') || error.code === 'unavailable';
-      if (isOffline) {
-        console.log("[RootNavigator] Client is offline during profile fetch.");
-      } else {
-        console.error("Error fetching user profile:", error);
-      }
-    }
-  }, [setUserProfile]);
+
 
   const fetchUserTickets = useCallback(async (userId: string) => {
     if (!userId) return;

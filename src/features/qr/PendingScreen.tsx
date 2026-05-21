@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   Animated,
-  Platform,
   StatusBar,
   Easing,
 } from "react-native";

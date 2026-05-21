@@ -8,7 +8,7 @@ import {
   StatusBar,
   ScrollView
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { MainHeader } from '../../components/layout/Header';
 

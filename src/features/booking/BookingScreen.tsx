@@ -12,8 +12,9 @@ import {
   TouchableOpacity,
   Alert,
   TextInput,
-  Keyboard,
   ScrollView,
+  Platform,
+  ToastAndroid,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PortalProvider } from "../../components/ui/Portal";
@@ -24,115 +25,19 @@ import { useAppStore } from "../../store/useAppStore";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import Animated, {
-  FadeIn,
-  FadeOut,
   useSharedValue,
   useAnimatedStyle,
   withTiming,
 } from "react-native-reanimated";
 import { db } from "../../services/firebase";
 import { AppState, AppStateStatus } from "react-native";
-import { ANIMATIONS } from "../../core/theme";
 import {
-  scale,
-  verticalScale,
   moderateScale,
   responsiveFontSize,
-  responsiveWidth,
-  responsiveHeight,
 } from "../../core/responsive";
 import { PrimaryButton } from "../../components/ui/PrimaryButton";
 
 // --- 1. Separate Memoized Item Components for Peak Performance ---
-
-const RouteItem = React.memo(
-  ({
-    item,
-    index,
-    onSelect,
-  }: {
-    item: any;
-    index: number;
-    onSelect: (item: any) => void;
-  }) => {
-    const _onPress = useCallback(() => onSelect(item), [item, onSelect]);
-    return (
-      <TouchableOpacity
-        activeOpacity={0.7}
-        style={[styles.routeItem, index === 0 && { borderTopWidth: 0 }]}
-        onPress={_onPress}
-      >
-        <View style={styles.routeItemContent}>
-          <View style={styles.routeIconHeader}>
-            <View style={styles.routeCircleWrapper}>
-              <MaterialCommunityIcons name="bus" size={22} color="#000000ff" />
-            </View>
-            <Text style={styles.routeNumberText}>
-              {item.id?.replace(/UP$|DOWN$/, "")}
-            </Text>
-          </View>
-          <View style={styles.routePathContainer}>
-            <View style={styles.routeStopRow}>
-              <View style={styles.routeCircleWrapper}>
-                <View style={styles.routeCircle} />
-              </View>
-              <Text style={styles.routeTerminalLabel} numberOfLines={1}>
-                {item.stops?.[0]}
-              </Text>
-            </View>
-
-            <View style={styles.routeLineRow}>
-              <View style={styles.routeCircleWrapper}>
-                <View style={styles.routeLine} />
-              </View>
-            </View>
-
-            <View style={styles.routeStopRow}>
-              <View style={styles.routeCircleWrapper}>
-                <View style={styles.routeCircle} />
-              </View>
-              <Text style={styles.routeTerminalLabel} numberOfLines={1}>
-                {item.stops?.[item.stops.length - 1]}
-              </Text>
-            </View>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  },
-);
-
-const StopItem = React.memo(
-  ({
-    item,
-    index,
-    onSelect,
-    activeInput,
-  }: {
-    item: any;
-    index: number;
-    onSelect: (type: any, item: any) => void;
-    activeInput: any;
-  }) => {
-    const _onPress = useCallback(
-      () => onSelect(activeInput, item),
-      [activeInput, item, onSelect],
-    );
-    return (
-      <TouchableOpacity
-        activeOpacity={0.6}
-        style={[styles.stopItem, index === 0 && { borderTopWidth: 0 }]}
-        onPress={_onPress}
-      >
-        <View style={styles.stopItemRow}>
-          <Text style={styles.stopItemText} numberOfLines={1}>
-            {item}
-          </Text>
-        </View>
-      </TouchableOpacity>
-    );
-  },
-);
 
 interface Route {
   id: string;
@@ -390,21 +295,14 @@ export const BookingScreen = ({ navigation }: any) => {
   const [selectedFullRouteId, setSelectedFullRouteId] = useState("");
   const [selectedSourceIndex, setSelectedSourceIndex] = useState<number | null>(null);
   const [dbRoutes, setDbRoutes] = useState<Route[]>([]);
-  const [isDbLoading, setIsDbLoading] = useState(true);
-
   const routeDropdownRef = useRef<{ focus: () => void; blur: () => void }>(null);
   const sourceDropdownRef = useRef<{ focus: () => void; blur: () => void }>(null);
   const destDropdownRef = useRef<{ focus: () => void; blur: () => void }>(null);
 
   // Fare calculation state
-  const [validationStatus, setValidationStatus] = useState<
-    "VALID" | "INVALID" | "MIN" | "MAX" | "EMPTY"
-  >("VALID");
   const [isEditingFare, setIsEditingFare] = useState(false);
   const lastTap = useRef<number | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const startTimeRef = useRef<number>(Date.now());
-  const initialTimeRef = useRef<number>(180);
 
   const handleFarePress = () => {
     const now = Date.now();
@@ -418,7 +316,6 @@ export const BookingScreen = ({ navigation }: any) => {
     }
   };
 
-  const [showToast, setShowToast] = useState(false);
   const resetForm = useCallback(() => {
     setRouteSearch("");
     setSourceSearch("");
@@ -445,7 +342,6 @@ export const BookingScreen = ({ navigation }: any) => {
   useEffect(() => {
     const fetchRoutes = async () => {
       try {
-        setIsDbLoading(true);
         const querySnapshot = await db.collection("routes").get();
         const fetchedRoutes: Route[] = [];
 
@@ -470,8 +366,6 @@ export const BookingScreen = ({ navigation }: any) => {
         setDbRoutes(fetchedRoutes);
       } catch (error) {
         console.error("Error fetching routes:", error);
-      } finally {
-        setIsDbLoading(false);
       }
     };
 
@@ -527,12 +421,17 @@ export const BookingScreen = ({ navigation }: any) => {
 
   useEffect(() => {
     if (timeLeftForLogic === 0) {
-      setShowToast(true);
-      setTimeout(() => {
-        setShowToast(false);
-        resetForm();
-        navigation.navigate("Main");
-      }, 1000);
+      if (Platform.OS === "android") {
+        ToastAndroid.showWithGravity(
+          "Session Expired",
+          ToastAndroid.LONG,
+          ToastAndroid.BOTTOM
+        );
+      } else {
+        Alert.alert("Session Expired");
+      }
+      resetForm();
+      navigation.navigate("Main");
     }
   }, [timeLeftForLogic, navigation, resetForm]);
 
@@ -612,16 +511,6 @@ export const BookingScreen = ({ navigation }: any) => {
       };
     }
   }, [isManualFare, manualTotal, qty, calculateAutoFare]);
-
-  // Sync validation status via effect to avoid re-render loops
-  useEffect(() => {
-    if (isManualFare) {
-      const validation = validateManualFare(Number(manualTotal), qty);
-      setValidationStatus(validation.status);
-    } else {
-      setValidationStatus("VALID");
-    }
-  }, [isManualFare, manualTotal, qty]);
 
   const getFinalFare = useCallback(() => {
     const currentFare = getCurrentFare();
@@ -798,7 +687,6 @@ export const BookingScreen = ({ navigation }: any) => {
                     setDestSearch("");
                     setSelectedSourceIndex(null);
                   }}
-                  keyboardOpenMaxHeight={500}
                 />
               </View>
 
@@ -838,8 +726,6 @@ export const BookingScreen = ({ navigation }: any) => {
                     setDestSearch("");
                     setSelectedSourceIndex(null);
                   }}
-                  keyboardOpenMaxHeight={220}
-                  
                 />
 
                 <SearchableDropdown
@@ -873,7 +759,6 @@ export const BookingScreen = ({ navigation }: any) => {
                   onFocus={() => {
                     setDestSearch("");
                   }}
-                  keyboardOpenMaxHeight={220}
                 />
               </View>
 
@@ -918,17 +803,6 @@ export const BookingScreen = ({ navigation }: any) => {
             />
           </View>
         </View>
-
-        {/* Toast */}
-        {showToast && (
-          <Animated.View
-            entering={FadeIn.duration(ANIMATIONS.fastTiming.duration)}
-            exiting={FadeOut.duration(ANIMATIONS.fastTiming.duration)}
-            style={styles.toast}
-          >
-            <Text style={styles.toastText}>Session expired</Text>
-          </Animated.View>
-        )}
       </Screen>
     </PortalProvider>
   );
@@ -1269,20 +1143,6 @@ const styles = StyleSheet.create({
   },
   emptyItemText: {
     color: "#9CA3AF",
-    fontSize: responsiveFontSize(14),
-    fontWeight: "500",
-  },
-  toast: {
-    position: "absolute",
-    top: "50%",
-    alignSelf: "center",
-    backgroundColor: "rgba(0,0,0,0.8)",
-    paddingHorizontal: moderateScale(20),
-    paddingVertical: moderateScale(10),
-    borderRadius: moderateScale(20),
-  },
-  toastText: {
-    color: "#FFF",
     fontSize: responsiveFontSize(14),
     fontWeight: "500",
   },

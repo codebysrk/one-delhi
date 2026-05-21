@@ -11,7 +11,6 @@ import {
   Keyboard, 
   TouchableWithoutFeedback, 
   Dimensions,
-  ActivityIndicator
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -24,7 +23,7 @@ import { registerDevice, clearForceLogout } from '../../services/deviceService';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '../../components/layout/Screen';
 import { Toast } from '../../components/ui/Toast';
-import { COLORS, TYPOGRAPHY, SPACING, SHADOWS, RADII } from '../../core/theme';
+import { COLORS, SHADOWS } from '../../core/theme';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
 
 interface LoginForm {

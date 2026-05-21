@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { StyleSheet, Text, Animated, Dimensions, View } from 'react-native';
+import { StyleSheet, Text, Animated, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, RADII, SHADOWS, SPACING, TYPOGRAPHY } from '../../core/theme';
@@ -11,8 +11,6 @@ interface ToastProps {
   onDismiss: () => void;
   duration?: number;
 }
-
-const { width } = Dimensions.get('window');
 
 export const Toast = ({
   message,

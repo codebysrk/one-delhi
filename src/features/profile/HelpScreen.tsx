@@ -1,9 +1,8 @@
-import React, { useState, useMemo, useCallback, memo } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar, Platform, ScrollView, useWindowDimensions } from 'react-native';
+import React, { useState, useMemo, useCallback } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Screen } from "../../components/layout/Screen";
 import { PrimaryButton } from "../../components/ui/PrimaryButton";
-import { useAppStore } from "../../store/useAppStore";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { FlashList } from "@shopify/flash-list";
 import { MainHeader } from "../../components/layout/Header";
@@ -13,7 +12,7 @@ export const HelpScreen = ({ navigation }: any) => {
   const { width } = useWindowDimensions();
   const scrollRef = React.useRef<ScrollView>(null);
   const scrollX = useSharedValue(0);
-  const { user } = useAppStore();
+
   const [activeTab, setActiveTab] = useState<"FAQs" | "Complaints">("FAQs");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 

@@ -4,23 +4,16 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  StatusBar,
-  Platform,
   RefreshControl,
-  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Screen } from "../../components/layout/Screen";
 import { Header } from "../../components/layout/Header";
 import { FlashList } from "@shopify/flash-list";
-import { db, auth } from "../../services/firebase";
+import { db } from "../../services/firebase";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { TicketCard } from "../../components/ui/TicketCard";
-import {
-  getRouteNumberOnly,
-  formatTimeTo12hr,
-  isTicketExpired,
-} from "../../utils/ticketHelper";
+
 import { useAppStore } from "../../store/useAppStore";
 import { Skeleton } from "../../components/ui/Skeleton";
 

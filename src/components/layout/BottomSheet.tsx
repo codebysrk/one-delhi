@@ -1,9 +1,8 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useMemo } from "react";
 import {
   StyleSheet,
   View,
-  useWindowDimensions,
-  Platform,
+  DimensionValue,
 } from "react-native";
 import {
   GestureDetector,
@@ -15,8 +14,6 @@ import Animated, {
   withSpring,
   interpolate,
   Extrapolate,
-  useAnimatedReaction,
-  runOnJS,
 } from "react-native-reanimated";
 import { COLORS, SHADOWS, RADII, SPACING, ANIMATIONS } from "../../core/theme";
 
@@ -25,7 +22,7 @@ interface BottomSheetProps {
   headerContent?: React.ReactNode;
   snapPoints: number[]; // Direct translateY values
   translateY: Animated.SharedValue<number>;
-  sheetHeight?: number | string;
+  sheetHeight?: DimensionValue;
 }
 
 export const BottomSheet = ({
@@ -35,7 +32,6 @@ export const BottomSheet = ({
   translateY,
   sheetHeight = "100%",
 }: BottomSheetProps) => {
-  const { height: SCREEN_HEIGHT } = useWindowDimensions();
   const context = useSharedValue({ y: 0 });
 
   const internalSnapPoints = useMemo(() => snapPoints, [snapPoints]);

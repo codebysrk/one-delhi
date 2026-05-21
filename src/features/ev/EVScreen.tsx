@@ -1,12 +1,11 @@
-import React, { useState, useMemo, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  useWindowDimensions,
-  Dimensions,
   ScrollView,
+  Dimensions,
 } from "react-native";
 import { GoogleMap, GoogleMapRef } from "../../components/ui/GoogleMap";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -14,33 +13,114 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Screen } from "../../components/layout/Screen";
 import * as Location from "expo-location";
 import { MainHeader } from "../../components/layout/Header";
+import { useFocusEffect } from "@react-navigation/native";
 
 const EV_STATIONS = [
   {
     id: "1",
-    name: "EESL",
-    status: "0/0 AVAIL",
-    distance: "9.47 KM",
-    address: "Double Story Market, Maherchand L...",
-    supports: "",
+    name: "EESL Lodhi Road",
+    status: "3/4 AVAIL",
+    distance: "1.2 KM",
+    address: "Double Story Market, Lodhi Road, New Delhi",
+    supports: "CCS2, AC Type 2",
     lat: 28.585,
     lng: 77.234,
   },
   {
     id: "2",
-    name: "EESL",
-    status: "0/0 AVAIL",
-    distance: "12.1 KM",
-    address: "Palika Gate No. 2, Connaught Place",
-    supports: "",
+    name: "EESL Palika Bazaar",
+    status: "2/6 AVAIL",
+    distance: "4.8 KM",
+    address: "Palika Gate No. 2, Connaught Place, New Delhi",
+    supports: "CCS2, CHAdeMO",
     lat: 28.632,
     lng: 77.218,
   },
+  {
+    id: "3",
+    name: "Tata Power Dwarka",
+    status: "1/2 AVAIL",
+    distance: "18.5 KM",
+    address: "Sector 10 Metro Station, Dwarka, New Delhi",
+    supports: "CCS2",
+    lat: 28.5815,
+    lng: 77.0594,
+  },
+  {
+    id: "4",
+    name: "Magenta Charge Saket",
+    status: "4/4 AVAIL",
+    distance: "8.3 KM",
+    address: "Select Citywalk Mall Parking, Saket, New Delhi",
+    supports: "CCS2, AC Type 2",
+    lat: 28.5284,
+    lng: 77.2195,
+  },
+  {
+    id: "5",
+    name: "Jio-bp Pulse Nehru Place",
+    status: "2/4 AVAIL",
+    distance: "6.1 KM",
+    address: "Nehru Place Market Parking, New Delhi",
+    supports: "CCS2, DC Fast",
+    lat: 28.5494,
+    lng: 77.2515,
+  },
+  {
+    id: "6",
+    name: "Statiq Karol Bagh",
+    status: "1/2 AVAIL",
+    distance: "7.2 KM",
+    address: "Pusa Road, Karol Bagh, New Delhi",
+    supports: "AC Type 2",
+    lat: 28.6532,
+    lng: 77.1902,
+  },
+  {
+    id: "7",
+    name: "Ather Grid Rajouri Garden",
+    status: "5/6 AVAIL",
+    distance: "12.4 KM",
+    address: "Main Market, Rajouri Garden, New Delhi",
+    supports: "Ather Connector",
+    lat: 28.6415,
+    lng: 77.1245,
+  },
+  {
+    id: "8",
+    name: "Zeon EV Vasant Kunj",
+    status: "3/4 AVAIL",
+    distance: "11.2 KM",
+    address: "Ambience Mall Parking, Vasant Kunj, New Delhi",
+    supports: "CCS2, CHAdeMO",
+    lat: 28.5412,
+    lng: 77.1556,
+  },
+  {
+    id: "9",
+    name: "Tata Power Rohini",
+    status: "2/2 AVAIL",
+    distance: "16.8 KM",
+    address: "Sector 9, Rohini, New Delhi",
+    supports: "CCS2",
+    lat: 28.7161,
+    lng: 77.1192,
+  },
+  {
+    id: "10",
+    name: "Jio-bp Mayur Vihar",
+    status: "0/2 AVAIL",
+    distance: "10.5 KM",
+    address: "Mayur Vihar Phase 1 Metro Station, New Delhi",
+    supports: "CCS2",
+    lat: 28.6041,
+    lng: 77.2911,
+  }
 ];
 
 export const EVScreen = ({ navigation }: any) => {
-  const { width } = useWindowDimensions();
   const webViewRef = useRef<GoogleMapRef>(null);
+  const hasAnimatedOnLoad = useRef(false);
   const [activeTab, setActiveTab] = useState<"EV" | "Parking">("EV");
   const [location, setLocation] = useState<Location.LocationObject | null>(
     null,
@@ -67,6 +147,30 @@ export const EVScreen = ({ navigation }: any) => {
     }
   }, [mapLoaded]);
 
+  // Trigger flyTo animation immediately to Delhi EV Station when map loaded
+  useEffect(() => {
+    if (mapLoaded && !hasAnimatedOnLoad.current) {
+      hasAnimatedOnLoad.current = true;
+      const timer = setTimeout(() => {
+        // दिल्ली के टॉप व्यू (lat: 28.6139, lng: 77.2090) पर ज़ूम 11 के साथ एनीमेशन शुरू करें ताकि सभी स्टेशन दिखें
+        webViewRef.current?.triggerFocusAnimation(28.6139, 77.2090, 11);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [mapLoaded]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (mapLoaded) {
+        if (!hasAnimatedOnLoad.current) return;
+        const timer = setTimeout(() => {
+          webViewRef.current?.triggerFocusAnimation(28.6139, 77.2090, 11);
+        }, 0);
+        return () => clearTimeout(timer);
+      }
+    }, [mapLoaded])
+  );
+
   // mapHtml removed since we now use the unified GoogleMap component
 
   const insets = useSafeAreaInsets();
@@ -81,6 +185,7 @@ export const EVScreen = ({ navigation }: any) => {
           userLocation={location}
           onMapLoaded={() => setMapLoaded(true)}
           style={{ flex: 1 }}
+          animateOnLoad={true}
         />
       </View>
 
@@ -165,7 +270,14 @@ export const EVScreen = ({ navigation }: any) => {
            disableIntervalMomentum={true}
          >
             {EV_STATIONS.map((item) => (
-              <View key={item.id} style={styles.stationCard}>
+              <TouchableOpacity
+                key={item.id}
+                style={styles.stationCard}
+                activeOpacity={0.9}
+                onPress={() => {
+                  webViewRef.current?.centerMap(item.lat, item.lng, 14);
+                }}
+              >
                 <View style={styles.cardTop}>
                   <Text style={styles.cardTitle}>{item.name}</Text>
                   <View style={styles.badgeContainer}>
@@ -188,8 +300,8 @@ export const EVScreen = ({ navigation }: any) => {
                   {item.address}
                 </Text>
                 <View style={styles.line} />
-                <Text style={styles.supportsText}>Supports:</Text>
-              </View>
+                <Text style={styles.supportsText}>Supports: {item.supports || "All Standard EVs"}</Text>
+              </TouchableOpacity>
             ))}
           </ScrollView>
         </View>

@@ -3,7 +3,6 @@ import React, {
   useEffect,
   useRef,
   useCallback,
-  useMemo,
 } from "react";
 import {
   View,
@@ -48,7 +47,7 @@ const SHEET_MIN_HEIGHT = 180;
 
 export const MapScreen = ({ navigation }: any) => {
   const insets = useSafeAreaInsets();
-  const { width, height: SCREEN_HEIGHT } = useWindowDimensions();
+  const { height: SCREEN_HEIGHT } = useWindowDimensions();
 
   const SHEET_FULL_HEIGHT = SCREEN_HEIGHT * 0.85;
   const SHEET_HALF_HEIGHT = SHEET_FULL_HEIGHT * 0.62;
@@ -63,10 +62,11 @@ export const MapScreen = ({ navigation }: any) => {
   const SNAP_BOTTOM = SHEET_FULL_HEIGHT - SHEET_MIN_HEIGHT + 250;
 
   const webViewRef = useRef<GoogleMapRef>(null);
+  const hasAnimatedOnLoad = useRef(false);
   const [location, setLocation] = useState<Location.LocationObject | null>(
     null,
   );
-  const [loading, setLoading] = useState(true);
+
   const [mapLoaded, setMapLoaded] = useState(false);
   const [stopsToShow, setStopsToShow] = useState<any[]>([]);
 
@@ -92,21 +92,36 @@ export const MapScreen = ({ navigation }: any) => {
     [canScroll, SNAP_TOP],
   );
 
-  const updateMapRegion = useCallback((loc: Location.LocationObject) => {
-    webViewRef.current?.centerMap(loc.coords.latitude, loc.coords.longitude, 15);
-  }, []);
+
 
   // Trigger flyTo animation immediately at the earliest possible millisecond when map loaded and location ready
   useEffect(() => {
-    if (location && mapLoaded) {
-      updateMapRegion(location);
+    if (location && mapLoaded && !hasAnimatedOnLoad.current) {
+      hasAnimatedOnLoad.current = true;
+      const timer = setTimeout(() => {
+        webViewRef.current?.triggerFocusAnimation(location.coords.latitude, location.coords.longitude, 15);
+      }, 0);
+      return () => clearTimeout(timer);
     }
-  }, [location, mapLoaded, updateMapRegion]);
+  }, [location, mapLoaded]);
 
   useFocusEffect(
     useCallback(() => {
       translateY.value = withSpring(SNAP_MID, ANIMATIONS.fastSpring);
-    }, [SNAP_MID]),
+      
+      // If we already animated on load, run the animation when we re-focus the screen
+      if (location && mapLoaded) {
+        if (!hasAnimatedOnLoad.current) {
+          return;
+        }
+        
+        // Add a 0ms delay to allow screen transition to complete, so the animation is clearly visible
+        const timer = setTimeout(() => {
+          webViewRef.current?.triggerFocusAnimation(location.coords.latitude, location.coords.longitude, 15);
+        }, 0);
+        return () => clearTimeout(timer);
+      }
+    }, [SNAP_MID, location, mapLoaded]),
   );
 
   useEffect(() => {
@@ -118,7 +133,6 @@ export const MapScreen = ({ navigation }: any) => {
             "Permission Denied",
             "One Delhi needs location access to show you nearby stops.",
           );
-          setLoading(false);
           return;
         }
 
@@ -135,8 +149,6 @@ export const MapScreen = ({ navigation }: any) => {
         setLocation(loc);
       } catch (error) {
         console.log("Location fetch error:", error);
-      } finally {
-        setLoading(false);
       }
     };
     initializeLocation();
@@ -291,6 +303,7 @@ export const MapScreen = ({ navigation }: any) => {
           userLocation={location}
           onMapLoaded={() => setMapLoaded(true)}
           style={styles.mapWeb}
+          animateOnLoad={true}
         />
         <Animated.View
           style={[styles.redArrowBtn, animatedRedArrowStyle, { left: 20 }]}

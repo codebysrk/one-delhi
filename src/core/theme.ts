@@ -55,7 +55,7 @@ export const TYPOGRAPHY = {
   bodySmall: { fontSize: 12, fontWeight: '400', lineHeight: 18 },
   caption: { fontSize: 10, fontWeight: '500', lineHeight: 14, letterSpacing: 0.5 },
   button: { fontSize: 14, fontWeight: '600', lineHeight: 20, letterSpacing: 0.1 },
-};
+} as const;
 
 export const SHADOWS = {
   none: { elevation: 0, shadowOpacity: 0 },

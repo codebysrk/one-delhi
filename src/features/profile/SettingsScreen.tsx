@@ -17,7 +17,7 @@ import { useAppStore } from "../../store/useAppStore";
 import { auth } from "../../services/firebase";
 
 export const SettingsScreen = ({ navigation }: any) => {
-  const { user, setUser, setShowFooter, resetStore, deviceId } = useAppStore();
+  const { user, setUser, setShowFooter } = useAppStore();
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
 

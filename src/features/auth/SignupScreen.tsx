@@ -10,8 +10,7 @@ import {
   TextInput, 
   Keyboard, 
   TouchableWithoutFeedback, 
-  Dimensions,
-  ActivityIndicator
+  Dimensions
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '../../components/layout/Screen';
@@ -22,7 +21,8 @@ import { auth, db } from '../../services/firebase';
 import { logAction } from '../../services/logService';
 import { useAppStore } from '../../store/useAppStore';
 import { registerDevice } from '../../services/deviceService';
-import { COLORS, TYPOGRAPHY, SPACING, SHADOWS, RADII } from '../../core/theme';
+import { Toast } from '../../components/ui/Toast';
+import { COLORS, SHADOWS } from '../../core/theme';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
 
 const { height } = Dimensions.get('window');
@@ -53,9 +53,10 @@ const customZodResolver = (schema: z.ZodSchema<any>) => async (values: any) => {
       errors: {},
     };
   } catch (error: any) {
-    if (error instanceof z.ZodError) {
+    const isZodError = error instanceof z.ZodError || error?.name === 'ZodError' || (error?.issues && Array.isArray(error?.issues));
+    if (isZodError) {
       const formattedErrors: any = {};
-      error.issues.forEach((err) => {
+      error.issues.forEach((err: any) => {
         const path = err.path.join('.') || 'form';
         formattedErrors[path] = {
           type: err.code,
@@ -94,8 +95,16 @@ export const SignupScreen = ({ navigation }: any) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Premium Inline error alert state
-  const [signupError, setSignupError] = useState<string | null>(null);
+  // Reusable Animated Toast state
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('error');
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'error') => {
+    setToastMsg(message);
+    setToastType(type);
+    setToastVisible(true);
+  };
 
   const setUser = useAppStore((state) => state.setUser);
   const setUserProfile = useAppStore((state) => state.setUserProfile);
@@ -123,7 +132,7 @@ export const SignupScreen = ({ navigation }: any) => {
     };
   }, []);
 
-  const { control, handleSubmit, watch, formState: { errors } } = useForm<SignupForm>({
+  const { control, handleSubmit, formState: { errors } } = useForm<SignupForm>({
     resolver: customZodResolver(signupSchema),
     mode: 'onSubmit',
     defaultValues: {
@@ -140,7 +149,6 @@ export const SignupScreen = ({ navigation }: any) => {
     Keyboard.dismiss();
     setLoading(true);
     setIsVerifying(true);
-    setSignupError(null); // Clear previous errors
     try {
       // 1. Create User
       const userCredential = await auth.createUserWithEmailAndPassword(data.email, data.password);
@@ -158,7 +166,7 @@ export const SignupScreen = ({ navigation }: any) => {
         setIsVerifying(false);
         await auth.signOut();
         
-        setSignupError('📱 This device is banned from creating new accounts.');
+        showToast('📱 This device is banned from creating new accounts.', 'error');
         return;
       }
 
@@ -215,7 +223,7 @@ export const SignupScreen = ({ navigation }: any) => {
       } else if (errCode === 'auth/weak-password' || errStr.includes('weak-password')) {
         msg = 'Password is too weak. Please use a stronger password.';
       }
-      setSignupError(msg);
+      showToast(msg, 'error');
     } finally {
       setLoading(false);
       setIsVerifying(false);
@@ -227,7 +235,7 @@ export const SignupScreen = ({ navigation }: any) => {
     console.log("[SignupScreen] Form validation failed:", formErrors);
     const firstError = Object.values(formErrors)[0] as any;
     if (firstError?.message) {
-      setSignupError(firstError.message);
+      showToast(firstError.message, 'error');
     }
   };
 
@@ -487,14 +495,6 @@ export const SignupScreen = ({ navigation }: any) => {
                   )}
                 </View>
 
-                {/* Signup Error Banner */}
-                {signupError && (
-                  <View style={styles.errorBanner}>
-                    <MaterialIcons name="error-outline" size={18} color={COLORS.error} />
-                    <Text style={styles.errorBannerText}>{signupError}</Text>
-                  </View>
-                )}
-
                 {/* Actions Group */}
                 <View style={styles.actionsGroup}>
                   {/* Signup Button */}
@@ -520,6 +520,14 @@ export const SignupScreen = ({ navigation }: any) => {
               </View>
             </ScrollView>
           </KeyboardAvoidingView>
+
+          {/* Toast */}
+          <Toast
+            visible={toastVisible}
+            message={toastMsg}
+            type={toastType}
+            onDismiss={() => setToastVisible(false)}
+          />
         </ScreenContainer>
       </View>
     </TouchableWithoutFeedback>
@@ -677,24 +685,6 @@ const styles = StyleSheet.create({
   linkText: {
     color: COLORS.primary,
     fontWeight: '600',
-  },
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FF525215',
-    borderWidth: 1,
-    borderColor: COLORS.error,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-    gap: 8,
-  },
-  errorBannerText: {
-    color: COLORS.primaryDark,
-    fontSize: 12,
-    fontWeight: '600',
-    flex: 1,
-    fontFamily: Platform.OS === 'ios' ? 'Inter' : undefined,
   },
   actionsGroup: {
     marginTop: 'auto',
