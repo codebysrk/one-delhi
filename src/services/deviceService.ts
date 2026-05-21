@@ -122,6 +122,36 @@ export const registerDevice = async (
       }));
     }
 
+    // Ensure all other devices for this user are deactivated/logged out
+    try {
+      const otherDevicesSnap = await db.collection('devices')
+        .where('userId', '==', userId)
+        .get();
+
+      const batch = db.batch();
+      let hasUpdates = false;
+
+      otherDevicesSnap.forEach((doc) => {
+        if (doc.id !== deviceId) {
+          const data = doc.data();
+          if (data.isCurrentDevice !== false || data.forceLogout !== true) {
+            batch.update(doc.ref, {
+              isCurrentDevice: false,
+              forceLogout: true
+            });
+            hasUpdates = true;
+          }
+        }
+      });
+
+      if (hasUpdates) {
+        await batch.commit();
+        console.log('[DeviceService] Deactivated other active devices for user:', userId);
+      }
+    } catch (e) {
+      console.warn('[DeviceService] Failed to disable other devices:', e);
+    }
+
     return { deviceId, status: existingStatus, forceLogout: existingForceLogout };
   } catch (error: any) {
     if (error.code === 'permission-denied') {
