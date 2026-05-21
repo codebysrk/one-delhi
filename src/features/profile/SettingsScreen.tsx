@@ -27,9 +27,35 @@ export const SettingsScreen = ({ navigation }: any) => {
   const [phone, setPhone] = useState("9876543210");
 
   useEffect(() => {
+    setName(user?.displayName || "");
+    setEmail(user?.email || "");
+  }, [user]);
+
+  useEffect(() => {
     setShowFooter(false);
-    return () => setShowFooter(true);
-  }, []);
+
+    const unsubscribeFocus = navigation.addListener("focus", () => {
+      setName(user?.displayName || "");
+      setEmail(user?.email || "");
+      setGender("Male");
+      setPhone("9876543210");
+      setIsEditing(null);
+    });
+
+    const unsubscribeBlur = navigation.addListener("blur", () => {
+      setName(user?.displayName || "");
+      setEmail(user?.email || "");
+      setGender("Male");
+      setPhone("9876543210");
+      setIsEditing(null);
+    });
+
+    return () => {
+      setShowFooter(true);
+      unsubscribeFocus();
+      unsubscribeBlur();
+    };
+  }, [navigation, user]);
 
   const handleSave = async () => {
     if (!auth.currentUser) return;
