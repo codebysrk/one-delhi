@@ -244,10 +244,9 @@ export const MapScreen = ({ navigation }: any) => {
     setStopsToShow(uniqueSortedStops);
   }, [location]);
 
+  // Nearby stops markers are no longer drawn on the map as per user request to keep only intended visuals.
   useEffect(() => {
-    if (stopsToShow.length > 0 && mapLoaded) {
-      webViewRef.current?.updateNearbyStops(stopsToShow);
-    }
+    // Intentionally left empty to prevent drawing red dots/markers on the map
   }, [stopsToShow, mapLoaded]);
 
   const renderStopItem = useCallback(
