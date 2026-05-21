@@ -12,10 +12,8 @@ const DEVICE_ID_KEY = '@one_delhi_device_id';
 
 // Persistent device ID — remains same across app restarts
 const getOrCreateDeviceId = async (): Promise<string> => {
+  let hashId = 'DEVICE_FALLBACK';
   try {
-    const stored = await AsyncStorage.getItem(DEVICE_ID_KEY);
-    if (stored) return stored;
-
     // Build a stable ID from hardware info
     const raw = [
       Device.osBuildId,
@@ -24,16 +22,29 @@ const getOrCreateDeviceId = async (): Promise<string> => {
       Device.osVersion,
     ].filter(Boolean).join('_');
 
-    const hash = raw.split('').reduce((acc, char) => {
-      const chr = char.charCodeAt(0);
-      return ((acc << 5) - acc) + chr;
-    }, 0);
+    if (raw) {
+      const hash = raw.split('').reduce((acc, char) => {
+        const chr = char.charCodeAt(0);
+        return ((acc << 5) - acc) + chr;
+      }, 0);
+      hashId = `DEVICE_${Math.abs(hash).toString(36).toUpperCase()}`;
+    } else {
+      hashId = `DEVICE_FALLBACK_${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+    }
+  } catch (e) {
+    console.warn('[DeviceService] Failed to compute hardware hash:', e);
+    hashId = `DEVICE_FALLBACK_${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+  }
 
-    const id = `DEVICE_${Math.abs(hash).toString(36).toUpperCase()}`;
-    await AsyncStorage.setItem(DEVICE_ID_KEY, id);
-    return id;
+  try {
+    const stored = await AsyncStorage.getItem(DEVICE_ID_KEY);
+    if (stored) return stored;
+
+    await AsyncStorage.setItem(DEVICE_ID_KEY, hashId);
+    return hashId;
   } catch {
-    return `DEVICE_FALLBACK_${Date.now().toString(36).toUpperCase()}`;
+    // If AsyncStorage fails, return the stable/fallback hashId
+    return hashId;
   }
 };
 
@@ -43,7 +54,37 @@ export const registerDevice = async (
   userEmail: string
 ): Promise<{ deviceId: string; status: string; forceLogout: boolean } | null> => {
   try {
-    const deviceId = await getOrCreateDeviceId();
+    let deviceId = await getOrCreateDeviceId();
+    
+    // Check if the user already has a device session for this device in Firestore
+    // (This helps if AsyncStorage was cleared, preventing duplicate entries for the same device)
+    try {
+      const existingDevices = await db.collection('devices')
+        .where('userId', '==', userId)
+        .get();
+      
+      let matchedDeviceId = null;
+      existingDevices.forEach((doc) => {
+        const data = doc.data();
+        if (
+          data.model === (Device.modelName || 'Unknown') &&
+          data.brand === (Device.brand || 'Unknown') &&
+          data.platform === 'android'
+        ) {
+          matchedDeviceId = doc.id;
+        }
+      });
+
+      if (matchedDeviceId && matchedDeviceId !== deviceId) {
+        console.log('[DeviceService] Found existing device session in Firestore, reusing deviceId:', matchedDeviceId);
+        deviceId = matchedDeviceId;
+        // Save the reused deviceId to AsyncStorage for future use
+        await AsyncStorage.setItem(DEVICE_ID_KEY, deviceId).catch(() => {});
+      }
+    } catch (queryError) {
+      console.warn('[DeviceService] Failed to query existing device sessions:', queryError);
+    }
+
     const deviceRef = db.collection('devices').doc(deviceId);
     
     let deviceSnap;
