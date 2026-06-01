@@ -1,18 +1,16 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Platform, Alert, BackHandler, ToastAndroid } from 'react-native';
+import { View, Text, StyleSheet, Platform, Alert, BackHandler, ToastAndroid, Animated, Dimensions } from 'react-native';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthNavigator } from './navigators/AuthNavigator';
 import { MainTabNavigator } from './navigators/MainTabNavigator';
 import { RouteDetailScreen } from '../features/home/RouteDetailScreen';
 import { NotificationScreen } from '../features/notifications/NotificationScreen';
-import { BookingScreen } from '../features/booking/BookingScreen';
-import { PaymentScreen } from '../features/payment/PaymentScreen';
 import { PassScreen } from '../features/pass/PassScreen';
 import { TicketScreen } from '../features/qr/TicketScreen';
-import { HistoryScreen } from '../features/history/HistoryScreen';
-import { HelpScreen } from '../features/profile/HelpScreen';
-import { SettingsScreen } from '../features/profile/SettingsScreen';
+import { BookingStack } from './navigators/BookingStack';
+import { ProfileStack } from './navigators/ProfileStack';
+import { linking } from './linking';
 import { useAppStore } from '../store/useAppStore';
 import { db, auth } from '../services/firebase';
 
@@ -54,6 +52,18 @@ export const RootNavigator = () => {
   const navigationRef = useNavigationContainerRef();
   const { user, setUser, userProfile, setUserProfile, setTickets, resetStore, isVerifying, isAuthReady, setIsAuthReady } = useAppStore();
   const [initializing, setInitializing] = useState(true);
+  const [splashVisible, setSplashVisible] = useState(true);
+  const splashAnim = React.useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!initializing) {
+      Animated.timing(splashAnim, {
+        toValue: -Dimensions.get('window').width,
+        duration: 320,
+        useNativeDriver: true,
+      }).start(() => setSplashVisible(false));
+    }
+  }, [initializing]);
 
 
 
@@ -305,22 +315,9 @@ export const RootNavigator = () => {
     return () => backHandler.remove();
   }, []);
 
-  if (initializing) {
-    return (
-      <View style={styles.initializingContainer}>
-        <Image 
-          source={require('../../assets/images/splash.png')} 
-          style={{ width: '100%', height: '100%' }}
-          contentFit="contain"
-          transition={500}
-        />
-      </View>
-    );
-  }
-
   return (
     <View style={{ flex: 1, backgroundColor: '#FFF' }}>
-      <NavigationContainer ref={navigationRef}>
+      <NavigationContainer ref={navigationRef} linking={linking}>
         <Stack.Navigator 
           screenOptions={{ 
             headerShown: false,
@@ -335,20 +332,33 @@ export const RootNavigator = () => {
           ) : (
             <>
               <Stack.Screen name="Main" component={MainTabNavigator} />
+              <Stack.Screen name="BookingStack" component={BookingStack} />
+              <Stack.Screen name="ProfileStack" component={ProfileStack} />
               <Stack.Screen name="RouteDetail" component={RouteDetailScreen} options={{ presentation: 'modal' }} />
               <Stack.Screen name="Notifications" component={NotificationScreen} />
-              <Stack.Screen name="Booking" component={BookingScreen} />
-              <Stack.Screen name="Payment" component={PaymentScreen} />
               <Stack.Screen name="Pass" component={PassScreen} />
               <Stack.Screen name="Ticket" component={TicketScreen} options={{ presentation: 'modal' }} />
-              <Stack.Screen name="History" component={HistoryScreen} />
-              <Stack.Screen name="Help" component={HelpScreen} />
-              <Stack.Screen name="Settings" component={SettingsScreen} />
               <Stack.Screen name="ComingSoon" component={ComingSoon} />
             </>
           )}
         </Stack.Navigator>
       </NavigationContainer>
+
+      {splashVisible && (
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            styles.initializingContainer,
+            { transform: [{ translateX: splashAnim }] },
+          ]}
+        >
+          <Image
+            source={require('../../assets/images/splash.png')}
+            style={{ width: '100%', height: '100%' }}
+            contentFit="contain"
+          />
+        </Animated.View>
+      )}
     </View>
   );
 };

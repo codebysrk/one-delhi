@@ -111,7 +111,7 @@ export const UpiPinScreen = ({
       {/* PAYMENT CARD */}
       <View style={styles.payCard}>
         <View style={styles.payCardLeft}>
-          <Text style={styles.payAmountText}>Pay ₹{Number(displayTotal).toFixed(2)}</Text>
+          <Text style={styles.payAmountText}>Pay ₹{Number(displayTotal) % 1 === 0 ? Number(displayTotal).toFixed(0) : Number(displayTotal).toFixed(1)}</Text>
           <Text style={styles.payToText}>To One Delhi</Text>
         </View>
         <View style={styles.payCardRight}>

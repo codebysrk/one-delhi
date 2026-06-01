@@ -284,7 +284,7 @@ export const MapScreen = ({ navigation }: any) => {
         searchPlaceholder="Search 500+ Route"
         onSearchPress={() => navigation.navigate("Search")}
         rightElement={
-          <TouchableOpacity onPress={() => navigation.navigate("Settings")}>
+          <TouchableOpacity onPress={() => (navigation as any).navigate("ProfileStack", { screen: "Settings" })}>
             <MaterialCommunityIcons name="cog" size={26} color="white" />
           </TouchableOpacity>
         }

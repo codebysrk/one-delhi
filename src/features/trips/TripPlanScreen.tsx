@@ -6,21 +6,43 @@ import {
   TouchableOpacity, 
   TextInput, 
   StatusBar,
-  ScrollView
+  ScrollView,
+  Alert
 } from 'react-native';
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { MainHeader } from '../../components/layout/Header';
+import { useAppStore } from '../../store/useAppStore';
 
 export const TripPlanScreen = ({ navigation }: any) => {
   const [sourceText, setSourceText] = useState('');
   const [destText, setDestText] = useState('');
+
+  const { recentTrips, addRecentTrip, removeRecentTrip, clearRecentTrips } = useAppStore();
 
   const handleSwap = () => {
     const temp = sourceText;
     setSourceText(destText);
     setDestText(temp);
   };
+
+  const handleSearch = () => {
+    const src = sourceText.trim();
+    const dst = destText.trim();
+    if (!src || !dst) {
+      Alert.alert("Required", "Please enter both Source and Destination stops to plan your trip.");
+      return;
+    }
+    
+    addRecentTrip(src, dst);
+
+    Alert.alert(
+      "Searching Routes",
+      `Finding transit options between:\n📍 ${src}\n🏁 ${dst}`,
+      [{ text: "OK" }]
+    );
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#A51F38" translucent />
@@ -102,7 +124,13 @@ export const TripPlanScreen = ({ navigation }: any) => {
               <MaterialCommunityIcons name="clock" size={24} color="#374151" />
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity style={styles.searchBtn} activeOpacity={0.8} onPress={handleSearch}>
+            <MaterialCommunityIcons name="magnify" size={22} color="white" />
+            <Text style={styles.searchBtnText}>Search Routes</Text>
+          </TouchableOpacity>
         </View>
+
 
         {/* Filter Bar */}
         <View style={styles.filterCard}>
@@ -112,11 +140,55 @@ export const TripPlanScreen = ({ navigation }: any) => {
 
         {/* Recent Section */}
         <View style={styles.recentHeader}>
-          <Text style={styles.recentTitle}>Recent</Text>
+          <Text style={styles.recentTitle}>Recent Searches</Text>
+          {recentTrips.length > 0 && (
+            <TouchableOpacity onPress={clearRecentTrips} activeOpacity={0.7}>
+              <Text style={styles.clearAllText}>Clear All</Text>
+            </TouchableOpacity>
+          )}
         </View>
         
-        <ScrollView style={styles.recentList}>
-           {/* Recent trip items would go here */}
+        <ScrollView style={styles.recentList} showsVerticalScrollIndicator={false}>
+          {recentTrips.length === 0 ? (
+            <View style={styles.emptyRecent}>
+              <MaterialCommunityIcons name="history" size={38} color="#D1D5DB" />
+              <Text style={styles.emptyRecentText}>No recent searches</Text>
+            </View>
+          ) : (
+            recentTrips.map((trip) => (
+              <View key={trip.id}>
+                <TouchableOpacity 
+                  style={styles.recentItem} 
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    setSourceText(trip.source);
+                    setDestText(trip.dest);
+                  }}
+                >
+                  <View style={styles.recentItemLeft}>
+                    <MaterialCommunityIcons name="clock-outline" size={20} color="#9CA3AF" />
+                    <View style={styles.recentTripDetails}>
+                      <Text style={styles.recentTripText} numberOfLines={1}>
+                        {trip.source}
+                      </Text>
+                      <MaterialCommunityIcons name="arrow-right" size={14} color="#9CA3AF" style={{ marginHorizontal: 6 }} />
+                      <Text style={styles.recentTripText} numberOfLines={1}>
+                        {trip.dest}
+                      </Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.deleteBtn} 
+                    onPress={() => removeRecentTrip(trip.id)}
+                    activeOpacity={0.6}
+                  >
+                    <MaterialCommunityIcons name="close" size={18} color="#9CA3AF" />
+                  </TouchableOpacity>
+                </TouchableOpacity>
+                <View style={styles.recentDivider} />
+              </View>
+            ))
+          )}
         </ScrollView>
       </View>
     </View>
@@ -137,7 +209,6 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: '#e5e7ebc8',
-   
   },
   inputRow: { 
     flexDirection: 'row', 
@@ -206,6 +277,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center'
   },
+  searchBtn: {
+    backgroundColor: '#A51F38',
+    borderRadius: 12,
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    gap: 8,
+    shadowColor: '#A51F38',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  searchBtnText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '700',
+  },
   filterCard: {
     backgroundColor: '#f5f5f5',
     borderRadius: 10,
@@ -214,7 +305,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    marginTop: 40
+    marginTop: 20
   },
   filterText: { fontSize: 16, color: '#333' },
   recentHeader: { 
@@ -224,7 +315,52 @@ const styles = StyleSheet.create({
     marginTop: 18,
     marginLeft: -16,
     marginRight: -16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  recentTitle: { fontSize: 14, color: '#666' },
-  recentList: { flex: 1 }
+  recentTitle: { fontSize: 14, color: '#666', fontWeight: '600' },
+  clearAllText: { fontSize: 13, color: '#A51F38', fontWeight: '600' },
+  recentList: { flex: 1, marginTop: 8 },
+  emptyRecent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    gap: 8,
+  },
+  emptyRecentText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+  },
+  recentItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  recentItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 12,
+  },
+  recentTripDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginLeft: 12,
+  },
+  recentTripText: {
+    fontSize: 15,
+    color: '#374151',
+    flex: 1,
+  },
+  deleteBtn: {
+    padding: 6,
+  },
+  recentDivider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+  },
 });
+

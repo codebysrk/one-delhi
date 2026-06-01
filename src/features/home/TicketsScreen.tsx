@@ -16,11 +16,11 @@ type RootStackParamList = {
   ComingSoon: undefined;
 };
 
-interface HomeScreenProps {
+interface TicketsScreenProps {
   navigation: NativeStackNavigationProp<RootStackParamList>;
 }
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
+export const TicketsScreen: React.FC<TicketsScreenProps> = ({ navigation }) => {
   const tickets = useAppStore(state => state.tickets);
   const setShowFooter = useAppStore(state => state.setShowFooter);
   const [tick, setTick] = useState(0);
@@ -85,7 +85,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <View style={styles.gridContainer}>
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => handleNavigate("Booking")}
+            onPress={() => (navigation as any).navigate("BookingStack", { screen: "Booking" })}
           >
             <Text style={styles.actionTitle}>Bus{"\n"}Ticket</Text>
             <Image
@@ -97,7 +97,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => handleNavigate("Pass")}
+            onPress={() => (navigation as any).navigate("PassStack", { screen: "Pass" })}
           >
             <Animated.View style={[styles.newBadgeCenter, { opacity: blinkAnim }]}>
               <Text style={styles.newBadgeText}>New</Text>
@@ -130,7 +130,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionLabel}>My Bus Ticket</Text>
-            <TouchableOpacity onPress={() => handleNavigate("History")}>
+            <TouchableOpacity onPress={() => (navigation as any).navigate("ProfileStack", { screen: "History" })}>
               <Text style={styles.viewAll}>View all tickets</Text>
             </TouchableOpacity>
           </View>
@@ -156,7 +156,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionLabel}>My Metro Ticket</Text>
-            <TouchableOpacity onPress={() => handleNavigate("History")}>
+            <TouchableOpacity onPress={() => (navigation as any).navigate("ProfileStack", { screen: "History" })}>
               <Text style={styles.viewAll}>View all tickets</Text>
             </TouchableOpacity>
           </View>
@@ -169,13 +169,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionLabel}>My Bus Pass</Text>
-            <TouchableOpacity onPress={() => handleNavigate("History")}>
+            <TouchableOpacity onPress={() => (navigation as any).navigate("ProfileStack", { screen: "History" })}>
               <Text style={styles.viewAll}>View all passes</Text>
             </TouchableOpacity>
           </View>
           <TouchableOpacity
             style={styles.bottomEmptyCard}
-            onPress={() => handleNavigate("Pass")}
+            onPress={() => (navigation as any).navigate("PassStack", { screen: "Pass" })}
           >
             <Text style={styles.bottomEmptyText}>Click to View</Text>
           </TouchableOpacity>

@@ -19,6 +19,7 @@ interface AppState {
   setLoading: (loading: boolean) => void;
   setShowFooter: (show: boolean) => void;
   recentRoutes: any[];
+  recentTrips: { id: string; source: string; dest: string; timestamp: number }[];
   lastSeenNotification: number;
   latestNotificationTimestamp: number;
   isVerifying: boolean;
@@ -31,6 +32,9 @@ interface AppState {
   addRecentRoute: (route: any) => void;
   removeRecentRoute: (routeId: string) => void;
   clearRecentRoutes: () => void;
+  addRecentTrip: (source: string, dest: string) => void;
+  removeRecentTrip: (id: string) => void;
+  clearRecentTrips: () => void;
   resetStore: () => void;
 }
 
@@ -45,6 +49,7 @@ export const useAppStore = create<AppState>()(
       showFooter: true,
       deviceId: null,
       recentRoutes: [],
+      recentTrips: [],
       lastSeenNotification: 0,
       latestNotificationTimestamp: 0,
       isVerifying: false,
@@ -74,7 +79,18 @@ export const useAppStore = create<AppState>()(
         recentRoutes: state.recentRoutes.filter(r => r.route !== routeId)
       })),
       clearRecentRoutes: () => set({ recentRoutes: [] }),
-      resetStore: () => set({ user: null, userProfile: null, tickets: [], cachedStops: [], loading: false, deviceId: null, recentRoutes: [], isVerifying: false, isAuthReady: false }),
+      addRecentTrip: (source, dest) => set((state) => {
+        const id = `${source}_${dest}_${Date.now()}`;
+        // Filter out existing similar trips to avoid duplicates
+        const filtered = state.recentTrips.filter(t => !(t.source === source && t.dest === dest));
+        const updated = [{ id, source, dest, timestamp: Date.now() }, ...filtered].slice(0, 5);
+        return { recentTrips: updated };
+      }),
+      removeRecentTrip: (id) => set((state) => ({
+        recentTrips: state.recentTrips.filter(t => t.id !== id)
+      })),
+      clearRecentTrips: () => set({ recentTrips: [] }),
+      resetStore: () => set({ user: null, userProfile: null, tickets: [], cachedStops: [], loading: false, deviceId: null, recentRoutes: [], recentTrips: [], isVerifying: false, isAuthReady: false }),
     }),
     {
       name: 'railone-storage',

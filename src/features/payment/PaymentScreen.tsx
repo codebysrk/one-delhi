@@ -30,6 +30,12 @@ import { logAction } from "../../services/logService";
 import { UpiConfirmScreen } from "./UpiConfirmScreen";
 import { UpiPinScreen } from "./UpiPinScreen";
 import { PhonePeConfirmScreen } from "./PhonePeConfirmScreen";
+import { PhonePeProcessingScreen } from "./PhonePeProcessingScreen";
+import { PhonePeSuccessScreen } from "./PhonePeSuccessScreen";
+import { PaytmProcessingScreen } from "./PaytmProcessingScreen";
+import { PaytmSuccessScreen } from "./PaytmSuccessScreen";
+import { GenericProcessingScreen } from "./GenericProcessingScreen";
+import { GenericSuccessScreen } from "./GenericSuccessScreen";
 import { moderateScale, responsiveFontSize } from "../../core/responsive";
 import * as Haptics from "expo-haptics";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -39,9 +45,9 @@ import { LoadingOverlay } from "../../components/ui/LoadingOverlay";
 export const PaymentScreen = ({ navigation, route }: any) => {
   const { ticketData = {}, timeLeft: initialTimeLeft = 180 } = route.params || {};
   const displayTotal = Number(ticketData.total || 9);
-  const formattedTotal = displayTotal % 1 === 0 ? displayTotal.toFixed(0) : displayTotal.toFixed(1);
+  const formattedTotal = displayTotal.toFixed(1);
   const baseFareNum = Number(ticketData.baseFare || 10);
-  const formattedBaseFare = baseFareNum % 1 === 0 ? baseFareNum.toFixed(0) : baseFareNum.toFixed(1);
+  const formattedBaseFare = baseFareNum.toFixed(1);
   const { addTicket } = useAppStore();
   const now = new Date();
   const dateStr = `${now.getDate().toString().padStart(2, "0")} ${now.toLocaleString("en-GB", { month: "short" })}, ${now.getFullYear()}`;
@@ -65,71 +71,12 @@ export const PaymentScreen = ({ navigation, route }: any) => {
   const simAnimProgress = React.useRef(new Animated.Value(0)).current;
 
   const [isRedirecting, setIsRedirecting] = useState(false);
-  const [typedTxnId, setTypedTxnId] = useState("");
   const [finalCreatedTicket, setFinalCreatedTicket] = useState<any>(null);
-
-  const successScale = React.useRef(new Animated.Value(0)).current;
-  const checkmarkScale = React.useRef(new Animated.Value(0)).current;
-  const detailsOpacity = React.useRef(new Animated.Value(0)).current;
-  const phonepeLoaderAnim = React.useRef(new Animated.Value(0.4)).current;
-  const paytmSpinAnim = React.useRef(new Animated.Value(0)).current;
-  const paytmPulseAnim = React.useRef(new Animated.Value(1)).current;
-  const paytmSuccessRingAnim = React.useRef(new Animated.Value(0)).current;
-  const paytmRing1 = React.useRef(new Animated.Value(0)).current;
-  const paytmRing2 = React.useRef(new Animated.Value(0)).current;
-  const paytmRing3 = React.useRef(new Animated.Value(0)).current;
-  const paytmGlowAnim = React.useRef(new Animated.Value(0.6)).current;
 
   // Fake generated IDs for active simulation
   const [activeTxnId, setActiveTxnId] = useState("");
   const [activeBankRef, setActiveBankRef] = useState("");
   const [activeTimestamp, setActiveTimestamp] = useState("");
-
-  useEffect(() => {
-    if (simStep === "success" && activeTxnId) {
-      setTypedTxnId("");
-      let current = "";
-      let index = 0;
-      const interval = setInterval(() => {
-        if (index < activeTxnId.length) {
-          current += activeTxnId[index];
-          setTypedTxnId(current);
-          index++;
-        } else {
-          clearInterval(interval);
-        }
-      }, 40);
-      return () => clearInterval(interval);
-    }
-  }, [simStep, activeTxnId]);
-
-  useEffect(() => {
-    if (simStep === "success") {
-      successScale.setValue(0);
-      checkmarkScale.setValue(0);
-      detailsOpacity.setValue(0);
-
-      Animated.sequence([
-        Animated.spring(successScale, {
-          toValue: 1,
-          friction: 6,
-          tension: 40,
-          useNativeDriver: true,
-        }),
-        Animated.spring(checkmarkScale, {
-          toValue: 1,
-          friction: 5,
-          tension: 50,
-          useNativeDriver: true,
-        }),
-        Animated.timing(detailsOpacity, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [simStep]);
 
   useEffect(() => {
     const timer = setInterval(
@@ -161,8 +108,6 @@ export const PaymentScreen = ({ navigation, route }: any) => {
     const sec = (s % 60).toString().padStart(2, "0");
     return `${min}:${sec}`;
   };
-
-  // History logs removed for production mode
 
   // --- Simulation Flow Controllers ---
   const startSimulation = (app: typeof selectedApp) => {
@@ -333,163 +278,28 @@ export const PaymentScreen = ({ navigation, route }: any) => {
 
   const handleDone = () => {
     closeSimulation();
-    navigation.navigate("Ticket", {
-      ticket: finalCreatedTicket || {
-        ...ticketData,
-        tid: "T" + Date.now().toString(),
-        timestamp: Date.now(),
-        fare: ticketData.total,
-        status: "Active",
-      },
-      isRedirect: true,
+    navigation.reset({
+      index: 1,
+      routes: [
+        { name: "Main", params: { screen: "TicketsTab" } },
+        {
+          name: "Ticket",
+          params: {
+            ticket: finalCreatedTicket || {
+              ...ticketData,
+              tid: "T" + Date.now().toString(),
+              timestamp: Date.now(),
+              fare: ticketData.total,
+              status: "Active",
+            },
+            isRedirect: true,
+          },
+        },
+      ],
     });
   };
 
-  const getPhonePeSuccessTime = () => {
-    const d = new Date();
-    const day = d.getDate();
-    const month = d.toLocaleString("en-US", { month: "short" });
-    const year = d.getFullYear();
-    let hours = d.getHours();
-    const minutes = d.getMinutes().toString().padStart(2, "0");
-    const ampm = hours >= 12 ? "PM" : "AM";
-    hours = hours % 12;
-    hours = hours ? hours : 12;
-    const strTime = `${hours.toString().padStart(2, "0")}:${minutes} ${ampm}`;
-    return `${day} ${month} ${year} at ${strTime}`;
-  };
 
-  useEffect(() => {
-    if (simStep === "processing") {
-      if (selectedApp === "PhonePe") {
-        phonepeLoaderAnim.setValue(0.4);
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(phonepeLoaderAnim, {
-              toValue: 1.0,
-              duration: 1000,
-              easing: Easing.inOut(Easing.ease),
-              useNativeDriver: true,
-            }),
-            Animated.timing(phonepeLoaderAnim, {
-              toValue: 0.4,
-              duration: 1000,
-              easing: Easing.inOut(Easing.ease),
-              useNativeDriver: true,
-            }),
-          ])
-        ).start();
-      } else if (selectedApp === "Paytm") {
-        paytmSpinAnim.setValue(0);
-        paytmPulseAnim.setValue(1);
-        paytmGlowAnim.setValue(0.6);
-        
-        Animated.loop(
-          Animated.timing(paytmSpinAnim, {
-            toValue: 1,
-            duration: 1200,
-            easing: Easing.linear,
-            useNativeDriver: true,
-          })
-        ).start();
-
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(paytmPulseAnim, {
-              toValue: 1.12,
-              duration: 750,
-              easing: Easing.inOut(Easing.ease),
-              useNativeDriver: true,
-            }),
-            Animated.timing(paytmPulseAnim, {
-              toValue: 0.95,
-              duration: 750,
-              easing: Easing.inOut(Easing.ease),
-              useNativeDriver: true,
-            }),
-          ])
-        ).start();
-
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(paytmGlowAnim, {
-              toValue: 1.0,
-              duration: 1000,
-              easing: Easing.inOut(Easing.ease),
-              useNativeDriver: true,
-            }),
-            Animated.timing(paytmGlowAnim, {
-              toValue: 0.6,
-              duration: 1000,
-              easing: Easing.inOut(Easing.ease),
-              useNativeDriver: true,
-            }),
-          ])
-        ).start();
-      }
-    }
-  }, [simStep, selectedApp]);
-
-  useEffect(() => {
-    if (simStep === "success" && selectedApp === "Paytm") {
-      paytmSuccessRingAnim.setValue(0);
-      paytmRing1.setValue(0);
-      paytmRing2.setValue(0);
-      paytmRing3.setValue(0);
-
-      Animated.loop(
-        Animated.timing(paytmSuccessRingAnim, {
-          toValue: 1,
-          duration: 1600,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        })
-      ).start();
-
-      const loop1 = Animated.loop(
-        Animated.timing(paytmRing1, {
-          toValue: 1,
-          duration: 1800,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: true,
-        })
-      );
-
-      const loop2 = Animated.loop(
-        Animated.sequence([
-          Animated.delay(600),
-          Animated.timing(paytmRing2, {
-            toValue: 1,
-            duration: 1800,
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: true,
-          }),
-        ])
-      );
-
-      const loop3 = Animated.loop(
-        Animated.sequence([
-          Animated.delay(1200),
-          Animated.timing(paytmRing3, {
-            toValue: 1,
-            duration: 1800,
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: true,
-          }),
-        ])
-      );
-
-      loop1.start();
-      loop2.start();
-      loop3.start();
-
-      return () => {
-        loop1.stop();
-        loop2.stop();
-        loop3.stop();
-      };
-    }
-  }, [simStep, selectedApp]);
 
   useEffect(() => {
     if (simStep === "success" && (selectedApp === "PhonePe" || selectedApp === "Paytm")) {
@@ -520,21 +330,6 @@ export const PaymentScreen = ({ navigation, route }: any) => {
     }
     return () => { if (loop) loop.stop(); };
   }, [timeLeft, timerScale]);
-
-
-
-  const paytmCardTranslateY = detailsOpacity.interpolate({
-    inputRange: [0, 1],
-    outputRange: [35, 0],
-  });
-  const paytmCardScale = detailsOpacity.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.96, 1],
-  });
-  const paytmTextTranslateY = detailsOpacity.interpolate({
-    inputRange: [0, 1],
-    outputRange: [15, 0],
-  });
 
   return (
     <Screen noPadding ignoreTopSafe style={{ backgroundColor: "#FFFFFF" }}>
@@ -586,9 +381,6 @@ export const PaymentScreen = ({ navigation, route }: any) => {
             </View>
           </View>
         </View>
-
-        {/* Simulation settings panel removed for production mode */}
-
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>UPI</Text>
         </View>
@@ -632,8 +424,6 @@ export const PaymentScreen = ({ navigation, route }: any) => {
             <MaterialCommunityIcons name="chevron-right" size={26} color="#666" />
           </View>
         </TouchableOpacity>
-
-        {/* Simulation logs button removed for production mode */}
 
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -708,290 +498,35 @@ export const PaymentScreen = ({ navigation, route }: any) => {
           {/* STEP 3: PROCESSING SCREEN */}
           {simStep === "processing" && (
             selectedApp === "PhonePe" ? (
-              <View style={styles.phonepeProcessingBox}>
-                <StatusBar barStyle="light-content" backgroundColor="#0f0f0f" translucent={true} />
-                <Animated.View
-                  style={[
-                    styles.phonepeLoaderPill,
-                    {
-                      opacity: phonepeLoaderAnim,
-                      transform: [
-                        {
-                          scale: phonepeLoaderAnim.interpolate({
-                            inputRange: [0.4, 1.0],
-                            outputRange: [0.9, 1.15],
-                          }),
-                        },
-                      ],
-                    },
-                  ]}
-                />
-                <Text style={styles.phonepeProcessingTitle}>Connecting Securely</Text>
-              </View>
+              <PhonePeProcessingScreen />
             ) : selectedApp === "Paytm" ? (
-              <View style={styles.paytmProcessingBox}>
-                <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent={true} />
-                <View style={styles.paytmSpinnerContainer}>
-                  <Animated.View
-                    style={[
-                      styles.paytmSpinnerGlow,
-                      {
-                        transform: [{ scale: paytmGlowAnim }],
-                        opacity: paytmGlowAnim.interpolate({
-                          inputRange: [0.6, 1.0],
-                          outputRange: [0.08, 0.22],
-                        }),
-                      },
-                    ]}
-                  />
-                  <View style={styles.paytmSpinnerBgRing} />
-                  <Animated.View
-                    style={[
-                      styles.paytmSpinnerRing,
-                      {
-                        transform: [
-                          {
-                            rotate: paytmSpinAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: ["0deg", "360deg"],
-                            }),
-                          },
-                        ],
-                      },
-                    ]}
-                  />
-                  <Animated.View
-                    style={[
-                      styles.paytmLockIcon,
-                      {
-                        transform: [{ scale: paytmPulseAnim }],
-                      },
-                    ]}
-                  >
-                    <MaterialCommunityIcons name="lock" size={32} color="#00b9f1" />
-                  </Animated.View>
-                </View>
-                <Text style={styles.paytmProcessingTitle}>Processing Payment</Text>
-                <Text style={styles.paytmProcessingSub}>
-                  Paying One Delhi{"\n"}
-                  <Text style={{ fontWeight: "bold", color: "#002e6e" }}>₹{formattedTotal}</Text>
-                </Text>
-                <View style={styles.paytmSecuredBadge}>
-                  <MaterialCommunityIcons name="shield-check" size={16} color="#002e6e" />
-                  <Text style={styles.paytmSecuredText}>paytm Secured</Text>
-                </View>
-              </View>
+              <PaytmProcessingScreen formattedTotal={formattedTotal} />
             ) : (
-              <View style={styles.simProcessingBox}>
-                <ActivityIndicator size="large" color="#10B981" />
-                <Text style={styles.simProcessingTitle}>{processingMessage}</Text>
-                <Text style={styles.simProcessingSub}>Please do not close this window</Text>
-                <View style={styles.securingIndicatorCard}>
-                  <MaterialCommunityIcons name="shield-check" size={16} color="#065F46" />
-                  <Text style={styles.securedIndicatorText}>NPCI SECURE PAYMENT GATEWAY</Text>
-                </View>
-              </View>
+              <GenericProcessingScreen processingMessage={processingMessage} />
             )
           )}
 
           {/* STEP 4: SUCCESS OUTCOME SCREEN */}
           {simStep === "success" && (
             selectedApp === "PhonePe" ? (
-              <View style={styles.phonepeSuccessContainer}>
-                <StatusBar barStyle="light-content" backgroundColor="#249b4f" translucent={true} />
-                <View style={styles.phonepeSuccessDot} />
-                <Animated.View style={[styles.phonepeSuccessCircle, { transform: [{ scale: checkmarkScale }] }]}>
-                  <MaterialCommunityIcons name="check" size={50} color="#249b4f" />
-                </Animated.View>
-                <Animated.Text style={[styles.phonepeSuccessTitle, { opacity: detailsOpacity }]}>Payment Successful</Animated.Text>
-                <Animated.Text style={[styles.phonepeSuccessTime, { opacity: detailsOpacity }]}>{getPhonePeSuccessTime()}</Animated.Text>
-              </View>
+              <PhonePeSuccessScreen />
             ) : selectedApp === "Paytm" ? (
-              <View style={styles.paytmSuccessContainer}>
-                <StatusBar barStyle="dark-content" backgroundColor="#F4F8FD" translucent={true} />
-                <View style={styles.paytmSuccessHeader}>
-                  <Text style={{ fontSize: 18, fontWeight: "bold", color: "#002e6e" }}>paytm</Text>
-                  <Text style={{ fontSize: 13, fontWeight: "600", color: "#00b9f1" }}>Help</Text>
-                </View>
-                <View style={styles.paytmSuccessTickContainer}>
-                  {/* Staggered concentric ripple rings */}
-                  <Animated.View
-                    style={[
-                      styles.paytmSuccessRing,
-                      {
-                        transform: [
-                          {
-                            scale: paytmRing1.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [1, 2.2],
-                            }),
-                          },
-                        ],
-                        opacity: paytmRing1.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [0.6, 0],
-                        }),
-                      },
-                    ]}
-                  />
-                  <Animated.View
-                    style={[
-                      styles.paytmSuccessRing,
-                      {
-                        transform: [
-                          {
-                            scale: paytmRing2.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [1, 1.8],
-                            }),
-                          },
-                        ],
-                        opacity: paytmRing2.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [0.5, 0],
-                        }),
-                      },
-                    ]}
-                  />
-                  <Animated.View
-                    style={[
-                      styles.paytmSuccessRing,
-                      {
-                        transform: [
-                          {
-                            scale: paytmRing3.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [1, 1.4],
-                            }),
-                          },
-                        ],
-                        opacity: paytmRing3.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [0.4, 0],
-                        }),
-                      },
-                    ]}
-                  />
-                  <Animated.View
-                    style={[
-                      styles.paytmSuccessCircle,
-                      {
-                        transform: [{ scale: checkmarkScale }],
-                      },
-                    ]}
-                  >
-                    <MaterialCommunityIcons name="check" size={48} color="white" />
-                  </Animated.View>
-                </View>
-                <Animated.Text
-                  style={[
-                    styles.paytmSuccessTitle,
-                    {
-                      opacity: detailsOpacity,
-                      transform: [{ translateY: paytmTextTranslateY }],
-                    },
-                  ]}
-                >
-                  ₹{formattedTotal} Paid Successfully
-                </Animated.Text>
-                <Animated.Text
-                  style={[
-                    styles.paytmSuccessSubtitle,
-                    {
-                      opacity: detailsOpacity,
-                      transform: [{ translateY: paytmTextTranslateY }],
-                    },
-                  ]}
-                >
-                  to One Delhi
-                </Animated.Text>
-                <Animated.View
-                  style={[
-                    styles.paytmDetailsCard,
-                    {
-                      opacity: detailsOpacity,
-                      transform: [
-                        { translateY: paytmCardTranslateY },
-                        { scale: paytmCardScale },
-                      ],
-                    },
-                  ]}
-                >
-                  <Text style={styles.paytmDetailsHeader}>Transaction Details</Text>
-                  <View style={styles.paytmDetailRow}>
-                    <Text style={styles.paytmDetailLabel}>Ticket Route</Text>
-                    <Text style={styles.paytmDetailVal}>{ticketData?.route || "Bus Route"}</Text>
-                  </View>
-                  <View style={styles.paytmDetailRow}>
-                    <Text style={styles.paytmDetailLabel}>Transaction ID</Text>
-                    <Text style={[styles.paytmDetailVal, { fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 11 }]}>
-                      {activeTxnId}
-                    </Text>
-                  </View>
-                  <View style={styles.paytmDetailRow}>
-                    <Text style={styles.paytmDetailLabel}>Bank Ref No.</Text>
-                    <Text style={styles.paytmDetailVal}>{activeBankRef}</Text>
-                  </View>
-                  <View style={styles.paytmDetailRow}>
-                    <Text style={styles.paytmDetailLabel}>Date & Time</Text>
-                    <Text style={styles.paytmDetailVal}>{activeTimestamp}</Text>
-                  </View>
-                </Animated.View>
-                <View style={styles.paytmSuccessFooter}>
-                  <Text style={{ fontSize: 11, color: "#687B95", fontWeight: "600" }}>Secured by Paytm UPI</Text>
-                </View>
-              </View>
+              <PaytmSuccessScreen
+                formattedTotal={formattedTotal}
+                routeNumber={ticketData?.route || "Bus Route"}
+                activeTxnId={activeTxnId}
+                activeBankRef={activeBankRef}
+                activeTimestamp={activeTimestamp}
+              />
             ) : (
-              <View style={styles.outcomeContainer}>
-                <ScrollView contentContainerStyle={styles.outcomeScroll} showsVerticalScrollIndicator={false}>
-                  <Animated.View style={[styles.successCelebrationBg, { transform: [{ scale: successScale }] }]}>
-                    <Animated.View style={[styles.successTickCircle, { transform: [{ scale: checkmarkScale }] }]}>
-                      <MaterialCommunityIcons name="check" size={44} color="white" />
-                    </Animated.View>
-                  </Animated.View>
-                  <Text style={styles.successTitleText}>Payment Successful</Text>
-                  <Text style={styles.successSubtitleText}>Your ticket has been booked successfully</Text>
-
-                  <Animated.View style={[styles.detailsCard, { opacity: detailsOpacity }]}>
-                    <Text style={styles.detailsCardTitle}>Transaction Details</Text>
-                    
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Transaction ID</Text>
-                      <Text style={[styles.detailVal, { fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }]}>
-                        {typedTxnId || " "}
-                      </Text>
-                    </View>
-
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Bank Reference No.</Text>
-                      <Text style={styles.detailVal}>{activeBankRef}</Text>
-                    </View>
-
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Paid From</Text>
-                      <Text style={styles.detailVal}>{selectedBank === "SBI" ? "SBI Savings - 4526" : "HDFC Savings - 8972"}</Text>
-                    </View>
-
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>UPI App</Text>
-                      <Text style={styles.detailVal}>{selectedApp}</Text>
-                    </View>
-
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Amount Paid</Text>
-                      <Text style={[styles.detailVal, { color: '#10B981', fontWeight: 'bold' }]}>₹{formattedTotal}</Text>
-                    </View>
-                  </Animated.View>
-
-                  {/* DONE BUTTON */}
-                  <Animated.View style={{ width: '100%', opacity: detailsOpacity, marginTop: 30 }}>
-                    <PrimaryButton 
-                      title="View Ticket"
-                      onPress={handleDone}
-                    />
-                  </Animated.View>
-                </ScrollView>
-              </View>
+              <GenericSuccessScreen
+                formattedTotal={formattedTotal}
+                activeTxnId={activeTxnId}
+                activeBankRef={activeBankRef}
+                selectedBank={selectedBank}
+                selectedApp={selectedApp}
+                onDone={handleDone}
+              />
             )
           )}
 
@@ -1021,11 +556,11 @@ const styles = StyleSheet.create({
   },
   summaryHeader: {
     backgroundColor: "#808080",
-    paddingVertical: moderateScale(10),
+    paddingVertical: moderateScale(12),
     paddingHorizontal: moderateScale(16),
   },
-  summaryDateText: { color: "white", fontSize: responsiveFontSize(14), fontWeight: "500" },
-  summaryBody: { padding: moderateScale(16) },
+  summaryDateText: { color: "white", fontSize: responsiveFontSize(16), fontWeight: "500" },
+  summaryBody: { padding: moderateScale(8) },
   summaryTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1034,7 +569,7 @@ const styles = StyleSheet.create({
   busInfo: { flexDirection: "row", alignItems: "center", gap: moderateScale(4) },
   busRouteText: { fontSize: responsiveFontSize(18), fontWeight: "bold", color: "#000" },
   fareCalcText: { fontSize: responsiveFontSize(18), color: "#333" },
-  fareGreen: { color: "#4CAF50", fontWeight: "bold" },
+  fareGreen: { color: "#63d367ff", fontWeight: "bold" },
 
   pathRow: { flexDirection: "row", alignItems: "center", marginTop: moderateScale(20) },
   stopWrapper: { flex: 1 },

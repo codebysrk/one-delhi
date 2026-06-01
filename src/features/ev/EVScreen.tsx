@@ -193,9 +193,9 @@ export const EVScreen = ({ navigation }: any) => {
       <MainHeader 
         style={styles.headerOverlayContainer}
         showSearch={true}
-        searchPlaceholder="Search 0+ charge points"
+        searchPlaceholder="Search EV charge points"
         rightElement={
-          <TouchableOpacity onPress={() => navigation.navigate("Settings")}>
+          <TouchableOpacity onPress={() => (navigation as any).navigate("ProfileStack", { screen: "Settings" })}>
             <MaterialCommunityIcons name="cog" size={26} color="white" />
           </TouchableOpacity>
         }

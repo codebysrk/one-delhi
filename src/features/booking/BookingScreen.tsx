@@ -34,8 +34,10 @@ import { AppState, AppStateStatus } from "react-native";
 import {
   moderateScale,
   responsiveFontSize,
+  responsiveHeight,
 } from "../../core/responsive";
 import { PrimaryButton } from "../../components/ui/PrimaryButton";
+import fareConfig from "../../config/fareConfig.json";
 
 // --- 1. Separate Memoized Item Components for Peak Performance ---
 
@@ -45,74 +47,26 @@ interface Route {
   stops: string[];
 }
 
-// Fare slab configuration
-interface FareSlab {
-  minStops: number;
-  maxStops: number;
-  nonACFare: number;
-  acFare: number;
-}
-
-const FARE_SLABS: FareSlab[] = [
-  { minStops: 1, maxStops: 4, nonACFare: 5, acFare: 10 }, // Tier 1: Small distance
-  { minStops: 5, maxStops: 9, nonACFare: 10, acFare: 15 }, // Tier 2: Medium distance
-  { minStops: 10, maxStops: 14, nonACFare: 15, acFare: 20 }, // Tier 3: Long distance
-  { minStops: 15, maxStops: Infinity, nonACFare: 15, acFare: 25 }, // Tier 4: Very long distance
-];
-
 // Fare calculation utilities
-const getFareForSlab = (
-  stopCount: number,
+const getFareForDistance = (
+  distanceKm: number,
   busType: "AC" | "Non-AC",
-): { fare: number; slab: FareSlab } => {
-  const applicableSlab = FARE_SLABS.find(
-    (slab) => stopCount >= slab.minStops && stopCount <= slab.maxStops,
-  );
-
-  if (!applicableSlab) {
-    return { fare: 0, slab: FARE_SLABS[2] }; // Default to highest slab
-  }
+  isNCR: boolean
+): { fare: number; slab: any } => {
+  const slabs = isNCR ? fareConfig.interstateSlabs : fareConfig.delhiSlabs;
+  const applicableSlab = slabs.find(
+    (slab) => {
+      const maxLimit = slab.maxKm === null ? Infinity : slab.maxKm;
+      return distanceKm >= slab.minKm && distanceKm <= maxLimit;
+    }
+  ) || slabs[slabs.length - 1];
 
   const fare =
     busType === "AC" ? applicableSlab.acFare : applicableSlab.nonACFare;
   return { fare, slab: applicableSlab };
 };
 
-const validateManualFare = (
-  fare: number,
-  qty: number,
-): {
-  isValid: boolean;
-  status: "VALID" | "INVALID" | "MIN" | "MAX" | "EMPTY";
-  message?: string;
-} => {
-  if (isNaN(fare) || fare <= 0) {
-    return {
-      isValid: false,
-      status: "INVALID",
-      message: "Fare must be a positive number",
-    };
-  }
 
-  if (fare < 5) {
-    return { isValid: false, status: "MIN", message: `Minimum fare is ₹5` };
-  }
-
-  if (fare > 100) {
-    return { isValid: false, status: "MAX", message: "Maximum fare is ₹100" };
-  }
-
-  const maxTotal = fare * qty;
-  if (maxTotal > 500) {
-    return {
-      isValid: false,
-      status: "MAX",
-      message: "Maximum total fare is ₹500",
-    };
-  }
-
-  return { isValid: true, status: "VALID" };
-};
 
 const TimerPill = React.memo(
   ({ timeLeft }: { timeLeft: Animated.SharedValue<number> }) => {
@@ -220,7 +174,7 @@ const FareDisplay = React.memo(
     onManualChange,
     onBlur,
   }: {
-    finalFare: { total: string; originalTotal: string };
+    finalFare: { total: string; originalTotal: string; toll?: number };
     showDiscount: boolean;
     isEditing: boolean;
     onPress: () => void;
@@ -253,7 +207,7 @@ const FareDisplay = React.memo(
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
                   <Text style={styles.newPrice}>₹</Text>
                   <TextInput
-                    style={[styles.newPrice, { minWidth: 40, padding: 0 }]}
+                    style={[styles.newPrice, { minWidth: moderateScale(40), padding: 0 }]}
                     value={manualTotal}
                     onChangeText={onManualChange}
                     onBlur={onBlur}
@@ -269,7 +223,14 @@ const FareDisplay = React.memo(
             </TouchableOpacity>
           </Animated.View>
         </View>
-        <Animated.View style={[{ justifyContent: "center" }, animatedStyle]}>
+        <Animated.View style={[{ flexDirection: 'row', gap: moderateScale(8), alignItems: "center" }, animatedStyle]}>
+          {finalFare.toll ? (
+            <View style={styles.tollBadge}>
+              <Text style={styles.tollText}>
+                ₹{finalFare.toll.toFixed(1)}{"\n"}toll incl.
+              </Text>
+            </View>
+          ) : null}
           <View style={styles.discountBadge}>
             <Text style={styles.discountText}>10.0% off</Text>
           </View>
@@ -438,7 +399,7 @@ export const BookingScreen = ({ navigation }: any) => {
   // Auto fare calculation based on stop count and bus type
   const calculateAutoFare = useCallback(() => {
     if (!routeSearch || !sourceSearch || !destSearch || !selectedFullRouteId) {
-      return { fare: 0, slab: FARE_SLABS[0], isValid: true };
+      return { fare: 0, slab: fareConfig.delhiSlabs[0], isValid: true };
     }
 
     const foundRoute = dbRoutes.find(
@@ -448,25 +409,38 @@ export const BookingScreen = ({ navigation }: any) => {
     );
 
     if (!foundRoute) {
-      return { fare: 0, slab: FARE_SLABS[0], isValid: false };
+      return { fare: 0, slab: fareConfig.delhiSlabs[0], isValid: false };
     }
 
     const srcIdx = foundRoute.stops.indexOf(sourceSearch);
     const dstIdx = foundRoute.stops.indexOf(destSearch);
 
     if (srcIdx === -1 || dstIdx === -1) {
-      return { fare: 0, slab: FARE_SLABS[0], isValid: false };
+      return { fare: 0, slab: fareConfig.delhiSlabs[0], isValid: false };
     }
 
+    const start = Math.min(srcIdx, dstIdx);
+    const end = Math.max(srcIdx, dstIdx);
+    const journeyStops = foundRoute.stops.slice(start, end + 1);
+
+    // Interstate journey conditions: Journey segment contains DELHI stops AND NCR stops
+    const ncrPattern = /noida|greater\s*noida|ghaziabad|faridabad|gurugram|gurgaon/;
+    let hasDelhi = false;
+    let hasNCR = false;
+    for (const stopName of journeyStops) {
+      const lowerStop = stopName.toLowerCase();
+      if (ncrPattern.test(lowerStop)) {
+        hasNCR = true;
+      } else {
+        hasDelhi = true;
+      }
+    }
+    const isInterstate = hasDelhi && hasNCR;
+
     const stopCount = Math.abs(dstIdx - srcIdx);
-    const { fare, slab } = getFareForSlab(stopCount, busType);
-    return {
-      fare,
-      slab,
-      isValid: true,
-      validationStatus: "VALID",
-      validationMessage: "",
-    };
+    const distanceKm = stopCount * 0.6; // Approximation: 1 stop ~ 0.6km
+    const { fare, slab } = getFareForDistance(distanceKm, busType, isInterstate);
+    return { fare, slab, isInterstate, isValid: true };
   }, [
     routeSearch,
     sourceSearch,
@@ -476,57 +450,98 @@ export const BookingScreen = ({ navigation }: any) => {
     dbRoutes,
   ]);
 
-  // Real-time fare calculation updates handled in getCurrentFare function
-
   // Unified fare calculation function
   const getCurrentFare = useCallback(() => {
     if (isManualFare) {
-      const validation = validateManualFare(Number(manualTotal), qty);
-
-      if (!validation.isValid) {
-        return {
-          fare: 0,
-          slab: FARE_SLABS[0],
-          isValid: false,
-          source: "MANUAL",
-          validationStatus: validation.status,
-          validationMessage: validation.message,
-        };
-      }
-
       const manualFarePerTicket = Number(manualTotal) / qty;
       return {
         fare: manualFarePerTicket,
         slab: null,
         isValid: true,
         source: "MANUAL",
-        validationStatus: "VALID",
-        validationMessage: undefined,
       };
     } else {
       const autoResult = calculateAutoFare();
-      return {
-        ...autoResult,
-        source: "AUTO",
-      };
+      return { ...autoResult, source: "AUTO" };
     }
   }, [isManualFare, manualTotal, qty, calculateAutoFare]);
 
   const getFinalFare = useCallback(() => {
     const currentFare = getCurrentFare();
-    const subTotal = currentFare.fare * qty;
+    const baseFareTotal = currentFare.fare * qty;
+
+    let isInterstate = false;
+    let tollPerTicket = 0;
+
+    const foundRoute = dbRoutes.find(
+      (r) =>
+        r.id?.toLowerCase() === selectedFullRouteId?.toLowerCase() ||
+        r.name?.toLowerCase() === selectedFullRouteId?.toLowerCase(),
+    );
+
+    if (foundRoute) {
+      const srcIdx = foundRoute.stops.indexOf(sourceSearch);
+      const dstIdx = foundRoute.stops.indexOf(destSearch);
+      if (srcIdx !== -1 && dstIdx !== -1) {
+        const start = Math.min(srcIdx, dstIdx);
+        const end = Math.max(srcIdx, dstIdx);
+        const journeyStops = foundRoute.stops.slice(start, end + 1);
+
+        // Interstate journey conditions: segment contains both Delhi and NCR stops
+        const ncrPattern = /noida|greater\s*noida|ghaziabad|faridabad|gurugram|gurgaon/;
+        let hasDelhi = false;
+        let hasNCR = false;
+        for (const stopName of journeyStops) {
+          const lowerStop = stopName.toLowerCase();
+          if (ncrPattern.test(lowerStop)) {
+            hasNCR = true;
+          } else {
+            hasDelhi = true;
+          }
+        }
+        isInterstate = hasDelhi && hasNCR;
+
+        if (isInterstate) {
+          const crossedBorderStop = journeyStops.find(stopName => {
+            const lowerStop = stopName.toLowerCase();
+            return lowerStop.match(/border|toll|tax\s+post|entry\s+tax/);
+          });
+
+          if (crossedBorderStop) {
+            const lowerStop = crossedBorderStop.toLowerCase();
+            // Detect crossed state boundary crossing point
+            const isHaryanaCrossing = lowerStop.match(/gurugram|gurgaon|faridabad|haryana|tikri|badarpur|singhu|kapashera/);
+            if (isHaryanaCrossing) {
+              tollPerTicket = 5.0;
+            } else {
+              tollPerTicket = 4.0;
+            }
+          } else {
+            // Fallback to determine tax rate based on which NCR city is present in the stops
+            const hasUP = journeyStops.some(s => s.toLowerCase().match(/noida|ghaziabad/));
+            tollPerTicket = hasUP ? 4.0 : 5.0;
+          }
+        }
+      }
+    }
+
+    const totalToll = tollPerTicket * qty;
+
+    const subTotal = baseFareTotal + totalToll;
 
     // Apply 10% discount for mobile booking (standard One Delhi rule)
-    const discountAmount = subTotal * 0.1;
-    const discountedTotal = subTotal - discountAmount;
+    const discountAmount = baseFareTotal * 0.1;
+    const discountedTotal = (baseFareTotal - discountAmount) + totalToll;
 
     return {
       ...currentFare,
-      originalTotal: subTotal.toFixed(0), // Show integer for original
+      isInterstate,
+      originalTotal: subTotal.toFixed(1), // Show integer for original
       finalFare: discountedTotal.toFixed(1), // Show one decimal for discount
       total: discountedTotal.toFixed(1),
+      toll: totalToll,
     };
-  }, [getCurrentFare, qty]);
+  }, [getCurrentFare, qty, sourceSearch, destSearch, dbRoutes, selectedFullRouteId]);
 
   const handleBuy = useCallback(() => {
     if (!routeSearch || !sourceSearch || !destSearch) {
@@ -537,18 +552,6 @@ export const BookingScreen = ({ navigation }: any) => {
       return;
     }
 
-    if (isManualFare) {
-      const val = Number(manualTotal);
-      const min = 5 * qty;
-      const max = 25 * qty;
-      if (val < min || val > max) {
-        Alert.alert(
-          "Invalid Fare",
-          `Fare must be between ₹${min} and ₹${max} for ${qty} tickets.`,
-        );
-        return;
-      }
-    }
     const currentFare = getCurrentFare();
     const finalFare = getFinalFare();
 
@@ -561,11 +564,10 @@ export const BookingScreen = ({ navigation }: any) => {
       fare: currentFare.fare,
       baseFare: currentFare.fare,
       finalFare: finalFare.total,
-      fareSource: currentFare.source,
-      validationStatus: currentFare.validationStatus,
-      validationMessage: currentFare.validationMessage,
       slab: currentFare.slab,
       total: finalFare.total,
+      toll: finalFare.toll,
+      isInterstate: finalFare.isInterstate,
     };
 
     navigation.navigate("Payment", {
@@ -679,7 +681,7 @@ export const BookingScreen = ({ navigation }: any) => {
                     <MaterialIcons name="route" size={24} color="#000" />
                   }
                   storageKey="recent_routes"
-                  maxHeight={550}
+                  maxHeight={responsiveHeight(65)}
                   onFocus={() => {
                     setRouteSearch("");
                     setSelectedFullRouteId("");
@@ -720,7 +722,7 @@ export const BookingScreen = ({ navigation }: any) => {
                     />
                   }
                   containerStyle={{ marginBottom: 12 }}
-                  maxHeight={320}
+                  maxHeight={responsiveHeight(40)}
                   onFocus={() => {
                     setSourceSearch("");
                     setDestSearch("");
@@ -755,7 +757,7 @@ export const BookingScreen = ({ navigation }: any) => {
                       color="#000"
                     />
                   }
-                  maxHeight={320}
+                  maxHeight={responsiveHeight(40)}
                   onFocus={() => {
                     setDestSearch("");
                   }}
@@ -998,7 +1000,7 @@ const styles = StyleSheet.create({
   },
   oldPrice: {
     fontSize: responsiveFontSize(28),
-    color: "#9CA3AF",
+    color: "#000000",
     textDecorationLine: "line-through",
   },
   newPrice: {
@@ -1006,10 +1008,27 @@ const styles = StyleSheet.create({
     color: "#D32F2F",
     fontWeight: "normal",
   },
+  tollBadge: {
+    backgroundColor: "#0ea5e9",
+    paddingHorizontal: moderateScale(10),
+    height: moderateScale(40),
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: moderateScale(6),
+  },
+  tollText: {
+    color: "#FFF",
+    fontSize: responsiveFontSize(14),
+    lineHeight: 16,
+    textAlign: "center",
+    fontWeight: "normal",
+  },
   discountBadge: {
     backgroundColor: "#11C76A",
     paddingHorizontal: moderateScale(10),
-    paddingVertical: moderateScale(6),
+    height: moderateScale(40),
+    justifyContent: "center",
+    alignItems: "center",
     borderRadius: moderateScale(6),
   },
   discountText: {
@@ -1095,20 +1114,20 @@ const styles = StyleSheet.create({
     height: moderateScale(6),
   },
   routeCircleWrapper: {
-    width: 24,
+    width: moderateScale(24),
     alignItems: "center",
     justifyContent: "center",
   },
   routeCircle: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: moderateScale(12),
+    height: moderateScale(12),
+    borderRadius: moderateScale(6),
     borderWidth: 1,
     borderColor: "#D32F2F",
     backgroundColor: "#FFF",
   },
   routeLine: {
-    width: 2,
+    width: moderateScale(2),
     height: "100%",
     backgroundColor: "#D32F2F",
   },

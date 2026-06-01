@@ -38,6 +38,8 @@ export interface Ticket {
   baseFare: number;
   finalFare: string;
   total: string;
+  toll?: number;
+  isInterstate?: boolean;
   qty: number;
   status: 'Active' | 'Expired';
   date: string;

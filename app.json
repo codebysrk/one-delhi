@@ -2,7 +2,8 @@
   "expo": {
     "name": "One Delhi",
     "slug": "railone-mobile",
-    "version": "1.0.1",
+    "scheme": "onedelhi",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "light",
@@ -26,7 +27,7 @@
     },
     "android": {
       "package": "com.onedelhi.app",
-      "versionCode": 2,
+      "versionCode": 3,
       "softwareKeyboardLayoutMode": "pan",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {

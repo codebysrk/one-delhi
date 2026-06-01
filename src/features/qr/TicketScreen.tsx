@@ -113,10 +113,10 @@ export const TicketScreen = ({ navigation, route }: any) => {
         backgroundColor="#D32F2F"
         textColor="white"
         backIconName="close"
-        onBackPress={() => navigation.navigate("Main")}
+        onBackPress={() => navigation.navigate("Main", { screen: "TicketsTab" })}
         rightElement={
           <TouchableOpacity
-            onPress={() => navigation.navigate("History")}
+            onPress={() => navigation.navigate("ProfileStack", { screen: "History" })}
             style={styles.allTicketsBtn}
             activeOpacity={0.7}
           >
@@ -139,10 +139,7 @@ export const TicketScreen = ({ navigation, route }: any) => {
               <View style={styles.validationSummary}>
                 <Text style={styles.validatedLabel}>VALIDATED</Text>
                 <Text style={styles.validatedValue}>
-                  ₹
-                  {(activeTicket.qty * (activeTicket.baseFare || 10)).toFixed(
-                    1,
-                  )}
+                  ₹{Number(activeTicket.total).toFixed(1)}
                 </Text>
               </View>
 

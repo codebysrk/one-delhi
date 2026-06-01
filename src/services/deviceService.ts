@@ -88,13 +88,40 @@ export const registerDevice = async (
     const deviceRef = db.collection('devices').doc(deviceId);
     
     let deviceSnap;
+    let documentExists = false;
+    let existingStatus = 'APPROVED';
+    let existingForceLogout = false;
+
     try {
       deviceSnap = await deviceRef.get();
+      documentExists = deviceSnap.exists;
+      if (documentExists) {
+        const data = deviceSnap.data();
+        existingStatus = data?.status || 'APPROVED';
+        existingForceLogout = data?.forceLogout || false;
+      }
     } catch (e: any) {
       if (e.code === 'permission-denied') {
-        // Retry once after a small delay - sometimes auth token takes a moment
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        deviceSnap = await deviceRef.get();
+        try {
+          // Retry once after a small delay - sometimes auth token takes a moment
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          deviceSnap = await deviceRef.get();
+          documentExists = deviceSnap.exists;
+          if (documentExists) {
+            const data = deviceSnap.data();
+            existingStatus = data?.status || 'APPROVED';
+            existingForceLogout = data?.forceLogout || false;
+          }
+        } catch (retryError: any) {
+          if (retryError.code === 'permission-denied') {
+            console.log('[DeviceService] Permission denied during retry (user likely banned).');
+            return null;
+          }
+          throw retryError;
+        }
+      } else if (e.code === 'firestore/not-found' || e.message?.includes('not-found')) {
+        console.log('[DeviceService] Device document not found on server during get(). Treating as new device.');
+        documentExists = false;
       } else {
         throw e;
       }
@@ -105,9 +132,6 @@ export const registerDevice = async (
       ipAddress = (await Network.getIpAddressAsync()) || 'Unknown';
     } catch {}
 
-    const existingStatus = deviceSnap.exists ? deviceSnap.data()?.status : 'APPROVED';
-    const existingForceLogout = deviceSnap.exists ? deviceSnap.data()?.forceLogout : false;
-
     // If device is already banned, don't try to update or log anything (prevents permission-denied)
     if (existingStatus === 'BANNED') {
       console.log('[DeviceService] Device is BANNED, skipping update.');
@@ -116,7 +140,7 @@ export const registerDevice = async (
 
     const now = Date.now();
 
-    if (!deviceSnap.exists) {
+    if (!documentExists) {
       // New device — full registration
       const deviceData = sanitizePayload({
         deviceId,
@@ -152,15 +176,42 @@ export const registerDevice = async (
       });
     } else {
       // Existing device — update activity
-      await deviceRef.update(sanitizePayload({
-        lastActive: now,
-        ipAddress,
-        userId,
-        userName,
-        userEmail,
-        appVersion: Constants.expoConfig?.version || '1.0.0',
-        isCurrentDevice: true,
-      }));
+      try {
+        await deviceRef.update(sanitizePayload({
+          lastActive: now,
+          ipAddress,
+          userId,
+          userName,
+          userEmail,
+          appVersion: Constants.expoConfig?.version || '1.0.0',
+          isCurrentDevice: true,
+        }));
+      } catch (updateError: any) {
+        if (updateError.code === 'firestore/not-found' || updateError.message?.includes('not-found')) {
+          console.log('[DeviceService] Device document not found on server during update. Re-creating with set().');
+          const deviceData = sanitizePayload({
+            deviceId,
+            userId,
+            userName,
+            userEmail,
+            deviceName: Device.deviceName || 'Unknown Device',
+            brand: Device.brand || 'Unknown',
+            model: Device.modelName || 'Unknown',
+            platform: 'android',
+            osVersion: Device.osVersion || 'Unknown',
+            appVersion: Constants.expoConfig?.version || '1.0.0',
+            ipAddress,
+            firstRegistered: now,
+            lastActive: now,
+            status: 'APPROVED',
+            isCurrentDevice: true,
+            forceLogout: false,
+          });
+          await deviceRef.set(deviceData);
+        } else {
+          throw updateError;
+        }
+      }
     }
 
     return { deviceId, status: existingStatus, forceLogout: existingForceLogout };

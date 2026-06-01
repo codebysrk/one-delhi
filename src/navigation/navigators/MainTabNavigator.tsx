@@ -6,7 +6,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { MapScreen } from '../../features/home/MapScreen';
-import { HomeScreen } from '../../features/home/HomeScreen';
+import { TicketsScreen } from '../../features/home/TicketsScreen';
 import { EVScreen } from '../../features/ev/EVScreen';
 import { TripPlanScreen } from '../../features/trips/TripPlanScreen';
 import { HelpScreen } from '../../features/profile/HelpScreen';
@@ -85,7 +85,7 @@ export const MainTabNavigator = () => {
         />
         <Tab.Screen 
           name="TicketsTab" 
-          component={HomeScreen} 
+          component={TicketsScreen} 
           options={{
             tabBarIcon: ({ color }) => <MaterialCommunityIcons name="ticket-confirmation" size={26} color={color} />,
             tabBarLabel: 'Tickets',

@@ -369,7 +369,7 @@ export const HelpScreen = ({ navigation }: any) => {
         showSearch={false}
         imageOpacity={0.9}
         rightElement={
-          <TouchableOpacity onPress={() => navigation.navigate("Settings")}>
+          <TouchableOpacity onPress={() => (navigation as any).navigate("ProfileStack", { screen: "Settings" })}>
             <MaterialCommunityIcons name="cog" size={26} color="white" />
           </TouchableOpacity>
         }

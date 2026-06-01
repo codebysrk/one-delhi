@@ -186,7 +186,7 @@ export const PendingScreen: React.FC<PendingScreenProps> = ({
             <Text style={styles.successTitle}>Booking Confirmed!</Text>
             
             {amount !== undefined && (
-              <Text style={styles.successAmount}>₹{Number(amount).toFixed(2)}</Text>
+              <Text style={styles.successAmount}>₹{Number(amount) % 1 === 0 ? Number(amount).toFixed(0) : Number(amount).toFixed(1)}</Text>
             )}
 
             <View style={styles.detailsCard}>

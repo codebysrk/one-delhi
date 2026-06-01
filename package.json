@@ -1,6 +1,6 @@
 {
   "name": "railone-mobile",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
     "start": "expo start",
@@ -10,6 +10,7 @@
     "build-leaflet": "node scratch/build_leaflet.js"
   },
   "dependencies": {
+    "@expo-google-fonts/roboto": "^0.4.3",
     "@expo/metro-runtime": "~3.2.3",
     "@hookform/resolvers": "^5.2.2",
     "@react-native-async-storage/async-storage": "1.23.1",
@@ -31,12 +32,14 @@
     "expo-haptics": "~13.0.1",
     "expo-image": "~1.13.0",
     "expo-linear-gradient": "~13.0.2",
+    "expo-linking": "~6.3.1",
     "expo-location": "~17.0.1",
     "expo-network": "~6.0.1",
     "expo-notifications": "~0.28.19",
     "expo-screen-capture": "~6.0.1",
     "expo-splash-screen": "~0.27.7",
     "expo-status-bar": "~1.12.1",
+    "expo-system-ui": "~3.0.7",
     "fast-text-encoding": "^1.0.6",
     "react": "18.2.0",
     "react-dom": "18.2.0",

@@ -1,0 +1,21 @@
+{
+  "delhiSlabs": [
+    { "minKm": 0, "maxKm": 4, "nonACFare": 5, "acFare": 10 },
+    { "minKm": 4.1, "maxKm": 8, "nonACFare": 10, "acFare": 15 },
+    { "minKm": 8.1, "maxKm": 12, "nonACFare": 15, "acFare": 20 },
+    { "minKm": 12.1, "maxKm": null, "nonACFare": 15, "acFare": 25 }
+  ],
+  "interstateSlabs": [
+    { "minKm": 0, "maxKm": 4, "nonACFare": 5, "acFare": 10 },
+    { "minKm": 4.1, "maxKm": 8, "nonACFare": 10, "acFare": 15 },
+    { "minKm": 8.1, "maxKm": 12, "nonACFare": 15, "acFare": 20 },
+    { "minKm": 12.1, "maxKm": 16, "nonACFare": 20, "acFare": 25 },
+    { "minKm": 16.1, "maxKm": 20, "nonACFare": 25, "acFare": 30 },
+    { "minKm": 20.1, "maxKm": 24, "nonACFare": 30, "acFare": 35 },
+    { "minKm": 24.1, "maxKm": 28, "nonACFare": 35, "acFare": 40 },
+    { "minKm": 28.1, "maxKm": 32, "nonACFare": 40, "acFare": 45 },
+    { "minKm": 32.1, "maxKm": 36, "nonACFare": 45, "acFare": 50 },
+    { "minKm": 36.1, "maxKm": 40, "nonACFare": 50, "acFare": 55 },
+    { "minKm": 40.1, "maxKm": null, "nonACFare": 55, "acFare": 60 }
+  ]
+}

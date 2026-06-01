@@ -52,6 +52,8 @@ export interface Ticket {
   baseFare: number;
   finalFare: string;
   total: string;
+  toll?: number;
+  isInterstate?: boolean;
   qty: number;
   status: 'Active' | 'Expired' | 'INVALID';
   date: string;
@@ -61,8 +63,10 @@ export interface Ticket {
   slab: {
     acFare: number;
     nonACFare: number;
-    maxStops: number;
-    minStops: number;
+    maxStops?: number;
+    minStops?: number;
+    maxKm?: number;
+    minKm?: number;
   };
 }
 
