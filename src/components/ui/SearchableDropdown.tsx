@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F3F4F6",
     paddingLeft: 8,
     paddingRight: 12,
-    height: 52,
+    height: 58,
   },
   inputContainerFocused: {
     borderColor: "#000",
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: "100%",
-    fontSize: 16,
+    fontSize: 18,
     color: "#000",
     padding: 0,
     margin: 0,

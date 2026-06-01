@@ -60,7 +60,8 @@ export interface Ticket {
   time: string;
   timestamp: number;
   fareSource: string;
-  slab: {
+  isCustom?: boolean;
+  slab?: {
     acFare: number;
     nonACFare: number;
     maxStops?: number;

@@ -23,6 +23,8 @@ import { Header } from "../../components/layout/Header";
 import { SearchableDropdown } from "../../components/ui/SearchableDropdown";
 import { useAppStore } from "../../store/useAppStore";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Haptics from "expo-haptics";
 import { useFocusEffect } from "@react-navigation/native";
 import Animated, {
   useSharedValue,
@@ -103,18 +105,21 @@ const BusTypeSelector = React.memo(
   ({
     busType,
     onTypeChange,
+    compact = false,
   }: {
     busType: "AC" | "Non-AC";
     onTypeChange: (type: "AC" | "Non-AC") => void;
+    compact?: boolean;
   }) => (
-    <View style={styles.inputSection}>
-      <Text style={styles.inputLabel}>Bus Type</Text>
+    <View style={[styles.inputSection, compact && styles.customInputSection, { marginBottom: compact ? 0 : 8 }]}>
+      <Text style={[styles.inputLabel, compact && styles.customInputLabel]}>Bus Type</Text>
       <View style={styles.typeRow}>
         {(["AC", "Non-AC"] as const).map((type) => (
           <TouchableOpacity
             key={type}
             style={[
               styles.typeBtn,
+              compact && styles.customTypeBtn,
               type === "AC" && {
                 paddingHorizontal: moderateScale(10),
                 minWidth: moderateScale(40),
@@ -129,6 +134,7 @@ const BusTypeSelector = React.memo(
             <Text
               style={[
                 styles.typeBtnText,
+                compact && { fontSize: responsiveFontSize(15) },
                 busType === type && styles.typeBtnTextActive,
               ]}
             >
@@ -256,9 +262,115 @@ export const BookingScreen = ({ navigation }: any) => {
   const [selectedFullRouteId, setSelectedFullRouteId] = useState("");
   const [selectedSourceIndex, setSelectedSourceIndex] = useState<number | null>(null);
   const [dbRoutes, setDbRoutes] = useState<Route[]>([]);
+  const [bookingMode, setBookingMode] = useState<"regular" | "custom">("regular");
+  const [customRoute, setCustomRoute] = useState("");
+  const [customSource, setCustomSource] = useState("");
+  const [customDest, setCustomDest] = useState("");
+  const [customFare, setCustomFare] = useState<number>(0);
+  const [customFareInput, setCustomFareInput] = useState("");
+  const [isCustomInputActive, setIsCustomInputActive] = useState(false);
+  const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
+  const [secretTapCount, setSecretTapCount] = useState(0);
+  const secretLastTapRef = useRef<number>(0);
   const routeDropdownRef = useRef<{ focus: () => void; blur: () => void }>(null);
   const sourceDropdownRef = useRef<{ focus: () => void; blur: () => void }>(null);
   const destDropdownRef = useRef<{ focus: () => void; blur: () => void }>(null);
+
+  const [customErrors, setCustomErrors] = useState<{
+    route?: boolean;
+    source?: boolean;
+    dest?: boolean;
+    fare?: boolean;
+  }>({});
+
+  interface CustomHistoryItem {
+    route: string;
+    source: string;
+    dest: string;
+    fare: number;
+    busType: "AC" | "Non-AC";
+  }
+  const [customHistory, setCustomHistory] = useState<CustomHistoryItem[]>([]);
+
+  // Load custom booking history on mount
+  useEffect(() => {
+    AsyncStorage.getItem("recent_custom_bookings").then((str) => {
+      if (str) {
+        try {
+          setCustomHistory(JSON.parse(str));
+        } catch (e) {
+          console.error("Failed to parse custom history:", e);
+        }
+      }
+    });
+  }, []);
+
+  const saveCustomHistory = useCallback(async (item: CustomHistoryItem) => {
+    try {
+      const existing = await AsyncStorage.getItem("recent_custom_bookings");
+      let list: CustomHistoryItem[] = [];
+      if (existing) {
+        list = JSON.parse(existing);
+      }
+      // Filter out duplicate
+      list = list.filter(
+        (x) =>
+          !(
+            x.route.toLowerCase() === item.route.toLowerCase() &&
+            x.source.toLowerCase() === item.source.toLowerCase() &&
+            x.dest.toLowerCase() === item.dest.toLowerCase() &&
+            x.fare === item.fare &&
+            x.busType === item.busType
+          )
+      );
+      // Prepend and limit to 3 items
+      const newList = [item, ...list].slice(0, 3);
+      setCustomHistory(newList);
+      await AsyncStorage.setItem("recent_custom_bookings", JSON.stringify(newList));
+    } catch (e) {
+      console.error("Failed to save custom history:", e);
+    }
+  }, []);
+
+  const handleSecretTap = useCallback(() => {
+    const now = Date.now();
+    const lastTap = secretLastTapRef.current;
+    
+    if (now - lastTap > 2000) {
+      setSecretTapCount(1);
+      secretLastTapRef.current = now;
+    } else {
+      setSecretTapCount((prev) => {
+        const nextCount = prev + 1;
+        if (nextCount === 7) {
+          setIsAdminUnlocked((adminPrev) => {
+            const nextState = !adminPrev;
+            Haptics.notificationAsync(
+              nextState
+                ? Haptics.NotificationFeedbackType.Success
+                : Haptics.NotificationFeedbackType.Warning
+            );
+            if (Platform.OS === "android") {
+              ToastAndroid.show(
+                nextState ? "Developer Mode Unlocked!" : "Developer Mode Locked",
+                ToastAndroid.SHORT
+              );
+            } else {
+              Alert.alert(
+                "Developer Mode",
+                nextState ? "Developer Mode Unlocked!" : "Developer Mode Locked"
+              );
+            }
+            setBookingMode(nextState ? "custom" : "regular");
+            return nextState;
+          });
+          return 0;
+        }
+        return nextCount;
+      });
+      secretLastTapRef.current = now;
+    }
+  }, []);
 
   // Fare calculation state
   const [isEditingFare, setIsEditingFare] = useState(false);
@@ -282,6 +394,11 @@ export const BookingScreen = ({ navigation }: any) => {
     setSourceSearch("");
     setDestSearch("");
     setSelectedSourceIndex(null);
+    setCustomRoute("");
+    setCustomSource("");
+    setCustomDest("");
+    setCustomFare(0);
+    setCustomFareInput("");
     setQty(1);
     setBusType("AC");
     timeLeft.value = 180;
@@ -543,46 +660,116 @@ export const BookingScreen = ({ navigation }: any) => {
     };
   }, [getCurrentFare, qty, sourceSearch, destSearch, dbRoutes, selectedFullRouteId]);
 
-  const handleBuy = useCallback(() => {
-    if (!routeSearch || !sourceSearch || !destSearch) {
-      Alert.alert(
-        "Selection Required",
-        "Please select route, source and destination stops.",
-      );
-      return;
-    }
-
-    const currentFare = getCurrentFare();
-    const finalFare = getFinalFare();
-
-    const ticketData = {
-      route: selectedFullRouteId || routeSearch.split("-")[0].trim(),
-      source: sourceSearch,
-      dest: destSearch,
-      qty: qty,
-      busType: busType,
-      fare: currentFare.fare,
-      baseFare: currentFare.fare,
-      finalFare: finalFare.total,
-      slab: currentFare.slab,
-      total: finalFare.total,
-      toll: finalFare.toll,
-      isInterstate: finalFare.isInterstate,
+  const getCustomFinalFare = useCallback(() => {
+    const baseFareTotal = customFare * qty;
+    const discountAmount = baseFareTotal * 0.1;
+    const discountedTotal = baseFareTotal - discountAmount;
+    return {
+      fare: customFare,
+      originalTotal: baseFareTotal.toFixed(1),
+      finalFare: discountedTotal.toFixed(1),
+      total: discountedTotal.toFixed(1),
+      toll: 0,
+      isInterstate: false,
     };
+  }, [customFare, qty]);
 
-    navigation.navigate("Payment", {
-      ticketData,
-      timeLeft: Math.floor(timeLeft.value),
-    });
+  const handleBuy = useCallback(() => {
+    if (bookingMode === "regular") {
+      if (!routeSearch || !sourceSearch || !destSearch) {
+        Alert.alert(
+          "Selection Required",
+          "Please select route, source and destination stops.",
+        );
+        return;
+      }
+
+      const currentFare = getCurrentFare();
+      const finalFare = getFinalFare();
+
+      const ticketData = {
+        route: selectedFullRouteId || routeSearch.split("-")[0].trim(),
+        source: sourceSearch,
+        dest: destSearch,
+        qty: qty,
+        busType: busType,
+        fare: currentFare.fare,
+        baseFare: currentFare.fare,
+        finalFare: finalFare.total,
+        slab: currentFare.slab,
+        total: finalFare.total,
+        toll: finalFare.toll,
+        isInterstate: finalFare.isInterstate,
+        isCustom: false,
+      };
+
+      navigation.navigate("Payment", {
+        ticketData,
+        timeLeft: Math.floor(timeLeft.value),
+      });
+    } else {
+      const errors: typeof customErrors = {};
+      if (!customRoute.trim()) errors.route = true;
+      if (!customSource.trim()) errors.source = true;
+      if (!customDest.trim()) errors.dest = true;
+      if (customFare <= 0) errors.fare = true;
+
+      if (Object.keys(errors).length > 0) {
+        setCustomErrors(errors);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        return;
+      }
+      setCustomErrors({});
+
+      const baseFareTotal = customFare * qty;
+      const discountAmount = baseFareTotal * 0.1;
+      const discountedTotal = baseFareTotal - discountAmount;
+
+      const ticketData = {
+        route: customRoute.trim().toUpperCase(),
+        source: customSource.trim(),
+        dest: customDest.trim(),
+        qty: qty,
+        busType: busType,
+        fare: customFare,
+        baseFare: customFare,
+        finalFare: discountedTotal.toFixed(1),
+        total: discountedTotal.toFixed(1),
+        toll: 0,
+        isInterstate: false,
+        isCustom: true,
+      };
+
+      // Save custom history
+      saveCustomHistory({
+        route: customRoute.trim().toUpperCase(),
+        source: customSource.trim(),
+        dest: customDest.trim(),
+        fare: customFare,
+        busType: busType,
+      });
+
+      navigation.navigate("Payment", {
+        ticketData,
+        timeLeft: Math.floor(timeLeft.value),
+      });
+    }
   }, [
+    bookingMode,
     routeSearch,
     sourceSearch,
     destSearch,
-    isManualFare,
-    manualTotal,
+    customRoute,
+    customSource,
+    customDest,
+    customFare,
+    qty,
+    busType,
     getCurrentFare,
     getFinalFare,
     navigation,
+    timeLeft,
+    saveCustomHistory,
   ]);
 
   const dropdownRoutesData = useMemo(() => {
@@ -636,10 +823,11 @@ export const BookingScreen = ({ navigation }: any) => {
           centerTitle={true}
           onBackPress={() => navigation.goBack()}
           titleStyle={{ fontSize: 22 }}
+          onTitlePress={handleSecretTap}
         />
 
         {/* Timer */}
-        <View style={styles.timerContainer}>
+        <View style={[styles.timerContainer, bookingMode === "custom" && { paddingBottom: moderateScale(4) }]}>
           <TimerPill timeLeft={timeLeft} />
         </View>
 
@@ -647,122 +835,290 @@ export const BookingScreen = ({ navigation }: any) => {
         <View style={styles.mainLayout}>
           <ScrollView
             style={styles.contentScroll}
-            contentContainerStyle={styles.contentScrollContainer}
+            contentContainerStyle={[
+              styles.contentScrollContainer,
+              bookingMode === "custom" && { paddingTop: moderateScale(4), paddingBottom: moderateScale(8) }
+            ]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             scrollEventThrottle={16}
           >
-            <View style={styles.card}>
-              {/* Route Input */}
-              <View style={styles.inputSection}>
-                <Text style={styles.inputLabel}>Route Info</Text>
-                <SearchableDropdown
-                  ref={routeDropdownRef}
-                  data={dropdownRoutesData}
-                  value={routeSearch}
-                  onChangeText={setRouteSearch}
-                  onSelect={(item: any) => {
-                    const displayId = item.id.replace(/UP$|DOWN$/, "");
-                    setRouteSearch(`${displayId}-${item.dest}`);
-                    setSelectedFullRouteId(item.id);
-                    setSourceSearch("");
-                    setDestSearch("");
-                    // First input selection ke baad automatically second (source) input trigger and focus
-                    setTimeout(() => {
-                      sourceDropdownRef.current?.focus();
-                    }, 100);
-                  }}
-                  variant="route"
-                  searchKeys={["route", "source", "dest"]}
-                  displayKey="route"
-                  keyExtractor={(item: any) => item.id}
-                  placeholder="Current Route"
-                  leftIcon={
-                    <MaterialIcons name="route" size={24} color="#000" />
-                  }
-                  storageKey="recent_routes"
-                  maxHeight={responsiveHeight(65)}
-                  onFocus={() => {
-                    setRouteSearch("");
-                    setSelectedFullRouteId("");
-                    setSourceSearch("");
-                    setDestSearch("");
-                    setSelectedSourceIndex(null);
-                  }}
-                />
-              </View>
+            <View style={[styles.card, bookingMode === "custom" && { paddingTop: moderateScale(12) }]}>
 
-              {/* Source/Destination */}
-              <View style={styles.inputSection}>
-                <Text style={styles.inputLabel}>From - To</Text>
-                <SearchableDropdown
-                  ref={sourceDropdownRef}
-                  data={sourceDropdownData}
-                  value={sourceSearch}
-                  onChangeText={setSourceSearch}
-                  onSelect={(item: any) => {
-                    setSourceSearch(item.name);
-                    setSelectedSourceIndex(item.index);
-                    // Second input selection ke baad automatically third (destination) input trigger and focus
-                    setTimeout(() => {
-                      destDropdownRef.current?.focus();
-                    }, 100);
-                  }}
-                  variant="simple"
-                  searchKeys={["name"]}
-                  displayKey="name"
-                  keyExtractor={(item: any) => item.id}
-                  placeholder="Source Stop"
-                  editable={!!selectedFullRouteId && routeSearch.length > 0}
-                  leftIcon={
-                    <MaterialCommunityIcons
-                      name="circle"
-                      size={18}
-                      color="#000"
+              {bookingMode === "regular" ? (
+                <>
+                  {/* Route Input */}
+                  <View style={styles.inputSection}>
+                    <Text style={styles.inputLabel}>Route Info</Text>
+                    <SearchableDropdown
+                      ref={routeDropdownRef}
+                      data={dropdownRoutesData}
+                      value={routeSearch}
+                      onChangeText={setRouteSearch}
+                      onSelect={(item: any) => {
+                        const displayId = item.id.replace(/UP$|DOWN$/, "");
+                        setRouteSearch(`${displayId}-${item.dest}`);
+                        setSelectedFullRouteId(item.id);
+                        setSourceSearch("");
+                        setDestSearch("");
+                        // First input selection ke baad automatically second (source) input trigger and focus
+                        setTimeout(() => {
+                          sourceDropdownRef.current?.focus();
+                        }, 100);
+                      }}
+                      variant="route"
+                      searchKeys={["route", "source", "dest"]}
+                      displayKey="route"
+                      keyExtractor={(item: any) => item.id}
+                      placeholder="Current Route"
+                      leftIcon={
+                        <MaterialIcons name="route" size={24} color="#000" />
+                      }
+                      storageKey="recent_routes"
+                      maxHeight={responsiveHeight(65)}
+                      onFocus={() => {
+                        setRouteSearch("");
+                        setSelectedFullRouteId("");
+                        setSourceSearch("");
+                        setDestSearch("");
+                        setSelectedSourceIndex(null);
+                      }}
                     />
-                  }
-                  containerStyle={{ marginBottom: 12 }}
-                  maxHeight={responsiveHeight(40)}
-                  onFocus={() => {
-                    setSourceSearch("");
-                    setDestSearch("");
-                    setSelectedSourceIndex(null);
-                  }}
-                />
+                  </View>
 
-                <SearchableDropdown
-                  ref={destDropdownRef}
-                  data={destDropdownData}
-                  value={destSearch}
-                  onChangeText={setDestSearch}
-                  onSelect={(item: any) => {
-                    setDestSearch(item.name);
-                    // Third input selection complete hone par keyboard hide and blur
-                    destDropdownRef.current?.blur();
-                  }}
-                  variant="simple"
-                  searchKeys={["name"]}
-                  displayKey="name"
-                  keyExtractor={(item: any) => item.id}
-                  placeholder="Destination Stop"
-                  editable={
-                    !!selectedFullRouteId &&
-                    routeSearch.length > 0 &&
-                    sourceSearch.length > 0
-                  }
-                  leftIcon={
-                    <MaterialCommunityIcons
-                      name="map-marker"
-                      size={24}
-                      color="#000"
+                  {/* Source/Destination */}
+                  <View style={styles.inputSection}>
+                    <Text style={styles.inputLabel}>From - To</Text>
+                    <SearchableDropdown
+                      ref={sourceDropdownRef}
+                      data={sourceDropdownData}
+                      value={sourceSearch}
+                      onChangeText={setSourceSearch}
+                      onSelect={(item: any) => {
+                        setSourceSearch(item.name);
+                        setSelectedSourceIndex(item.index);
+                        // Second input selection ke baad automatically third (destination) input trigger and focus
+                        setTimeout(() => {
+                          destDropdownRef.current?.focus();
+                        }, 100);
+                      }}
+                      variant="simple"
+                      searchKeys={["name"]}
+                      displayKey="name"
+                      keyExtractor={(item: any) => item.id}
+                      placeholder="Source Stop"
+                      editable={!!selectedFullRouteId && routeSearch.length > 0}
+                      leftIcon={
+                        <MaterialCommunityIcons
+                          name="circle"
+                          size={18}
+                          color="#000"
+                        />
+                      }
+                      containerStyle={{ marginBottom: 12 }}
+                      maxHeight={responsiveHeight(40)}
+                      onFocus={() => {
+                        setSourceSearch("");
+                        setDestSearch("");
+                        setSelectedSourceIndex(null);
+                      }}
                     />
-                  }
-                  maxHeight={responsiveHeight(40)}
-                  onFocus={() => {
-                    setDestSearch("");
-                  }}
-                />
-              </View>
+
+                    <SearchableDropdown
+                      ref={destDropdownRef}
+                      data={destDropdownData}
+                      value={destSearch}
+                      onChangeText={setDestSearch}
+                      onSelect={(item: any) => {
+                        setDestSearch(item.name);
+                        // Third input selection complete hone par keyboard hide and blur
+                        destDropdownRef.current?.blur();
+                      }}
+                      variant="simple"
+                      searchKeys={["name"]}
+                      displayKey="name"
+                      keyExtractor={(item: any) => item.id}
+                      placeholder="Destination Stop"
+                      editable={
+                        !!selectedFullRouteId &&
+                        routeSearch.length > 0 &&
+                        sourceSearch.length > 0
+                      }
+                      leftIcon={
+                        <MaterialCommunityIcons
+                          name="map-marker"
+                          size={24}
+                          color="#000"
+                        />
+                      }
+                      maxHeight={responsiveHeight(40)}
+                      onFocus={() => {
+                        setDestSearch("");
+                      }}
+                    />
+                  </View>
+                </>
+              ) : (
+                <>
+                  {/* Custom History List */}
+                  {customHistory.length > 0 && (
+                    <View style={styles.historySection}>
+                      <Text style={styles.historyLabel}>Recent Custom Bookings</Text>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.historyChipsRow}>
+                        {customHistory.map((item, idx) => (
+                          <TouchableOpacity
+                            key={idx}
+                            style={styles.historyChip}
+                            onPress={() => {
+                              setCustomRoute(item.route);
+                              setCustomSource(item.source);
+                              setCustomDest(item.dest);
+                              const isPreset = [5, 10, 15, 20, 25].includes(item.fare);
+                              setCustomFare(item.fare);
+                              setCustomFareInput(isPreset ? "" : item.fare.toString());
+                              setIsCustomInputActive(!isPreset);
+                              setBusType(item.busType);
+                              setCustomErrors({});
+                            }}
+                          >
+                            <Text style={styles.historyChipText} numberOfLines={1}>
+                              {item.route} ({item.source.split(" ")[0]} → {item.dest.split(" ")[0]})
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+
+                  {/* Route Input (Manual) */}
+                  <View style={styles.customInputSection}>
+                    <Text style={styles.customInputLabel}>Route Info (Manual)</Text>
+                    <View style={[styles.inputBox, styles.customInputBox, customErrors.route && styles.inputBoxError]}>
+                      <View style={styles.inputIcon}>
+                        <MaterialIcons name="route" size={24} color="#000" />
+                      </View>
+                      <TextInput
+                        style={[styles.input, styles.customInput]}
+                        placeholder="e.g. 502, 857, 429A"
+                        placeholderTextColor="#9CA3AF"
+                        value={customRoute}
+                        onChangeText={(text) => {
+                          setCustomRoute(text.toUpperCase());
+                          setCustomErrors((prev) => ({ ...prev, route: false }));
+                        }}
+                        onBlur={() => setCustomRoute(prev => prev.trim())}
+                        autoCapitalize="characters"
+                      />
+                    </View>
+                  </View>
+
+                  {/* Boarding/Destination Stop (Manual) */}
+                  <View style={styles.customInputSection}>
+                    <Text style={styles.customInputLabel}>From - To (Manual)</Text>
+                    <View style={{ position: "relative" }}>
+                      <View style={[styles.inputBox, styles.customInputBox, customErrors.source && styles.inputBoxError, { marginBottom: 6 }]}>
+                        <View style={styles.inputIcon}>
+                          <MaterialCommunityIcons name="circle" size={18} color="#000" />
+                        </View>
+                        <TextInput
+                          style={[styles.input, styles.customInput]}
+                          placeholder="Boarding Stop"
+                          placeholderTextColor="#9CA3AF"
+                          value={customSource}
+                          onChangeText={(text) => {
+                            setCustomSource(text);
+                            setCustomErrors((prev) => ({ ...prev, source: false }));
+                          }}
+                        />
+                      </View>
+                      <View style={[styles.inputBox, styles.customInputBox, customErrors.dest && styles.inputBoxError]}>
+                        <View style={styles.inputIcon}>
+                          <MaterialCommunityIcons name="map-marker" size={24} color="#000" />
+                        </View>
+                        <TextInput
+                          style={[styles.input, styles.customInput]}
+                          placeholder="Destination Stop"
+                          placeholderTextColor="#9CA3AF"
+                          value={customDest}
+                          onChangeText={(text) => {
+                            setCustomDest(text);
+                            setCustomErrors((prev) => ({ ...prev, dest: false }));
+                          }}
+                        />
+                      </View>
+                      
+                      {/* Swap Button */}
+                      <TouchableOpacity
+                        style={styles.swapBtn}
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          setCustomSource(customDest);
+                          setCustomDest(customSource);
+                          setCustomErrors((prev) => ({ ...prev, source: false, dest: false }));
+                        }}
+                        activeOpacity={0.8}
+                      >
+                        <MaterialCommunityIcons name="swap-vertical" size={22} color="#D32F2F" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* Base Fare Selector */}
+                  <View style={styles.customInputSection}>
+                    <Text style={styles.customInputLabel}>Select Base Fare</Text>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      style={{ marginBottom: moderateScale(12) }}
+                      contentContainerStyle={styles.fareChipsRow}
+                      keyboardShouldPersistTaps="handled"
+                    >
+                      {[5, 10, 15, 20, 25].map((f) => (
+                        <TouchableOpacity
+                          key={f}
+                          style={[styles.fareChip, customFare === f && !isCustomInputActive && styles.fareChipActive]}
+                          onPress={() => {
+                            setCustomFare(f);
+                            setCustomFareInput("");
+                            setIsCustomInputActive(false);
+                            setCustomErrors((prev) => ({ ...prev, fare: false }));
+                          }}
+                        >
+                          <Text style={[styles.fareChipText, customFare === f && !isCustomInputActive && styles.fareChipTextActive]}>
+                            ₹{f}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+
+                      {/* Custom Input Chip */}
+                      <View style={[
+                        styles.customFareInputChip,
+                        (isCustomInputActive || (customFareInput && ![5, 10, 15, 20, 25].includes(customFare))) && styles.customFareInputChipActive,
+                        customErrors.fare && styles.customFareInputChipError
+                      ]}>
+                        <Text style={styles.customFareChipSymbol}>₹</Text>
+                        <TextInput
+                          style={styles.customFareChipInput}
+                          placeholder="Other"
+                          placeholderTextColor="#9CA3AF"
+                          keyboardType="numeric"
+                          value={customFareInput}
+                          onChangeText={(val) => {
+                            setCustomFareInput(val);
+                            const num = parseFloat(val);
+                            setCustomFare(isNaN(num) ? 0 : num);
+                            setIsCustomInputActive(true);
+                            setCustomErrors((prev) => ({ ...prev, fare: false }));
+                          }}
+                          onFocus={() => {
+                            setIsCustomInputActive(true);
+                          }}
+                        />
+                      </View>
+                    </ScrollView>
+                  </View>
+                </>
+              )}
 
               {/* Bus Type */}
               <BusTypeSelector
@@ -772,6 +1128,7 @@ export const BookingScreen = ({ navigation }: any) => {
                   setIsManualFare(false);
                   setManualTotal("");
                 }}
+                compact={bookingMode === "custom"}
               />
             </View>
           </ScrollView>
@@ -786,10 +1143,10 @@ export const BookingScreen = ({ navigation }: any) => {
             <QuantitySelector qty={qty} onQtyChange={setQty} />
 
             <FareDisplay
-              finalFare={getFinalFare()}
-              showDiscount={!!(routeSearch && sourceSearch && destSearch)}
-              isEditing={isEditingFare}
-              onPress={handleFarePress}
+              finalFare={bookingMode === "regular" ? getFinalFare() : getCustomFinalFare()}
+              showDiscount={bookingMode === "regular" ? !!(routeSearch && sourceSearch && destSearch) : customFare > 0}
+              isEditing={bookingMode === "regular" ? isEditingFare : false}
+              onPress={bookingMode === "regular" ? handleFarePress : () => {}}
               manualTotal={manualTotal}
               onManualChange={(val) => {
                 setIsManualFare(true);
@@ -856,8 +1213,9 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: "#FFF",
-    borderRadius: moderateScale(12),
-    paddingVertical: moderateScale(24),
+    borderRadius: moderateScale(8),
+    paddingTop: moderateScale(24),
+    paddingBottom: moderateScale(12),
     paddingHorizontal: moderateScale(16),
     elevation: 2,
     shadowColor: "#000",
@@ -870,7 +1228,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: responsiveFontSize(16),
-    fontWeight: "normal",
+    fontWeight: "500",
     color: "#111",
     marginBottom: moderateScale(4),
   },
@@ -881,7 +1239,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingLeft: moderateScale(6),
     paddingRight: moderateScale(12),
-    height: moderateScale(54),
+    height: moderateScale(62),
     marginBottom: moderateScale(8),
     borderWidth: 1,
     borderColor: "transparent",
@@ -1164,5 +1522,167 @@ const styles = StyleSheet.create({
     color: "#9CA3AF",
     fontSize: responsiveFontSize(14),
     fontWeight: "500",
+  },
+  segmentContainer: {
+    flexDirection: "row",
+    backgroundColor: "#F3F4F6",
+    borderRadius: moderateScale(8),
+    padding: moderateScale(4),
+    marginBottom: moderateScale(20),
+  },
+  segmentBtn: {
+    flex: 1,
+    paddingVertical: moderateScale(10),
+    alignItems: "center",
+    borderRadius: moderateScale(6),
+  },
+  segmentBtnActive: {
+    backgroundColor: "#FFFFFF",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  segmentBtnText: {
+    fontSize: responsiveFontSize(15),
+    color: "#6B7280",
+    fontWeight: "500",
+  },
+  segmentBtnTextActive: {
+    color: "#D32F2F",
+    fontWeight: "700",
+  },
+  fareChipsRow: {
+    flexDirection: "row",
+    gap: moderateScale(6),
+    paddingVertical: moderateScale(4),
+  },
+  fareChip: {
+    height: moderateScale(42),
+    width: moderateScale(42),
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: moderateScale(6),
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#F9FAFB",
+  },
+  fareChipActive: {
+    backgroundColor: "#FFEBEE",
+    borderColor: "#D32F2F",
+  },
+  fareChipText: {
+    fontSize: responsiveFontSize(14),
+    color: "#4B5563",
+    fontWeight: "500",
+  },
+  fareChipTextActive: {
+    color: "#D32F2F",
+    fontWeight: "700",
+  },
+  customFareInputChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: moderateScale(42),
+    paddingHorizontal: moderateScale(10),
+    borderRadius: moderateScale(6),
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#F9FAFB",
+    minWidth: moderateScale(80),
+  },
+  customFareInputChipActive: {
+    backgroundColor: "#FFEBEE",
+    borderColor: "#D32F2F",
+  },
+  customFareInputChipError: {
+    borderColor: "#D32F2F",
+    backgroundColor: "#FFEBEE",
+  },
+  customFareChipSymbol: {
+    fontSize: responsiveFontSize(14),
+    color: "#4B5563",
+    marginRight: moderateScale(2),
+    fontWeight: "500",
+  },
+  customFareChipInput: {
+    flex: 1,
+    height: "100%",
+    fontSize: responsiveFontSize(14),
+    color: "#000",
+    padding: 0,
+    margin: 0,
+    fontWeight: "500",
+  },
+  inputBoxError: {
+    borderColor: "#D32F2F",
+    borderWidth: 1.5,
+    backgroundColor: "#FFEBEE",
+  },
+  swapBtn: {
+    position: "absolute",
+    right: moderateScale(16),
+    top: moderateScale(37),
+    backgroundColor: "#FFF",
+    width: moderateScale(36),
+    height: moderateScale(36),
+    borderRadius: moderateScale(18),
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    zIndex: 10,
+  },
+  historySection: {
+    marginBottom: moderateScale(10),
+  },
+  historyLabel: {
+    fontSize: responsiveFontSize(14),
+    fontWeight: "600",
+    color: "#6B7280",
+    marginBottom: moderateScale(6),
+  },
+  historyChipsRow: {
+    paddingVertical: moderateScale(4),
+    gap: moderateScale(8),
+  },
+  historyChip: {
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: moderateScale(6),
+    borderRadius: moderateScale(16),
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    maxWidth: moderateScale(220),
+  },
+  historyChipText: {
+    fontSize: responsiveFontSize(13),
+    color: "#374151",
+    fontWeight: "500",
+  },
+  customInputSection: {
+    marginBottom: moderateScale(6),
+  },
+  customInputLabel: {
+    fontSize: responsiveFontSize(14),
+    fontWeight: "500",
+    color: "#4B5563",
+    marginBottom: moderateScale(2),
+  },
+  customInputBox: {
+    height: moderateScale(52),
+  },
+  customInput: {
+    fontSize: responsiveFontSize(16),
+  },
+  customTypeBtn: {
+    height: moderateScale(34),
+    borderRadius: moderateScale(6),
   },
 });

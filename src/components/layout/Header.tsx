@@ -24,6 +24,7 @@ export interface HeaderProps {
   children?: React.ReactNode;
   centerTitle?: boolean;
   showShadow?: boolean;
+  onTitlePress?: () => void;
 
   // MainHeader props
   showSearch?: boolean;
@@ -47,6 +48,7 @@ export const Header: React.FC<HeaderProps> = ({
   children,
   centerTitle = false,
   showShadow = false,
+  onTitlePress,
 
   // MainHeader props
   showSearch = false,
@@ -88,16 +90,31 @@ export const Header: React.FC<HeaderProps> = ({
         <View style={isCenteredLayout ? styles.titleContainerAbsolute : styles.titleContainerCustom}>
           {children ? children : (
             title ? (
-              <Text
-                style={[
-                  styles.title,
-                  { color: textColor, textAlign: isCenteredLayout ? 'center' : 'left' },
-                  titleStyle,
-                ]}
-                numberOfLines={1}
-              >
-                {title}
-              </Text>
+              onTitlePress ? (
+                <TouchableOpacity onPress={onTitlePress} activeOpacity={0.8}>
+                  <Text
+                    style={[
+                      styles.title,
+                      { color: textColor, textAlign: isCenteredLayout ? 'center' : 'left' },
+                      titleStyle,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {title}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <Text
+                  style={[
+                    styles.title,
+                    { color: textColor, textAlign: isCenteredLayout ? 'center' : 'left' },
+                    titleStyle,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {title}
+                </Text>
+              )
             ) : (
               isMainHeader ? (
                 // If it's MainHeader, render the logo in center!

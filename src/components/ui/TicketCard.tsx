@@ -56,7 +56,9 @@ export const TicketCard = React.memo(({ ticket, onPress, showTimer, largeText, s
       
       <View style={[styles.body, compact && { paddingBottom: 8 }]}>
         <View style={styles.dataRow}>
-          <Text style={textStyle}>{getRouteNumberOnly(ticket.route || ticket.id || 'Bus')}</Text>
+          <Text style={textStyle}>
+            {getRouteNumberOnly(ticket.route || ticket.id || 'Bus')}
+          </Text>
           <Text style={textStyle}>₹{(Number(ticket.qty || 1) * Number(ticket.baseFare || 10)).toFixed(1)}</Text>
         </View>
  

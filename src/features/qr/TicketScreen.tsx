@@ -418,4 +418,5 @@ const styles = StyleSheet.create({
     borderRadius: 25,
   },
   errorBackBtnText: { color: "#D32F2F", fontWeight: "bold" },
+
 });
