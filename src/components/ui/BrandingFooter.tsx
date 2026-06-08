@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface BrandingFooterProps {
   variant?: 'tab' | 'ticket';
@@ -15,7 +16,7 @@ export const BrandingFooter: React.FC<BrandingFooterProps> = ({
   if (variant === 'ticket') {
     return (
       <View style={containerStyle}>
-        <Text style={[styles.poweredText, textStyle]}>Powered by IIIT-Delhi</Text>
+        <Text style={[styles.poweredText, textStyle]}>Powered by DOT, DTC & ARF IIT Kanpur</Text>
       </View>
     );
   }
@@ -24,7 +25,11 @@ export const BrandingFooter: React.FC<BrandingFooterProps> = ({
     <View style={[styles.footerContainer, containerStyle]}>
       <View style={styles.footerShadow} />
       <View style={styles.globalFooter}>
-        <Text style={[styles.poweredText, textStyle]}>Powered by IIIT-Delhi</Text>
+        <LinearGradient
+          colors={['rgba(0, 0, 0, 0.25)', 'transparent', 'rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0.15)']}
+          style={StyleSheet.absoluteFill}
+        />
+        <Text style={[styles.poweredText, textStyle]}>Powered by DOT, DTC & ARF IIT Kanpur</Text>
       </View>
     </View>
   );
@@ -44,19 +49,19 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 8,
   },
-  
+
   // Tab footer strip
-  globalFooter: { 
-    backgroundColor: '#D32F2F',
-    paddingVertical: 2, 
-    alignItems: 'center', 
+  globalFooter: {
+    backgroundColor: '#c62f46ff',
+    paddingVertical: 2,
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  
-  // Single unified styling for "Powered by IIIT-Delhi" text across all screens
-  poweredText: { 
-    color: 'rgba(255,255,255,0.8)', 
-    fontSize: 11, 
+
+  // Single unified styling for "Powered by DOT, DTC & ARF IIT Kanpur" text across all screens
+  poweredText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
     fontWeight: '400',
     textAlign: 'center',
   },

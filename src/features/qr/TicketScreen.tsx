@@ -233,7 +233,7 @@ export const TicketScreen = ({ navigation, route }: any) => {
         </Animated.View>
       </View>
 
-      {/* Sticky Branding Footer at the very bottom (Logo + Powered by IIIT-Delhi Text) */}
+      {/* Sticky Branding Footer at the very bottom (Logo + Powered by DOT, DTC & ARF IIT Kanpur Text) */}
       <View style={[styles.absoluteFooter, { bottom: insets.bottom + 8 }]}>
         <Image source={logoImg} style={styles.logoImg} contentFit="contain" />
         <BrandingFooter variant="ticket" />
