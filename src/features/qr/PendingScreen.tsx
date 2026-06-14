@@ -1,62 +1,43 @@
 import React, { useState, useRef, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Animated,
-  StatusBar,
-  Easing,
-} from "react-native";
+import { View, Text, StyleSheet, Animated, StatusBar, Easing } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-
 interface PendingScreenProps {
   visible: boolean;
   onAnimationEnd: () => void;
   amount?: number | string;
   route?: string;
 }
-
 export const PendingScreen: React.FC<PendingScreenProps> = ({
   visible,
   onAnimationEnd,
   amount,
-  route,
+  route
 }) => {
   const [status, setStatus] = useState<"processing" | "success" | "done">("processing");
   const [showRedirect, setShowRedirect] = useState(visible);
-
-  // Animations
   const mainOpacity = useRef(new Animated.Value(1)).current;
   const mainTranslateY = useRef(new Animated.Value(0)).current;
-  
   const spinValue = useRef(new Animated.Value(0)).current;
-  
   const tickScale = useRef(new Animated.Value(0)).current;
   const rippleScale = useRef(new Animated.Value(0.5)).current;
   const rippleOpacity = useRef(new Animated.Value(0.6)).current;
   const detailsOpacity = useRef(new Animated.Value(0)).current;
-
-  // Spin animation loop
   useEffect(() => {
     let spinAnimation: Animated.CompositeAnimation | null = null;
     if (visible && status === "processing") {
       spinValue.setValue(0);
-      spinAnimation = Animated.loop(
-        Animated.timing(spinValue, {
-          toValue: 1,
-          duration: 1200,
-          easing: Easing.linear,
-          useNativeDriver: true,
-        })
-      );
+      spinAnimation = Animated.loop(Animated.timing(spinValue, {
+        toValue: 1,
+        duration: 1200,
+        easing: Easing.linear,
+        useNativeDriver: true
+      }));
       spinAnimation.start();
     }
     return () => {
       if (spinAnimation) spinAnimation.stop();
     };
   }, [visible, status]);
-
-  // Main flow coordinator
   useEffect(() => {
     if (visible) {
       setStatus("processing");
@@ -67,61 +48,45 @@ export const PendingScreen: React.FC<PendingScreenProps> = ({
       rippleScale.setValue(0.5);
       rippleOpacity.setValue(0.6);
       detailsOpacity.setValue(0);
-
-      // 1. After 1.8 seconds of processing, transition to success
       const successTimer = setTimeout(() => {
         setStatus("success");
-
-        // 2. Trigger checkmark and details animation
-        Animated.parallel([
-          Animated.spring(tickScale, {
-            toValue: 1,
-            friction: 5,
-            tension: 40,
-            useNativeDriver: true,
-          }),
-          Animated.timing(rippleScale, {
-            toValue: 1.4,
-            duration: 800,
-            easing: Easing.out(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(rippleOpacity, {
-            toValue: 0,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-          Animated.timing(detailsOpacity, {
-            toValue: 1,
-            duration: 500,
-            delay: 150,
-            useNativeDriver: true,
-          }),
-        ]).start();
-
-        // 3. After 2.0 seconds of success display, transition out
+        Animated.parallel([Animated.spring(tickScale, {
+          toValue: 1,
+          friction: 5,
+          tension: 40,
+          useNativeDriver: true
+        }), Animated.timing(rippleScale, {
+          toValue: 1.4,
+          duration: 800,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true
+        }), Animated.timing(rippleOpacity, {
+          toValue: 0,
+          duration: 800,
+          useNativeDriver: true
+        }), Animated.timing(detailsOpacity, {
+          toValue: 1,
+          duration: 500,
+          delay: 150,
+          useNativeDriver: true
+        })]).start();
         const exitTimer = setTimeout(() => {
-          Animated.parallel([
-            Animated.timing(mainOpacity, {
-              toValue: 0,
-              duration: 400,
-              useNativeDriver: true,
-            }),
-            Animated.timing(mainTranslateY, {
-              toValue: 50,
-              duration: 400,
-              useNativeDriver: true,
-            }),
-          ]).start(() => {
+          Animated.parallel([Animated.timing(mainOpacity, {
+            toValue: 0,
+            duration: 400,
+            useNativeDriver: true
+          }), Animated.timing(mainTranslateY, {
+            toValue: 50,
+            duration: 400,
+            useNativeDriver: true
+          })]).start(() => {
             setStatus("done");
             setShowRedirect(false);
             onAnimationEnd();
           });
         }, 2200);
-
         return () => clearTimeout(exitTimer);
       }, 1800);
-
       return () => {
         clearTimeout(successTimer);
       };
@@ -129,91 +94,74 @@ export const PendingScreen: React.FC<PendingScreenProps> = ({
       setShowRedirect(false);
     }
   }, [visible]);
-
   if (!showRedirect) return null;
-
   const spin = spinValue.interpolate({
     inputRange: [0, 1],
-    outputRange: ["0deg", "360deg"],
+    outputRange: ["0deg", "360deg"]
   });
-
-  return (
-    <Animated.View
-      style={[
-        styles.overlay,
-        {
-          opacity: mainOpacity,
-          transform: [{ translateY: mainTranslateY }],
-        },
-      ]}
-    >
+  return <Animated.View style={[styles.overlay, {
+    opacity: mainOpacity,
+    transform: [{
+      translateY: mainTranslateY
+    }]
+  }]}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent={true} />
       
-      {status === "processing" ? (
-        <View style={styles.container}>
-          <Animated.View style={{ transform: [{ rotate: spin }] }}>
+      {status === "processing" ? <View style={styles.container}>
+          <Animated.View style={{
+        transform: [{
+          rotate: spin
+        }]
+      }}>
             <MaterialCommunityIcons name="loading" size={64} color="#00B9F1" />
           </Animated.View>
           <Text style={styles.processingText}>Processing Payment...</Text>
           <Text style={styles.processingSubtext}>Confirming transaction with bank</Text>
-        </View>
-      ) : (
-        <View style={styles.container}>
-          {/* Circular ripple and tick background */}
+        </View> : <View style={styles.container}>
+          {}
           <View style={styles.checkWrapper}>
-            <Animated.View
-              style={[
-                styles.ripple,
-                {
-                  opacity: rippleOpacity,
-                  transform: [{ scale: rippleScale }],
-                },
-              ]}
-            />
-            <Animated.View
-              style={[
-                styles.checkCircle,
-                {
-                  transform: [{ scale: tickScale }],
-                },
-              ]}
-            >
+            <Animated.View style={[styles.ripple, {
+          opacity: rippleOpacity,
+          transform: [{
+            scale: rippleScale
+          }]
+        }]} />
+            <Animated.View style={[styles.checkCircle, {
+          transform: [{
+            scale: tickScale
+          }]
+        }]}>
               <MaterialCommunityIcons name="check-bold" size={48} color="#FFFFFF" />
             </Animated.View>
           </View>
 
-          <Animated.View style={[styles.successContent, { opacity: detailsOpacity }]}>
+          <Animated.View style={[styles.successContent, {
+        opacity: detailsOpacity
+      }]}>
             <Text style={styles.successTitle}>Booking Confirmed!</Text>
             
-            {amount !== undefined && (
-              <Text style={styles.successAmount}>₹{Number(amount) % 1 === 0 ? Number(amount).toFixed(0) : Number(amount).toFixed(1)}</Text>
-            )}
+            {amount !== undefined && <Text style={styles.successAmount}>₹{Number(amount) % 1 === 0 ? Number(amount).toFixed(0) : Number(amount).toFixed(1)}</Text>}
 
             <View style={styles.detailsCard}>
               <Text style={styles.detailsText}>
                 Paid to <Text style={styles.boldText}>One Delhi</Text>
               </Text>
-              {route && (
-                <Text style={styles.detailsSubtext}>
+              {route && <Text style={styles.detailsSubtext}>
                   Bus Route: <Text style={styles.boldText}>{route}</Text>
-                </Text>
-              )}
+                </Text>}
             </View>
           </Animated.View>
-        </View>
-      )}
+        </View>}
 
-      {/* Secured footer */}
+      {}
       <View style={styles.footer}>
         <View style={styles.securedBadge}>
           <MaterialCommunityIcons name="shield-check" size={18} color="#09B360" />
           <Text style={styles.securedText}>Secured by UPI</Text>
         </View>
       </View>
-    </Animated.View>
-  );
+    </Animated.View>;
 };
-
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
@@ -223,33 +171,33 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingTop: 100,
-    paddingBottom: 40,
+    paddingBottom: 40
   },
   container: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    width: "100%",
+    width: "100%"
   },
   processingText: {
     fontSize: 22,
     fontWeight: "600",
     color: "#1F2937",
     marginTop: 24,
-    textAlign: "center",
+    textAlign: "center"
   },
   processingSubtext: {
     fontSize: 14,
     color: "#6B7280",
     marginTop: 8,
-    textAlign: "center",
+    textAlign: "center"
   },
   checkWrapper: {
     width: 120,
     height: 120,
     justifyContent: "center",
     alignItems: "center",
-    position: "relative",
+    position: "relative"
   },
   ripple: {
     position: "absolute",
@@ -258,7 +206,7 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     backgroundColor: "#E8F8F0",
     borderWidth: 2,
-    borderColor: "#A3E635",
+    borderColor: "#A3E635"
   },
   checkCircle: {
     width: 90,
@@ -269,27 +217,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
     elevation: 4,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {
+      width: 0,
+      height: 2
+    },
     shadowOpacity: 0.15,
-    shadowRadius: 4,
+    shadowRadius: 4
   },
   successContent: {
     alignItems: "center",
     marginTop: 30,
     width: "100%",
-    paddingHorizontal: 20,
+    paddingHorizontal: 20
   },
   successTitle: {
     fontSize: 24,
     fontWeight: "700",
     color: "#09B360",
-    textAlign: "center",
+    textAlign: "center"
   },
   successAmount: {
     fontSize: 36,
     fontWeight: "800",
     color: "#1F2937",
-    marginTop: 15,
+    marginTop: 15
   },
   detailsCard: {
     marginTop: 25,
@@ -300,26 +251,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#F3F4F6",
     width: "85%",
-    alignItems: "center",
+    alignItems: "center"
   },
   detailsText: {
     fontSize: 16,
     color: "#4B5563",
-    textAlign: "center",
+    textAlign: "center"
   },
   detailsSubtext: {
     fontSize: 14,
     color: "#6B7280",
     marginTop: 6,
-    textAlign: "center",
+    textAlign: "center"
   },
   boldText: {
     fontWeight: "600",
-    color: "#1F2937",
+    color: "#1F2937"
   },
   footer: {
     alignItems: "center",
-    width: "100%",
+    width: "100%"
   },
   securedBadge: {
     flexDirection: "row",
@@ -328,11 +279,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    gap: 6,
+    gap: 6
   },
   securedText: {
     fontSize: 14,
     color: "#065F46",
-    fontWeight: "600",
-  },
+    fontWeight: "600"
+  }
 });

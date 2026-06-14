@@ -2,30 +2,18 @@ import * as Device from 'expo-device';
 import * as Network from 'expo-network';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-
 import { db } from './firebase';
 import { sanitizePayload } from '../utils/firebaseUtils';
 import { logAction } from './logService';
-
 const DEVICE_ID_KEY = '@one_delhi_device_id';
-
-// Persistent device ID — remains same across app restarts
 const getOrCreateDeviceId = async (): Promise<string> => {
   let hashId = 'DEVICE_FALLBACK';
   try {
-    // Build a stable ID from hardware info
-    const raw = [
-      Device.osBuildId,
-      Device.modelId,
-      Device.brand,
-      Device.osVersion,
-    ].filter(Boolean).join('_');
-
+    const raw = [Device.osBuildId, Device.modelId, Device.brand, Device.osVersion].filter(Boolean).join('_');
     if (raw) {
       const hash = raw.split('').reduce((acc, char) => {
         const chr = char.charCodeAt(0);
-        return ((acc << 5) - acc) + chr;
+        return (acc << 5) - acc + chr;
       }, 0);
       hashId = `DEVICE_${Math.abs(hash).toString(36).toUpperCase()}`;
     } else {
@@ -35,63 +23,44 @@ const getOrCreateDeviceId = async (): Promise<string> => {
     console.warn('[DeviceService] Failed to compute hardware hash:', e);
     hashId = `DEVICE_FALLBACK_${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
   }
-
   try {
     const stored = await AsyncStorage.getItem(DEVICE_ID_KEY);
     if (stored) return stored;
-
     await AsyncStorage.setItem(DEVICE_ID_KEY, hashId);
     return hashId;
   } catch {
-    // If AsyncStorage fails, return the stable/fallback hashId
     return hashId;
   }
 };
-
-export const registerDevice = async (
-  userId: string,
-  userName: string,
-  userEmail: string
-): Promise<{ deviceId: string; status: string; forceLogout: boolean } | null> => {
+export const registerDevice = async (userId: string, userName: string, userEmail: string): Promise<{
+  deviceId: string;
+  status: string;
+  forceLogout: boolean;
+} | null> => {
   try {
     let deviceId = await getOrCreateDeviceId();
-    
-    // Check if the user already has a device session for this device in Firestore
-    // (This helps if AsyncStorage was cleared, preventing duplicate entries for the same device)
     try {
-      const existingDevices = await db.collection('devices')
-        .where('userId', '==', userId)
-        .get();
-      
+      const existingDevices = await db.collection('devices').where('userId', '==', userId).get();
       let matchedDeviceId = null;
-      existingDevices.forEach((doc) => {
+      existingDevices.forEach(doc => {
         const data = doc.data();
-        if (
-          data.model === (Device.modelName || 'Unknown') &&
-          data.brand === (Device.brand || 'Unknown') &&
-          data.platform === 'android'
-        ) {
+        if (data.model === (Device.modelName || 'Unknown') && data.brand === (Device.brand || 'Unknown') && data.platform === 'android') {
           matchedDeviceId = doc.id;
         }
       });
-
       if (matchedDeviceId && matchedDeviceId !== deviceId) {
         console.log('[DeviceService] Found existing device session in Firestore, reusing deviceId:', matchedDeviceId);
         deviceId = matchedDeviceId;
-        // Save the reused deviceId to AsyncStorage for future use
         await AsyncStorage.setItem(DEVICE_ID_KEY, deviceId).catch(() => {});
       }
     } catch (queryError) {
       console.warn('[DeviceService] Failed to query existing device sessions:', queryError);
     }
-
     const deviceRef = db.collection('devices').doc(deviceId);
-    
     let deviceSnap;
     let documentExists = false;
     let existingStatus = 'APPROVED';
     let existingForceLogout = false;
-
     try {
       deviceSnap = await deviceRef.get();
       documentExists = deviceSnap.exists;
@@ -103,7 +72,6 @@ export const registerDevice = async (
     } catch (e: any) {
       if (e.code === 'permission-denied') {
         try {
-          // Retry once after a small delay - sometimes auth token takes a moment
           await new Promise(resolve => setTimeout(resolve, 1500));
           deviceSnap = await deviceRef.get();
           documentExists = deviceSnap.exists;
@@ -126,22 +94,20 @@ export const registerDevice = async (
         throw e;
       }
     }
-
     let ipAddress = 'Unknown';
     try {
       ipAddress = (await Network.getIpAddressAsync()) || 'Unknown';
     } catch {}
-
-    // If device is already banned, don't try to update or log anything (prevents permission-denied)
     if (existingStatus === 'BANNED') {
       console.log('[DeviceService] Device is BANNED, skipping update.');
-      return { deviceId, status: 'BANNED', forceLogout: existingForceLogout };
+      return {
+        deviceId,
+        status: 'BANNED',
+        forceLogout: existingForceLogout
+      };
     }
-
     const now = Date.now();
-
     if (!documentExists) {
-      // New device — full registration
       const deviceData = sanitizePayload({
         deviceId,
         userId,
@@ -158,11 +124,9 @@ export const registerDevice = async (
         lastActive: now,
         status: 'APPROVED',
         isCurrentDevice: true,
-        forceLogout: false,
+        forceLogout: false
       });
-
       await deviceRef.set(deviceData);
-
       await logAction({
         userId,
         userName,
@@ -172,10 +136,9 @@ export const registerDevice = async (
         type: 'SYSTEM',
         deviceId,
         deviceName: deviceData.deviceName,
-        ipAddress,
+        ipAddress
       });
     } else {
-      // Existing device — update activity
       try {
         await deviceRef.update(sanitizePayload({
           lastActive: now,
@@ -184,7 +147,7 @@ export const registerDevice = async (
           userName,
           userEmail,
           appVersion: Constants.expoConfig?.version || '1.0.0',
-          isCurrentDevice: true,
+          isCurrentDevice: true
         }));
       } catch (updateError: any) {
         if (updateError.code === 'firestore/not-found' || updateError.message?.includes('not-found')) {
@@ -205,7 +168,7 @@ export const registerDevice = async (
             lastActive: now,
             status: 'APPROVED',
             isCurrentDevice: true,
-            forceLogout: false,
+            forceLogout: false
           });
           await deviceRef.set(deviceData);
         } else {
@@ -213,8 +176,11 @@ export const registerDevice = async (
         }
       }
     }
-
-    return { deviceId, status: existingStatus, forceLogout: existingForceLogout };
+    return {
+      deviceId,
+      status: existingStatus,
+      forceLogout: existingForceLogout
+    };
   } catch (error: any) {
     if (error.code === 'permission-denied') {
       console.log('[DeviceService] Permission denied during registration (user likely banned).');
@@ -224,15 +190,9 @@ export const registerDevice = async (
     return null;
   }
 };
-
-// Realtime security listener — ban or force logout
-export const listenToDeviceSecurity = (
-  deviceId: string,
-  onAction: (action: 'BANNED' | 'LOGOUT') => void
-): (() => void) => {
+export const listenToDeviceSecurity = (deviceId: string, onAction: (action: 'BANNED' | 'LOGOUT') => void): (() => void) => {
   if (!deviceId) return () => {};
-
-  return db.collection('devices').doc(deviceId).onSnapshot((snap) => {
+  return db.collection('devices').doc(deviceId).onSnapshot(snap => {
     if (!snap || !snap.exists) return;
     const data = snap.data();
     if (data?.status === 'BANNED') {
@@ -242,29 +202,25 @@ export const listenToDeviceSecurity = (
     }
   }, (error: any) => {
     if (error.code === 'permission-denied') {
-      // If permission is denied, it's because the security rules (isNotBanned) 
-      // have blocked access, which means the user or device is likely banned.
       onAction('BANNED');
     } else {
       console.error('[DeviceService] Security listener error:', error);
     }
   });
 };
-
-// Call on app foreground
 export const updateLastActive = async (deviceId: string): Promise<void> => {
   if (!deviceId) return;
   try {
-    await db.collection('devices').doc(deviceId).update({ lastActive: Date.now() });
-  } catch {
-    // Silent — non-critical
-  }
+    await db.collection('devices').doc(deviceId).update({
+      lastActive: Date.now()
+    });
+  } catch {}
 };
-
-// Reset forceLogout flag after handling it
 export const clearForceLogout = async (deviceId: string): Promise<void> => {
   if (!deviceId) return;
   try {
-    await db.collection('devices').doc(deviceId).update({ forceLogout: false });
+    await db.collection('devices').doc(deviceId).update({
+      forceLogout: false
+    });
   } catch {}
 };

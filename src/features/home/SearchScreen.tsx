@@ -1,13 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
-  Animated,
-} from "react-native";
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Animated } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Screen } from "../../components/layout/Screen";
 import { Header } from "../../components/layout/Header";
@@ -18,13 +10,17 @@ import { auth } from "../../services/firebase";
 import { getRoutes, Route } from "../../services/routeService";
 import { useAppStore } from "../../store/useAppStore";
 import { logAction } from "../../services/logService";
-
-export const SearchScreen = ({ navigation }: any) => {
-  const { recentRoutes, addRecentRoute, removeRecentRoute } = useAppStore();
+export const SearchScreen = ({
+  navigation
+}: any) => {
+  const {
+    recentRoutes,
+    addRecentRoute,
+    removeRecentRoute
+  } = useAppStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [routes, setRoutes] = useState<Route[]>([]);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     const fetchRoutes = async () => {
       try {
@@ -37,14 +33,11 @@ export const SearchScreen = ({ navigation }: any) => {
         setLoading(false);
       }
     };
-
     fetchRoutes();
   }, []);
-
   const allDirectionRoutes = React.useMemo(() => {
     const list: any[] = [];
     routes.forEach((r: any) => {
-      // Format 1: Has directions.up and directions.down
       if (r.directions) {
         if (r.directions.up && Array.isArray(r.directions.up.stops) && r.directions.up.stops.length > 0) {
           list.push({
@@ -53,7 +46,7 @@ export const SearchScreen = ({ navigation }: any) => {
             directionType: 'UP',
             from: r.directions.up.from || r.directions.up.stops?.[0] || 'Origin',
             to: r.directions.up.to || r.directions.up.stops?.[r.directions.up.stops.length - 1] || 'Destination',
-            originalRoute: r,
+            originalRoute: r
           });
         }
         if (r.directions.down && Array.isArray(r.directions.down.stops) && r.directions.down.stops.length > 0) {
@@ -63,12 +56,10 @@ export const SearchScreen = ({ navigation }: any) => {
             directionType: 'DOWN',
             from: r.directions.down.from || r.directions.down.stops?.[0] || 'Origin',
             to: r.directions.down.to || r.directions.down.stops?.[r.directions.down.stops.length - 1] || 'Destination',
-            originalRoute: r,
+            originalRoute: r
           });
         }
-      } 
-      // Format 2: Flat route with stops
-      else {
+      } else {
         const routeName = r.route || r.id || r.routeNumber;
         list.push({
           route: routeName,
@@ -76,21 +67,19 @@ export const SearchScreen = ({ navigation }: any) => {
           directionType: 'UP',
           from: r.origin || r.stops?.[0] || 'Origin',
           to: r.destination || r.stops?.[r.stops.length - 1] || 'Destination',
-          originalRoute: r,
+          originalRoute: r
         });
       }
     });
     return list;
   }, [routes]);
-
   const filteredRoutes = React.useMemo(() => {
     const queryLower = searchQuery.toLowerCase().replace(/[\s-]/g, '');
-    return allDirectionRoutes.filter((item) => {
+    return allDirectionRoutes.filter(item => {
       const normalizedRoute = item.route.toLowerCase().replace(/[\s-]/g, '');
       return normalizedRoute.includes(queryLower);
     });
   }, [allDirectionRoutes, searchQuery]);
-
   const mappedRecentRoutes = React.useMemo(() => {
     const list: any[] = [];
     recentRoutes.forEach((r: any) => {
@@ -102,7 +91,7 @@ export const SearchScreen = ({ navigation }: any) => {
             directionType: 'UP',
             from: r.directions.up.from || r.directions.up.stops?.[0] || 'Origin',
             to: r.directions.up.to || r.directions.up.stops?.[r.directions.up.stops.length - 1] || 'Destination',
-            originalRoute: r,
+            originalRoute: r
           });
         }
         if (r.directions.down && Array.isArray(r.directions.down.stops) && r.directions.down.stops.length > 0) {
@@ -112,7 +101,7 @@ export const SearchScreen = ({ navigation }: any) => {
             directionType: 'DOWN',
             from: r.directions.down.from || r.directions.down.stops?.[0] || 'Origin',
             to: r.directions.down.to || r.directions.down.stops?.[r.directions.down.stops.length - 1] || 'Destination',
-            originalRoute: r,
+            originalRoute: r
           });
         }
       } else {
@@ -123,35 +112,36 @@ export const SearchScreen = ({ navigation }: any) => {
           directionType: 'UP',
           from: r.origin || r.stops?.[0] || 'Origin',
           to: r.destination || r.stops?.[r.stops.length - 1] || 'Destination',
-          originalRoute: r,
+          originalRoute: r
         });
       }
     });
     return list;
   }, [recentRoutes]);
-
-  const renderRouteItem = useCallback(({ item }: { item: any }) => (
-    <TouchableOpacity 
-      style={styles.routeCard} 
-      activeOpacity={0.7}
-      onPress={async () => {
-        try {
-          await logAction({
-            userId: auth.currentUser?.uid || 'guest',
-            userName: auth.currentUser?.displayName || 'Delhi Traveler',
-            userEmail: auth.currentUser?.email || '',
-            action: 'SEARCH_ROUTE',
-            details: `User viewed details for Route ${item.route} (${item.directionType})`,
-            type: 'USER',
-            targetType: 'ROUTE',
-            targetId: item.route,
-            deviceId: useAppStore.getState().deviceId || undefined
-          });
-        } catch {}
-        addRecentRoute(item.originalRoute);
-        navigation.navigate("RouteDetail", { routeId: item.route, direction: item.directionType });
-      }}
-    >
+  const renderRouteItem = useCallback(({
+    item
+  }: {
+    item: any;
+  }) => <TouchableOpacity style={styles.routeCard} activeOpacity={0.7} onPress={async () => {
+    try {
+      await logAction({
+        userId: auth.currentUser?.uid || 'guest',
+        userName: auth.currentUser?.displayName || 'Delhi Traveler',
+        userEmail: auth.currentUser?.email || '',
+        action: 'SEARCH_ROUTE',
+        details: `User viewed details for Route ${item.route} (${item.directionType})`,
+        type: 'USER',
+        targetType: 'ROUTE',
+        targetId: item.route,
+        deviceId: useAppStore.getState().deviceId || undefined
+      });
+    } catch {}
+    addRecentRoute(item.originalRoute);
+    navigation.navigate("RouteDetail", {
+      routeId: item.route,
+      direction: item.directionType
+    });
+  }}>
       <View style={styles.leftCol}>
         <View style={styles.busIconBox}>
           <MaterialCommunityIcons name="bus" size={20} color="#333" />
@@ -174,124 +164,72 @@ export const SearchScreen = ({ navigation }: any) => {
           </Text>
         </View>
       </View>
-    </TouchableOpacity>
-  ), [navigation, addRecentRoute]);
-
-  const renderRecentRouteItem = useCallback(({ item }: { item: Route }) => {
-    const renderRightActions = (
-      _progress: Animated.AnimatedInterpolation<number>,
-      dragX: Animated.AnimatedInterpolation<number>
-    ) => {
+    </TouchableOpacity>, [navigation, addRecentRoute]);
+  const renderRecentRouteItem = useCallback(({
+    item
+  }: {
+    item: Route;
+  }) => {
+    const renderRightActions = (_progress: Animated.AnimatedInterpolation<number>, dragX: Animated.AnimatedInterpolation<number>) => {
       const trans = dragX.interpolate({
         inputRange: [-70, 0],
         outputRange: [0, 70],
-        extrapolate: "clamp",
+        extrapolate: "clamp"
       });
-
-      return (
-        <TouchableOpacity 
-          style={styles.deleteAction} 
-          onPress={() => removeRecentRoute(item.route)}
-          activeOpacity={0.8}
-        >
-          <Animated.View style={{ transform: [{ translateX: trans }] }}>
+      return <TouchableOpacity style={styles.deleteAction} onPress={() => removeRecentRoute(item.route)} activeOpacity={0.8}>
+          <Animated.View style={{
+          transform: [{
+            translateX: trans
+          }]
+        }}>
             <MaterialCommunityIcons name="trash-can-outline" size={26} color="#FFF" />
           </Animated.View>
-        </TouchableOpacity>
-      );
+        </TouchableOpacity>;
     };
-
-    return (
-      <Swipeable 
-        renderRightActions={renderRightActions}
-        friction={2}
-        rightThreshold={40}
-        overshootRight={false}
-      >
-        {renderRouteItem({ item })}
-      </Swipeable>
-    );
+    return <Swipeable renderRightActions={renderRightActions} friction={2} rightThreshold={40} overshootRight={false}>
+        {renderRouteItem({
+        item
+      })}
+      </Swipeable>;
   }, [renderRouteItem, removeRecentRoute]);
-
   const insets = useSafeAreaInsets();
-
-  return (
-    <Screen 
-      noPadding 
-      ignoreTopSafe 
-      style={{ backgroundColor: '#FFF' }}
-    >
-      <Header 
-        onBackPress={() => navigation.goBack()}
-        backgroundColor="#FFFFFF"
-        textColor="#000000"
-        height={50}
-        showShadow={true}
-      >
+  return <Screen noPadding ignoreTopSafe style={{
+    backgroundColor: '#FFF'
+  }}>
+      <Header onBackPress={() => navigation.goBack()} backgroundColor="#FFFFFF" textColor="#000000" height={50} showShadow={true}>
         <View style={styles.inputWrapper}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search 500+ Route"
-            placeholderTextColor="#999"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            multiline={false}
-            scrollEnabled
-            textAlign="left"
-            numberOfLines={1}
-          />
+          <TextInput style={styles.searchInput} placeholder="Search 500+ Route" placeholderTextColor="#999" value={searchQuery} onChangeText={setSearchQuery} multiline={false} scrollEnabled textAlign="left" numberOfLines={1} />
         </View>
       </Header>
 
-      {searchQuery.length > 0 ? (
-        loading ? (
-          <View style={styles.loaderBox}>
+      {searchQuery.length > 0 ? loading ? <View style={styles.loaderBox}>
             <ActivityIndicator size="large" color="#D32F2F" />
-          </View>
-        ) : (
-          <FlashList
-            data={filteredRoutes}
-            renderItem={renderRouteItem}
-            keyExtractor={(item) => item.id}
-            estimatedItemSize={80}
-            contentContainerStyle={StyleSheet.flatten([styles.listContent, { paddingBottom: insets.bottom + 20 }])}
-            ListEmptyComponent={
-              <View style={styles.emptyBox}>
+          </View> : <FlashList data={filteredRoutes} renderItem={renderRouteItem} keyExtractor={item => item.id} estimatedItemSize={80} contentContainerStyle={StyleSheet.flatten([styles.listContent, {
+      paddingBottom: insets.bottom + 20
+    }])} ListEmptyComponent={<View style={styles.emptyBox}>
                 <Text style={styles.emptyText}>No routes found</Text>
-              </View>
-            }
-          />
-        )
-      ) : (
-        mappedRecentRoutes.length > 0 && (
-          <View style={{ flex: 1 }}>
-            <FlashList
-              data={mappedRecentRoutes}
-              renderItem={renderRecentRouteItem}
-              keyExtractor={(item) => `recent-${item.id}`}
-              estimatedItemSize={80}
-              contentContainerStyle={StyleSheet.flatten([styles.listContent, { paddingBottom: insets.bottom + 20 }])}
-            />
-          </View>
-        )
-      )}
-    </Screen>
-  );
+              </View>} /> : mappedRecentRoutes.length > 0 && <View style={{
+      flex: 1
+    }}>
+            <FlashList data={mappedRecentRoutes} renderItem={renderRecentRouteItem} keyExtractor={item => `recent-${item.id}`} estimatedItemSize={80} contentContainerStyle={StyleSheet.flatten([styles.listContent, {
+        paddingBottom: insets.bottom + 20
+      }])} />
+          </View>}
+    </Screen>;
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFF",
+    backgroundColor: "#FFF"
   },
   safeArea: {
-    flex: 1,
+    flex: 1
   },
   inputWrapper: {
     flex: 1,
     minWidth: 0,
     overflow: "visible",
-    justifyContent: "center",
+    justifyContent: "center"
   },
   searchInput: {
     flex: 1,
@@ -301,33 +239,33 @@ const styles = StyleSheet.create({
     textAlign: "left",
     paddingVertical: 0,
     paddingHorizontal: 0,
-    margin: 0,
+    margin: 0
   },
   loaderBox: {
     flex: 1,
     justifyContent: "center",
-    alignItems: "center",
+    alignItems: "center"
   },
   listContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 16
   },
   routeCard: {
     flexDirection: "row",
-    paddingVertical: 8,
+    paddingVertical: 8
   },
   leftCol: {
-    width: 28, // Reduced width to bring icon/path closer to text
-    alignItems: "center",
+    width: 28,
+    alignItems: "center"
   },
   busIconBox: {
-    height: 25, // Matched with routeNumber height to align the paths below
-    justifyContent: "center",
+    height: 25,
+    justifyContent: "center"
   },
   visualPath: {
     alignItems: "center",
     marginTop: 2,
-    height: 38, // Slightly reduced to bring circles closer together
-    justifyContent: "space-between",
+    height: 38,
+    justifyContent: "space-between"
   },
   circle: {
     width: 12,
@@ -335,42 +273,42 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1.5,
     borderColor: "#B91C1C",
-    backgroundColor: "transparent",
+    backgroundColor: "transparent"
   },
   line: {
-    width: 1.5, // Matches circle border thickness perfectly
+    width: 1.5,
     flex: 1,
     backgroundColor: "#B91C1C",
-    marginVertical: -1, // Seamlessly connects inside the circles with zero gap
+    marginVertical: -1
   },
   routeInfo: {
     flex: 1,
-    marginLeft: 6, // Reduced margin to bring text closer to the left column
+    marginLeft: 6
   },
   routeNumber: {
-    fontSize: 16, // Increased slightly for better hierarchy
+    fontSize: 16,
     fontWeight: "700",
     color: "#000",
     height: 25,
-    textAlignVertical: "center",
+    textAlignVertical: "center"
   },
   textPath: {
-    height: 38, // Slightly reduced to bring stop text lines closer together
+    height: 38,
     justifyContent: "space-between",
-    marginTop: 2,
+    marginTop: 2
   },
   terminalName: {
-    fontSize: 15, // Increased from 14 for better stop name readability
+    fontSize: 15,
     color: "#666",
-    fontWeight: "400",
+    fontWeight: "400"
   },
   emptyBox: {
     paddingTop: 50,
-    alignItems: "center",
+    alignItems: "center"
   },
   emptyText: {
     fontSize: 16,
-    color: "#999",
+    color: "#999"
   },
   historyHeader: {
     flexDirection: "row",
@@ -378,42 +316,41 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingTop: 20,
-    paddingBottom: 10,
+    paddingBottom: 10
   },
   historyTitle: {
     fontSize: 16,
     fontWeight: "700",
     color: "#666",
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 0.5
   },
   clearText: {
     fontSize: 14,
     color: "#D32F2F",
-    fontWeight: "600",
+    fontWeight: "600"
   },
   deleteAction: {
     backgroundColor: "#D32F2F",
     justifyContent: "center",
     alignItems: "center",
     width: 70,
-    height: "100%",
+    height: "100%"
   },
   divider: {
     height: 1,
     backgroundColor: "#EEE",
-    marginHorizontal: 0,
+    marginHorizontal: 0
   },
   directionBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 4,
     marginLeft: 10,
-    alignSelf: 'center',
+    alignSelf: 'center'
   },
   directionText: {
     fontSize: 10,
-    fontWeight: '800',
-  },
+    fontWeight: '800'
+  }
 });
-

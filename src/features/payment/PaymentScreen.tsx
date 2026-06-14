@@ -1,18 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Platform,
-  ToastAndroid,
-  Alert,
-  Animated,
-  Easing,
-  ScrollView,
-  StatusBar,
-  ActivityIndicator,
-} from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Platform, ToastAndroid, Alert, Animated, Easing, ScrollView, StatusBar } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Screen } from "../../components/layout/Screen";
 import { Header } from "../../components/layout/Header";
@@ -22,11 +9,7 @@ import { auth } from "../../services/firebase";
 import { saveTicket } from "../../services/ticketService";
 import { savePass } from "../../services/passService";
 import firestore from "@react-native-firebase/firestore";
-import {
-  PaytmIcon,
-  PhonePeIcon,
-  GPayIcon,
-} from "../../components/icons/PaymentIcons";
+import { PaytmIcon, PhonePeIcon, GPayIcon } from "../../components/icons/PaymentIcons";
 import { sanitizePayload } from "../../utils/firebaseUtils";
 import { logAction } from "../../services/logService";
 import { UpiConfirmScreen } from "./UpiConfirmScreen";
@@ -41,84 +24,67 @@ import { GenericSuccessScreen } from "./GenericSuccessScreen";
 import { moderateScale, responsiveFontSize } from "../../utils/responsive";
 import * as Haptics from "expo-haptics";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { PrimaryButton } from "../../components/ui/PrimaryButton";
 import { LoadingOverlay } from "../../components/ui/LoadingOverlay";
-
-export const PaymentScreen = ({ navigation, route }: any) => {
-  const { ticketData = {}, timeLeft: initialTimeLeft = 180 } = route.params || {};
+export const PaymentScreen = ({
+  navigation,
+  route
+}: any) => {
+  const {
+    ticketData = {},
+    timeLeft: initialTimeLeft = 180
+  } = route.params || {};
   const displayTotal = Number(ticketData.total || 9);
   const formattedTotal = displayTotal.toFixed(1);
   const baseFareNum = Number(ticketData.baseFare || 10);
   const formattedBaseFare = baseFareNum.toFixed(1);
-  const { addTicket } = useAppStore();
+  const {
+    addTicket
+  } = useAppStore();
   const now = new Date();
-  const dateStr = `${now.getDate().toString().padStart(2, "0")} ${now.toLocaleString("en-GB", { month: "short" })}, ${now.getFullYear()}`;
-  const summaryTime =
-    dateStr +
-    " | " +
-    now.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
-  
+  const dateStr = `${now.getDate().toString().padStart(2, "0")} ${now.toLocaleString("en-GB", {
+    month: "short"
+  })}, ${now.getFullYear()}`;
+  const summaryTime = dateStr + " | " + now.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true
+  });
   const [timeLeft, setTimeLeft] = useState(initialTimeLeft);
-
-  // --- UPI Payment Simulation State Machine ---
   const [isSimulating, setIsSimulating] = useState(false);
   const [selectedApp, setSelectedApp] = useState<"Paytm" | "PhonePe" | "GPay" | "BHIM">("GPay");
   const [simStep, setSimStep] = useState<"confirmation" | "pin_entry" | "processing" | "success" | "failed">("confirmation");
   const [processingMessage, setProcessingMessage] = useState("Securing connection...");
-  const [selectedBank, setSelectedBank] = useState<string | null>("SBI"); // SBI selected by default
+  const [selectedBank, setSelectedBank] = useState<string | null>("SBI");
   const simAnimProgress = React.useRef(new Animated.Value(0)).current;
-
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [finalCreatedTicket, setFinalCreatedTicket] = useState<any>(null);
-
-  // Fake generated IDs for active simulation
   const [activeTxnId, setActiveTxnId] = useState("");
   const [activeBankRef, setActiveBankRef] = useState("");
   const [activeTimestamp, setActiveTimestamp] = useState("");
-
   useEffect(() => {
-    const timer = setInterval(
-      () => setTimeLeft((p) => (p > 0 ? p - 1 : 0)),
-      1000,
-    );
+    const timer = setInterval(() => setTimeLeft(p => p > 0 ? p - 1 : 0), 1000);
     return () => clearInterval(timer);
   }, []);
-
   useEffect(() => {
     if (timeLeft === 0) {
       if (Platform.OS === "android") {
-        ToastAndroid.showWithGravity(
-          "Session Expired",
-          ToastAndroid.LONG,
-          ToastAndroid.BOTTOM
-        );
+        ToastAndroid.showWithGravity("Session Expired", ToastAndroid.LONG, ToastAndroid.BOTTOM);
       } else {
         Alert.alert("Session Expired");
       }
       navigation.navigate("Main");
     }
   }, [timeLeft, navigation]);
-
   const formatTime = (s: number) => {
-    const min = Math.floor(s / 60)
-      .toString()
-      .padStart(2, "0");
+    const min = Math.floor(s / 60).toString().padStart(2, "0");
     const sec = (s % 60).toString().padStart(2, "0");
     return `${min}:${sec}`;
   };
-
-  // --- Simulation Flow Controllers ---
   const startSimulation = (app: typeof selectedApp) => {
     setSelectedApp(app);
     setSelectedBank("SBI");
     setSimStep("confirmation");
     setIsSimulating(true);
-
-    // Pre-generate unique fake transaction IDs in exact NPCI/UPI format: YYMMDDHHMMSS + 9 alphanumeric characters
     const now = new Date();
     const yy = now.getFullYear().toString().slice(-2);
     const mm = (now.getMonth() + 1).toString().padStart(2, "0");
@@ -126,7 +92,6 @@ export const PaymentScreen = ({ navigation, route }: any) => {
     const hh = now.getHours().toString().padStart(2, "0");
     const min = now.getMinutes().toString().padStart(2, "0");
     const ss = now.getSeconds().toString().padStart(2, "0");
-    
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     let suffix = "";
     for (let i = 0; i < 9; i++) {
@@ -137,24 +102,21 @@ export const PaymentScreen = ({ navigation, route }: any) => {
     const timeString = now.toLocaleDateString("en-IN", {
       day: "2-digit",
       month: "short",
-      year: "numeric",
+      year: "numeric"
     }) + ", " + now.toLocaleTimeString("en-IN", {
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
-      hour12: true,
+      hour12: true
     });
-
     setActiveTxnId(newTxnId);
     setActiveBankRef(newBankRef);
     setActiveTimestamp(timeString);
   };
-
   const openSimulation = (app: typeof selectedApp) => {
     setSelectedApp(app);
     setIsRedirecting(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
     setTimeout(() => {
       setIsRedirecting(false);
       startSimulation(app);
@@ -163,28 +125,25 @@ export const PaymentScreen = ({ navigation, route }: any) => {
         toValue: 1,
         duration: 350,
         easing: Easing.bezier(0.22, 1, 0.36, 1),
-        useNativeDriver: true,
+        useNativeDriver: true
       }).start();
     }, 1500);
   };
-
   const closeSimulation = () => {
     Animated.timing(simAnimProgress, {
       toValue: 0,
       duration: 250,
       easing: Easing.bezier(0.22, 1, 0.36, 1),
-      useNativeDriver: true,
+      useNativeDriver: true
     }).start(() => {
       setIsSimulating(false);
     });
   };
-
   const saveTicketInBackground = async () => {
     try {
       const now = new Date();
       const nowMs = now.getTime();
-      let expiresAtMs = nowMs + 2 * 60 * 60 * 1000; // Default 2 hours
-
+      let expiresAtMs = nowMs + 2 * 60 * 60 * 1000;
       if (ticketData.isPass) {
         const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
         if (ticketData.passName && ticketData.passName.toUpperCase().includes("DAILY")) {
@@ -195,15 +154,15 @@ export const PaymentScreen = ({ navigation, route }: any) => {
           expiresAtMs = endOfFutureDay.getTime();
         }
       }
-
-      const dateStr = `${now.getDate().toString().padStart(2, "0")} ${now.toLocaleString("en-GB", { month: "short" })}, ${now.getFullYear()}`;
+      const dateStr = `${now.getDate().toString().padStart(2, "0")} ${now.toLocaleString("en-GB", {
+        month: "short"
+      })}, ${now.getFullYear()}`;
       const timeStr = now.toLocaleTimeString("en-US", {
         hour: "2-digit",
         minute: "2-digit",
-        hour12: true,
+        hour12: true
       });
       const tid = generateTicketId();
-
       const finalTicket = {
         ...ticketData,
         baseFare: ticketData.baseFare || 10,
@@ -214,31 +173,21 @@ export const PaymentScreen = ({ navigation, route }: any) => {
         userId: auth.currentUser?.uid,
         deviceId: useAppStore.getState().deviceId,
         status: "Active",
-        tid: tid,
+        tid: tid
       };
-
-      // 1. Add to Local Store Immediately
       addTicket({
         ...finalTicket,
         timestamp: finalTicket.timestamp.toMillis(),
         expiresAt: expiresAtMs,
         fare: ticketData.total,
         status: "Active" as any,
-        tid: tid,
+        tid: tid
       });
-
-      // 2. Save to Firestore in background
-      saveTicket(tid, sanitizePayload(finalTicket))
-        .then(() => {
-          console.log("[PaymentScreen] Ticket synced online successfully.");
-        })
-        .catch(() => {
-          console.log(
-            "[OfflineSync] Offline mode active. Ticket saved locally and will sync when online.",
-          );
-        });
-
-      // 2b. If it is a pass, also save to passes collection
+      saveTicket(tid, sanitizePayload(finalTicket)).then(() => {
+        console.log("[PaymentScreen] Ticket synced online successfully.");
+      }).catch(() => {
+        console.log("[OfflineSync] Offline mode active. Ticket saved locally and will sync when online.");
+      });
       if (ticketData.isPass) {
         const passDoc = {
           passId: tid,
@@ -255,18 +204,14 @@ export const PaymentScreen = ({ navigation, route }: any) => {
           idLastDigits: ticketData.idLastDigits,
           fare: ticketData.total,
           paymentStatus: "PAID",
-          txnId: tid,
+          txnId: tid
         };
-        savePass(tid, sanitizePayload(passDoc))
-          .then(() => {
-            console.log("[PaymentScreen] Pass synced online successfully.");
-          })
-          .catch((err) => {
-            console.log("[OfflineSync] Offline/failed pass sync. Will retry online.", err);
-          });
+        savePass(tid, sanitizePayload(passDoc)).then(() => {
+          console.log("[PaymentScreen] Pass synced online successfully.");
+        }).catch(err => {
+          console.log("[OfflineSync] Offline/failed pass sync. Will retry online.", err);
+        });
       }
-
-      // 3. Log Action (Background)
       logAction({
         userId: auth.currentUser?.uid || "anonymous",
         userName: useAppStore.getState().userProfile?.name || "User",
@@ -276,77 +221,67 @@ export const PaymentScreen = ({ navigation, route }: any) => {
         type: "USER",
         targetType: "TICKET",
         targetId: tid,
-        deviceId: useAppStore.getState().deviceId || undefined,
+        deviceId: useAppStore.getState().deviceId || undefined
       }).catch(() => {});
-
       setFinalCreatedTicket({
         ...finalTicket,
         timestamp: finalTicket.timestamp.toMillis(),
         fare: ticketData.total,
-        tid,
+        tid
       });
     } catch (error) {
       console.error(error);
     }
   };
-
   const submitPin = () => {
     setSimStep("processing");
     setProcessingMessage("Initializing payment...");
-
-    // Simulating slight network latency with step-by-step processing messages
     setTimeout(() => {
       setProcessingMessage("Connecting securely...");
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }, 1000);
-
     setTimeout(() => {
       setProcessingMessage("Verifying transaction...");
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }, 2000);
-
     setTimeout(() => {
       setProcessingMessage("Confirming payment...");
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }, 3000);
-
     setTimeout(() => {
       setProcessingMessage("Checking payment status...");
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }, 4000);
-
     setTimeout(async () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSimStep("success");
       await saveTicketInBackground();
     }, 5000);
   };
-
   const handleDone = () => {
     closeSimulation();
     navigation.reset({
       index: 1,
-      routes: [
-        { name: "Main", params: { screen: "TicketsTab" } },
-        {
-          name: "Ticket",
-          params: {
-            ticket: finalCreatedTicket || {
-              ...ticketData,
-              tid: "T" + Date.now().toString(),
-              timestamp: Date.now(),
-              fare: ticketData.total,
-              status: "Active",
-            },
-            isRedirect: true,
+      routes: [{
+        name: "Main",
+        params: {
+          screen: "TicketsTab"
+        }
+      }, {
+        name: "Ticket",
+        params: {
+          ticket: finalCreatedTicket || {
+            ...ticketData,
+            tid: "T" + Date.now().toString(),
+            timestamp: Date.now(),
+            fare: ticketData.total,
+            status: "Active"
           },
-        },
-      ],
+          isRedirect: true
+        }
+      }]
     });
   };
-
-
-
   useEffect(() => {
     if (simStep === "success" && (selectedApp === "PhonePe" || selectedApp === "Paytm")) {
       const timer = setTimeout(() => {
@@ -355,41 +290,39 @@ export const PaymentScreen = ({ navigation, route }: any) => {
       return () => clearTimeout(timer);
     }
   }, [simStep, selectedApp, finalCreatedTicket]);
-
-    const insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets();
   const timerScale = React.useRef(new Animated.Value(1)).current;
-
-  // Pulse animation when only a short time remains
   React.useEffect(() => {
     let loop: Animated.CompositeAnimation | null = null;
     if (timeLeft > 0 && timeLeft <= 30) {
-      loop = Animated.loop(
-        Animated.sequence([
-          Animated.timing(timerScale, { toValue: 1.06, duration: 450, easing: Easing.linear, useNativeDriver: true }),
-          Animated.timing(timerScale, { toValue: 1.0, duration: 450, easing: Easing.linear, useNativeDriver: true }),
-        ])
-      );
+      loop = Animated.loop(Animated.sequence([Animated.timing(timerScale, {
+        toValue: 1.06,
+        duration: 450,
+        easing: Easing.linear,
+        useNativeDriver: true
+      }), Animated.timing(timerScale, {
+        toValue: 1.0,
+        duration: 450,
+        easing: Easing.linear,
+        useNativeDriver: true
+      })]));
       loop.start();
     } else {
       timerScale.setValue(1);
       if (loop) loop.stop();
     }
-    return () => { if (loop) loop.stop(); };
+    return () => {
+      if (loop) loop.stop();
+    };
   }, [timeLeft, timerScale]);
+  return <Screen noPadding ignoreTopSafe style={{
+    backgroundColor: "#FFFFFF"
+  }}>
+      <Header title="Complete Payment" onBackPress={() => navigation.goBack()} titleStyle={{
+      fontSize: 18
+    }} />
 
-  return (
-    <Screen noPadding ignoreTopSafe style={{ backgroundColor: "#FFFFFF" }}>
-      <Header
-        title="Complete Payment"
-        onBackPress={() => navigation.goBack()}
-        titleStyle={{ fontSize: 18 }}
-      />
-
-      <ScrollView
-        style={styles.scrollContainer}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView style={styles.scrollContainer} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={styles.summaryCard}>
           <View style={styles.summaryHeader}>
             <Text style={styles.summaryDateText}>{summaryTime}</Text>
@@ -413,11 +346,7 @@ export const PaymentScreen = ({ navigation, route }: any) => {
                 </Text>
               </View>
               <View style={styles.arrowWrapper}>
-                <MaterialCommunityIcons
-                  name="arrow-right"
-                  size={24}
-                  color="#333"
-                />
+                <MaterialCommunityIcons name="arrow-right" size={24} color="#333" />
               </View>
               <View style={styles.stopWrapper}>
                 <Text style={styles.stopText} numberOfLines={2}>
@@ -431,22 +360,28 @@ export const PaymentScreen = ({ navigation, route }: any) => {
           <Text style={styles.sectionTitle}>UPI</Text>
         </View>
 
-        {/* --- 2. Three UPI Selection Grid --- */}
+        {}
         <View style={styles.upiGrid}>
           <TouchableOpacity style={styles.upiCard} onPress={() => openSimulation("Paytm")} disabled={isRedirecting || isSimulating} accessibilityLabel="Pay with Paytm" activeOpacity={0.7}>
-            <View style={{ alignItems: 'center' }}>
+            <View style={{
+            alignItems: 'center'
+          }}>
               <PaytmIcon size={42} />
               <Text style={styles.upiLabel}>Paytm</Text>
             </View>
           </TouchableOpacity>
           <TouchableOpacity style={styles.upiCard} onPress={() => openSimulation("PhonePe")} disabled={isRedirecting || isSimulating} accessibilityLabel="Pay with PhonePe" activeOpacity={0.7}>
-            <View style={{ alignItems: 'center' }}>
+            <View style={{
+            alignItems: 'center'
+          }}>
               <PhonePeIcon size={42} />
               <Text style={styles.upiLabel}>PhonePe</Text>
             </View>
           </TouchableOpacity>
           <TouchableOpacity style={styles.upiCard} onPress={() => openSimulation("GPay")} disabled={isRedirecting || isSimulating} accessibilityLabel="Pay with GPay" activeOpacity={0.7}>
-            <View style={{ alignItems: 'center' }}>
+            <View style={{
+            alignItems: 'center'
+          }}>
               <GPayIcon size={42} />
               <Text style={styles.upiLabel}>GPay</Text>
             </View>
@@ -458,24 +393,33 @@ export const PaymentScreen = ({ navigation, route }: any) => {
         </View>
 
         <TouchableOpacity style={styles.othersRow} onPress={() => openSimulation("GPay")} disabled={isRedirecting || isSimulating} accessibilityLabel="Other payment methods" activeOpacity={0.7}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          width: '100%'
+        }}>
             <View style={styles.othersLeft}>
-              <MaterialCommunityIcons
-                name="credit-card"
-                size={28}
-                color="#D32F2F"
-              />
+              <MaterialCommunityIcons name="credit-card" size={28} color="#D32F2F" />
               <Text style={styles.othersText}>Wallet, Cards or Net banking</Text>
             </View>
             <MaterialCommunityIcons name="chevron-right" size={26} color="#666" />
           </View>
         </TouchableOpacity>
 
-        <View style={{ height: 100 }} />
+        <View style={{
+        height: 100
+      }} />
       </ScrollView>
 
-      <Animated.View style={[styles.footerContainer, { bottom: insets.bottom + 10 }]}>
-        <Animated.View style={[styles.timerPill, { transform: [{ scale: timerScale }] }]}>
+      <Animated.View style={[styles.footerContainer, {
+      bottom: insets.bottom + 10
+    }]}>
+        <Animated.View style={[styles.timerPill, {
+        transform: [{
+          scale: timerScale
+        }]
+      }]}>
           <Text style={styles.timerText}>
             Pay within{" "}
             <Text style={styles.timerBold}>{formatTime(timeLeft)}</Text>
@@ -483,113 +427,48 @@ export const PaymentScreen = ({ navigation, route }: any) => {
         </Animated.View>
       </Animated.View>
 
-      {/* ========================================================= */}
-      {/* --- MASTERPIECE FULL-SCREEN INTERACTIVE SIMULATOR SCREEN --- */}
-      {/* ========================================================= */}
-      {isSimulating && (
-        <Animated.View 
-          style={[
-            styles.simulatorOverlay,
-            {
-              paddingTop: insets.top,
-              opacity: simAnimProgress,
-              transform: [
-                {
-                  scale: simAnimProgress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.96, 1],
-                  })
-                }
-              ]
-            }
-          ]}
-        >
+      {}
+      {}
+      {}
+      {isSimulating && <Animated.View style={[styles.simulatorOverlay, {
+      paddingTop: insets.top,
+      opacity: simAnimProgress,
+      transform: [{
+        scale: simAnimProgress.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0.96, 1]
+        })
+      }]
+    }]}>
           <StatusBar barStyle="dark-content" backgroundColor="white" translucent={true} />
           
-          {/* STEP 1: SPECIFIC APP CONFIRMATION SCREEN */}
-          {simStep === "confirmation" && (
-            selectedApp === "PhonePe" ? (
-              <PhonePeConfirmScreen
-                activeTxnId={activeTxnId}
-                formattedTotal={formattedTotal}
-                selectedBank={selectedBank}
-                setSelectedBank={setSelectedBank}
-                onProceed={() => setSimStep("pin_entry")}
-                onClose={closeSimulation}
-              />
-            ) : (
-              <UpiConfirmScreen
-                selectedApp={selectedApp}
-                activeTxnId={activeTxnId}
-                formattedTotal={formattedTotal}
-                displayTotal={displayTotal}
-                selectedBank={selectedBank}
-                setSelectedBank={setSelectedBank}
-                onProceed={() => setSimStep("pin_entry")}
-                onClose={closeSimulation}
-              />
-            )
-          )}
+          {}
+          {simStep === "confirmation" && (selectedApp === "PhonePe" ? <PhonePeConfirmScreen activeTxnId={activeTxnId} formattedTotal={formattedTotal} selectedBank={selectedBank} setSelectedBank={setSelectedBank} onProceed={() => setSimStep("pin_entry")} onClose={closeSimulation} /> : <UpiConfirmScreen selectedApp={selectedApp} activeTxnId={activeTxnId} formattedTotal={formattedTotal} displayTotal={displayTotal} selectedBank={selectedBank} setSelectedBank={setSelectedBank} onProceed={() => setSimStep("pin_entry")} onClose={closeSimulation} />)}
 
-          {/* STEP 2: HIGH-FIDELITY NPCI SECURE UPI PIN ENTRY SCREEN */}
-          {simStep === "pin_entry" && (
-            <UpiPinScreen
-              selectedBank={selectedBank}
-              displayTotal={displayTotal}
-              onSubmit={submitPin}
-              onClose={closeSimulation}
-            />
-          )}
+          {}
+          {simStep === "pin_entry" && <UpiPinScreen selectedBank={selectedBank} displayTotal={displayTotal} onSubmit={submitPin} onClose={closeSimulation} />}
 
-          {/* STEP 3: PROCESSING SCREEN */}
-          {simStep === "processing" && (
-            selectedApp === "PhonePe" ? (
-              <PhonePeProcessingScreen />
-            ) : selectedApp === "Paytm" ? (
-              <PaytmProcessingScreen formattedTotal={formattedTotal} />
-            ) : (
-              <GenericProcessingScreen processingMessage={processingMessage} />
-            )
-          )}
+          {}
+          {simStep === "processing" && (selectedApp === "PhonePe" ? <PhonePeProcessingScreen /> : selectedApp === "Paytm" ? <PaytmProcessingScreen formattedTotal={formattedTotal} /> : <GenericProcessingScreen processingMessage={processingMessage} />)}
 
-          {/* STEP 4: SUCCESS OUTCOME SCREEN */}
-          {simStep === "success" && (
-            selectedApp === "PhonePe" ? (
-              <PhonePeSuccessScreen />
-            ) : selectedApp === "Paytm" ? (
-              <PaytmSuccessScreen
-                formattedTotal={formattedTotal}
-                routeNumber={ticketData?.route || "Bus Route"}
-                activeTxnId={activeTxnId}
-                activeBankRef={activeBankRef}
-                activeTimestamp={activeTimestamp}
-              />
-            ) : (
-              <GenericSuccessScreen
-                formattedTotal={formattedTotal}
-                activeTxnId={activeTxnId}
-                activeBankRef={activeBankRef}
-                selectedBank={selectedBank}
-                selectedApp={selectedApp}
-                onDone={handleDone}
-              />
-            )
-          )}
+          {}
+          {simStep === "success" && (selectedApp === "PhonePe" ? <PhonePeSuccessScreen /> : selectedApp === "Paytm" ? <PaytmSuccessScreen formattedTotal={formattedTotal} routeNumber={ticketData?.route || "Bus Route"} activeTxnId={activeTxnId} activeBankRef={activeBankRef} activeTimestamp={activeTimestamp} /> : <GenericSuccessScreen formattedTotal={formattedTotal} activeTxnId={activeTxnId} activeBankRef={activeBankRef} selectedBank={selectedBank} selectedApp={selectedApp} onDone={handleDone} />)}
 
-        </Animated.View>
-      )}
+        </Animated.View>}
 
-      {/* SIMPLE LOADING OVERLAY */}
+      {}
       <LoadingOverlay visible={isRedirecting} message="Loading payment, please wait." />
 
-    </Screen>
-  );
+    </Screen>;
 };
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
-  scrollContainer: { flex: 1 },
-
+  container: {
+    flex: 1,
+    backgroundColor: "#FFFFFF"
+  },
+  scrollContainer: {
+    flex: 1
+  },
   summaryCard: {
     marginHorizontal: moderateScale(16),
     marginTop: moderateScale(12),
@@ -598,48 +477,77 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5E7EB",
     overflow: "hidden",
-    backgroundColor: "white",
+    backgroundColor: "white"
   },
   summaryHeader: {
     backgroundColor: "#808080",
     paddingVertical: moderateScale(12),
-    paddingHorizontal: moderateScale(16),
+    paddingHorizontal: moderateScale(16)
   },
-  summaryDateText: { color: "white", fontSize: responsiveFontSize(16), fontWeight: "500" },
-  summaryBody: { padding: moderateScale(8) },
+  summaryDateText: {
+    color: "white",
+    fontSize: responsiveFontSize(16),
+    fontWeight: "500"
+  },
+  summaryBody: {
+    padding: moderateScale(8)
+  },
   summaryTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "center"
   },
-  busInfo: { flexDirection: "row", alignItems: "center", gap: moderateScale(4) },
-  busRouteText: { fontSize: responsiveFontSize(18), fontWeight: "bold", color: "#000" },
-  fareCalcText: { fontSize: responsiveFontSize(18), color: "#333" },
-  fareGreen: { color: "#63d367ff", fontWeight: "bold" },
-
-  pathRow: { flexDirection: "row", alignItems: "center", marginTop: moderateScale(20) },
-  stopWrapper: { flex: 1 },
-  arrowWrapper: { paddingHorizontal: moderateScale(10) },
+  busInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(4)
+  },
+  busRouteText: {
+    fontSize: responsiveFontSize(18),
+    fontWeight: "bold",
+    color: "#000"
+  },
+  fareCalcText: {
+    fontSize: responsiveFontSize(18),
+    color: "#333"
+  },
+  fareGreen: {
+    color: "#63d367ff",
+    fontWeight: "bold"
+  },
+  pathRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: moderateScale(20)
+  },
+  stopWrapper: {
+    flex: 1
+  },
+  arrowWrapper: {
+    paddingHorizontal: moderateScale(10)
+  },
   stopText: {
     fontSize: responsiveFontSize(16),
     color: "#333",
     fontWeight: "400",
-    textAlign: "center",
+    textAlign: "center"
   },
-
   sectionHeader: {
     backgroundColor: "#F3F4F6",
     paddingVertical: moderateScale(10),
-    paddingHorizontal: moderateScale(16),
+    paddingHorizontal: moderateScale(16)
   },
-  sectionTitle: { fontSize: responsiveFontSize(12), color: "#4B5563", fontWeight: "700", letterSpacing: 1 },
-
-  // --- Grid and app selectors ---
+  sectionTitle: {
+    fontSize: responsiveFontSize(12),
+    color: "#4B5563",
+    fontWeight: "700",
+    letterSpacing: 1
+  },
   upiGrid: {
     flexDirection: "row",
     paddingHorizontal: moderateScale(16),
     paddingVertical: moderateScale(12),
-    justifyContent: "space-between",
+    justifyContent: "space-between"
   },
   upiCard: {
     backgroundColor: "white",
@@ -651,28 +559,42 @@ const styles = StyleSheet.create({
     width: "30%",
     elevation: 3,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {
+      width: 0,
+      height: 2
+    },
     shadowOpacity: 0.05,
-    shadowRadius: moderateScale(4),
+    shadowRadius: moderateScale(4)
   },
-  upiLabel: { marginTop: moderateScale(8), fontSize: responsiveFontSize(11), color: "#4B5563", fontWeight: "600", textAlign: "center" },
-
+  upiLabel: {
+    marginTop: moderateScale(8),
+    fontSize: responsiveFontSize(11),
+    color: "#4B5563",
+    fontWeight: "600",
+    textAlign: "center"
+  },
   othersRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: moderateScale(16),
     paddingVertical: moderateScale(16),
-    backgroundColor: "white",
+    backgroundColor: "white"
   },
-  othersLeft: { flexDirection: "row", alignItems: "center", gap: moderateScale(16) },
-  othersText: { fontSize: responsiveFontSize(15), color: "#1F2937" },
-
+  othersLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(16)
+  },
+  othersText: {
+    fontSize: responsiveFontSize(15),
+    color: "#1F2937"
+  },
   footerContainer: {
     position: "absolute",
     left: 0,
     right: 0,
-    alignItems: "center",
+    alignItems: "center"
   },
   timerPill: {
     backgroundColor: "#D32F2F",
@@ -681,14 +603,20 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(8),
     elevation: 4,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: {
+      width: 0,
+      height: 4
+    },
     shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowRadius: 4
   },
-  timerText: { color: "white", fontSize: responsiveFontSize(16) },
-  timerBold: { fontWeight: "600" },
-
-  // --- Custom Test Panel Styles ---
+  timerText: {
+    color: "white",
+    fontSize: responsiveFontSize(16)
+  },
+  timerBold: {
+    fontWeight: "600"
+  },
   settingsPanel: {
     marginHorizontal: moderateScale(16),
     marginBottom: moderateScale(12),
@@ -696,27 +624,57 @@ const styles = StyleSheet.create({
     backgroundColor: "#FEF2F2",
     borderRadius: moderateScale(10),
     borderWidth: 1.5,
-    borderColor: "#FCA5A5",
+    borderColor: "#FCA5A5"
   },
-  settingsHeader: { flexDirection: "row", alignItems: "center", marginBottom: moderateScale(6) },
-  settingsTitle: { fontSize: responsiveFontSize(13), fontWeight: "bold", color: "#D32F2F", marginLeft: 6 },
-  settingsDesc: { fontSize: responsiveFontSize(12), color: "#4B5563", marginBottom: moderateScale(10) },
-  settingsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  settingsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: moderateScale(6)
+  },
+  settingsTitle: {
+    fontSize: responsiveFontSize(13),
+    fontWeight: "bold",
+    color: "#D32F2F",
+    marginLeft: 6
+  },
+  settingsDesc: {
+    fontSize: responsiveFontSize(12),
+    color: "#4B5563",
+    marginBottom: moderateScale(10)
+  },
+  settingsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6
+  },
   settingsBtn: {
     paddingVertical: moderateScale(6),
     paddingHorizontal: moderateScale(10),
     backgroundColor: "white",
     borderRadius: moderateScale(6),
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#E5E7EB"
   },
-  settingsBtnActiveSuccess: { backgroundColor: "#10B981", borderColor: "#10B981" },
-  settingsBtnActiveFailed: { backgroundColor: "#EF4444", borderColor: "#EF4444" },
-  settingsBtnActiveTimeout: { backgroundColor: "#F59E0B", borderColor: "#F59E0B" },
-  settingsBtnText: { fontSize: responsiveFontSize(11), fontWeight: "600", color: "#1F2937" },
-  textWhite: { color: "white" },
-
-  // --- Payment Simulator Screen Modal Styles ---
+  settingsBtnActiveSuccess: {
+    backgroundColor: "#10B981",
+    borderColor: "#10B981"
+  },
+  settingsBtnActiveFailed: {
+    backgroundColor: "#EF4444",
+    borderColor: "#EF4444"
+  },
+  settingsBtnActiveTimeout: {
+    backgroundColor: "#F59E0B",
+    borderColor: "#F59E0B"
+  },
+  settingsBtnText: {
+    fontSize: responsiveFontSize(11),
+    fontWeight: "600",
+    color: "#1F2937"
+  },
+  textWhite: {
+    color: "white"
+  },
   simulatorOverlay: {
     position: "absolute",
     top: 0,
@@ -724,18 +682,26 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: "#FFFFFF",
-    zIndex: 9999,
+    zIndex: 9999
   },
-  // --- Processing state styles ---
   simProcessingBox: {
     flex: 1,
     backgroundColor: "white",
     justifyContent: "center",
     alignItems: "center",
-    padding: 30,
+    padding: 30
   },
-  simProcessingTitle: { fontSize: 20, fontWeight: "bold", color: "#1F2937", marginTop: 24 },
-  simProcessingSub: { fontSize: 13, color: "#6B7280", marginTop: 8 },
+  simProcessingTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#1F2937",
+    marginTop: 24
+  },
+  simProcessingSub: {
+    fontSize: 13,
+    color: "#6B7280",
+    marginTop: 8
+  },
   securingIndicatorCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -743,20 +709,23 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     backgroundColor: "#ECFDF5",
-    borderRadius: 20,
+    borderRadius: 20
   },
-  securedIndicatorText: { fontSize: 12, color: "#065F46", marginLeft: 8, fontWeight: "600" },
-
-  // --- Success Outcome & GPay Scratch Card Styles ---
+  securedIndicatorText: {
+    fontSize: 12,
+    color: "#065F46",
+    marginLeft: 8,
+    fontWeight: "600"
+  },
   outcomeContainer: {
     flex: 1,
-    backgroundColor: "white",
+    backgroundColor: "white"
   },
   outcomeScroll: {
     alignItems: "center",
     paddingTop: 60,
     paddingBottom: 40,
-    paddingHorizontal: 20,
+    paddingHorizontal: 20
   },
   successCelebrationBg: {
     width: 100,
@@ -765,7 +734,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#ECFDF5",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 20
   },
   successTickCircle: {
     width: 80,
@@ -774,10 +743,19 @@ const styles = StyleSheet.create({
     backgroundColor: "#10B981",
     justifyContent: "center",
     alignItems: "center",
-    elevation: 4,
+    elevation: 4
   },
-  successTitleText: { fontSize: 22, fontWeight: "900", color: "#10B981" },
-  successSubtitleText: { fontSize: 14, color: "#6B7280", marginTop: 6, fontWeight: "500" },
+  successTitleText: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: "#10B981"
+  },
+  successSubtitleText: {
+    fontSize: 14,
+    color: "#6B7280",
+    marginTop: 6,
+    fontWeight: "500"
+  },
   detailsCard: {
     width: "100%",
     backgroundColor: "#F9FAFB",
@@ -785,20 +763,30 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5E7EB",
     padding: 16,
-    marginTop: 24,
+    marginTop: 24
   },
-  detailsCardTitle: { fontSize: 14, fontWeight: "bold", color: "#374151", marginBottom: 12 },
+  detailsCardTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#374151",
+    marginBottom: 12
+  },
   detailRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     paddingVertical: 8,
     borderBottomWidth: 0.5,
-    borderColor: "#E5E7EB",
+    borderColor: "#E5E7EB"
   },
-  detailLabel: { fontSize: 13, color: "#6B7280" },
-  detailVal: { fontSize: 13, fontWeight: "600", color: "#1F2937" },
-
-  // Scratch card
+  detailLabel: {
+    fontSize: 13,
+    color: "#6B7280"
+  },
+  detailVal: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1F2937"
+  },
   scratchCardContainer: {
     width: "100%",
     backgroundColor: "#FFFBEB",
@@ -807,9 +795,14 @@ const styles = StyleSheet.create({
     borderColor: "#FCD34D",
     padding: 16,
     marginTop: 24,
-    alignItems: "center",
+    alignItems: "center"
   },
-  scratchSectionTitle: { fontSize: 13, fontWeight: "bold", color: "#D97706", marginBottom: 12 },
+  scratchSectionTitle: {
+    fontSize: 13,
+    fontWeight: "bold",
+    color: "#D97706",
+    marginBottom: 12
+  },
   scratchOverlay: {
     width: "100%",
     height: 110,
@@ -817,15 +810,31 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
-    elevation: 2,
+    elevation: 2
   },
-  scratchOverlayText: { color: "white", fontSize: 14, fontWeight: "bold", marginTop: 8 },
+  scratchOverlayText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "bold",
+    marginTop: 8
+  },
   scratchedRewardBox: {
     alignItems: "center",
-    paddingVertical: 10,
+    paddingVertical: 10
   },
-  scratchedRewardTitle: { fontSize: 16, fontWeight: "bold", color: "#F59E0B", marginTop: 6 },
-  scratchedRewardDesc: { fontSize: 12, color: "#4B5563", textAlign: "center", marginTop: 4, paddingHorizontal: 10 },
+  scratchedRewardTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#F59E0B",
+    marginTop: 6
+  },
+  scratchedRewardDesc: {
+    fontSize: 12,
+    color: "#4B5563",
+    textAlign: "center",
+    marginTop: 4,
+    paddingHorizontal: 10
+  },
   successDoneBtn: {
     width: "100%",
     backgroundColor: "#10B981",
@@ -834,17 +843,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginTop: 30,
-    elevation: 3,
+    elevation: 3
   },
-  successDoneBtnText: { color: "white", fontSize: 16, fontWeight: "bold" },
-
-  // Failed Outcomes Styles
+  successDoneBtnText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold"
+  },
   failedMainContainer: {
     flex: 1,
     backgroundColor: "#FFF5F5",
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 24,
+    paddingHorizontal: 24
   },
   failedIconCircle: {
     width: 80,
@@ -854,10 +865,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     elevation: 4,
-    marginBottom: 20,
+    marginBottom: 20
   },
-  failedTitleText: { fontSize: 24, fontWeight: "900", color: "#EF4444" },
-  failedSubtitleText: { fontSize: 14, color: "#6B7280", marginTop: 6, textAlign: "center" },
+  failedTitleText: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: "#EF4444"
+  },
+  failedSubtitleText: {
+    fontSize: 14,
+    color: "#6B7280",
+    marginTop: 6,
+    textAlign: "center"
+  },
   failedReasonCard: {
     width: "100%",
     backgroundColor: "white",
@@ -865,16 +885,35 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#FEE2E2",
     padding: 16,
-    marginTop: 24,
+    marginTop: 24
   },
-  failedReasonLabel: { fontSize: 13, fontWeight: "bold", color: "#D1D5DB", marginBottom: 8, textTransform: "uppercase" },
-  failedReasonText: { fontSize: 13, color: "#EF4444", lineHeight: 18, fontWeight: "500" },
-  failedMetadataRow: { marginTop: 12, borderTopWidth: 0.5, borderColor: "#F3F4F6", paddingTop: 8 },
-  failedMetadataText: { fontSize: 11, color: "#9CA3AF" },
+  failedReasonLabel: {
+    fontSize: 13,
+    fontWeight: "bold",
+    color: "#D1D5DB",
+    marginBottom: 8,
+    textTransform: "uppercase"
+  },
+  failedReasonText: {
+    fontSize: 13,
+    color: "#EF4444",
+    lineHeight: 18,
+    fontWeight: "500"
+  },
+  failedMetadataRow: {
+    marginTop: 12,
+    borderTopWidth: 0.5,
+    borderColor: "#F3F4F6",
+    paddingTop: 8
+  },
+  failedMetadataText: {
+    fontSize: 11,
+    color: "#9CA3AF"
+  },
   failedActionRow: {
     width: "100%",
     marginTop: 30,
-    gap: 12,
+    gap: 12
   },
   retryBtn: {
     width: "100%",
@@ -883,9 +922,13 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    flexDirection: "row",
+    flexDirection: "row"
   },
-  retryBtnText: { color: "white", fontSize: 16, fontWeight: "bold" },
+  retryBtnText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold"
+  },
   cancelBtn: {
     width: "100%",
     paddingVertical: 16,
@@ -893,11 +936,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1.5,
-    borderColor: "#EF4444",
+    borderColor: "#EF4444"
   },
-  cancelBtnText: { color: "#EF4444", fontSize: 16, fontWeight: "bold" },
-
-  // --- Payment Simulator History Inspector Styles ---
+  cancelBtnText: {
+    color: "#EF4444",
+    fontSize: 16,
+    fontWeight: "bold"
+  },
   historyTriggerRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -908,20 +953,24 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderColor: "#E5E7EB",
-    marginTop: moderateScale(10),
+    marginTop: moderateScale(10)
   },
-  historyTriggerText: { fontSize: responsiveFontSize(15), color: "#4B5563", fontWeight: "600" },
+  historyTriggerText: {
+    fontSize: responsiveFontSize(15),
+    color: "#4B5563",
+    fontWeight: "600"
+  },
   historyOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.7)",
-    justifyContent: "flex-end",
+    justifyContent: "flex-end"
   },
   historyContainer: {
     backgroundColor: "white",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     height: "75%",
-    paddingBottom: 20,
+    paddingBottom: 20
   },
   historyHeader: {
     flexDirection: "row",
@@ -930,49 +979,123 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 18,
     borderBottomWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#E5E7EB"
   },
-  historyHeaderLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
-  historyTitleText: { fontSize: 18, fontWeight: "bold", color: "#1F2937" },
-  historyScroll: { flex: 1, padding: 16 },
+  historyHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10
+  },
+  historyTitleText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#1F2937"
+  },
+  historyScroll: {
+    flex: 1,
+    padding: 16
+  },
   emptyHistoryBox: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 80,
+    paddingVertical: 80
   },
-  emptyHistoryText: { fontSize: 16, fontWeight: "bold", color: "#4B5563", marginTop: 12 },
-  emptyHistorySub: { fontSize: 13, color: "#9CA3AF", marginTop: 4 },
+  emptyHistoryText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#4B5563",
+    marginTop: 12
+  },
+  emptyHistorySub: {
+    fontSize: 13,
+    color: "#9CA3AF",
+    marginTop: 4
+  },
   historyItemCard: {
     backgroundColor: "#F9FAFB",
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#E5E7EB",
     padding: 14,
-    marginBottom: 12,
+    marginBottom: 12
   },
-  historyItemTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  historyItemBadgeContainer: { flexDirection: "row", alignItems: "center", gap: 8 },
-  historyAppBadge: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: 6 },
-  historyAppText: { fontSize: 11, fontWeight: "700", color: "#4B5563" },
-  historyRouteText: { fontSize: 12, color: "#1F2937", fontWeight: "600" },
-  historyAmountText: { fontSize: 16, fontWeight: "bold" },
-  historyItemMiddle: { marginTop: 8 },
-  historyTxnText: { fontSize: 11, color: "#6B7280" },
-  historyDateText: { fontSize: 11, color: "#9CA3AF", marginTop: 2 },
-  historyItemBottom: { marginTop: 10, flexDirection: "row" },
-  historyStatusIndicator: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: 4 },
-  historyStatusText: { fontSize: 10, fontWeight: "bold" },
-  statusSuccessBg: { backgroundColor: "#D1FAE5" },
-  statusFailedBg: { backgroundColor: "#FEE2E2" },
-  textSuccess: { color: "#065F46" },
-  textFailed: { color: "#991B1B" },
-  textGreen: { color: "#10B981" },
-  textRed: { color: "#EF4444" },
+  historyItemTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center"
+  },
+  historyItemBadgeContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8
+  },
+  historyAppBadge: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6
+  },
+  historyAppText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#4B5563"
+  },
+  historyRouteText: {
+    fontSize: 12,
+    color: "#1F2937",
+    fontWeight: "600"
+  },
+  historyAmountText: {
+    fontSize: 16,
+    fontWeight: "bold"
+  },
+  historyItemMiddle: {
+    marginTop: 8
+  },
+  historyTxnText: {
+    fontSize: 11,
+    color: "#6B7280"
+  },
+  historyDateText: {
+    fontSize: 11,
+    color: "#9CA3AF",
+    marginTop: 2
+  },
+  historyItemBottom: {
+    marginTop: 10,
+    flexDirection: "row"
+  },
+  historyStatusIndicator: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 4
+  },
+  historyStatusText: {
+    fontSize: 10,
+    fontWeight: "bold"
+  },
+  statusSuccessBg: {
+    backgroundColor: "#D1FAE5"
+  },
+  statusFailedBg: {
+    backgroundColor: "#FEE2E2"
+  },
+  textSuccess: {
+    color: "#065F46"
+  },
+  textFailed: {
+    color: "#991B1B"
+  },
+  textGreen: {
+    color: "#10B981"
+  },
+  textRed: {
+    color: "#EF4444"
+  },
   historyFooter: {
     paddingHorizontal: 16,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#E5E7EB"
   },
   clearHistoryBtn: {
     width: "100%",
@@ -982,16 +1105,20 @@ const styles = StyleSheet.create({
     borderColor: "#EF4444",
     alignItems: "center",
     justifyContent: "center",
-    flexDirection: "row",
+    flexDirection: "row"
   },
-  clearHistoryBtnText: { color: "#EF4444", fontSize: 14, fontWeight: "bold" },
+  clearHistoryBtnText: {
+    color: "#EF4444",
+    fontSize: 14,
+    fontWeight: "bold"
+  },
   gatewayLoaderOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     zIndex: 100000,
     elevation: 100000,
     justifyContent: "center",
-    alignItems: "center",
+    alignItems: "center"
   },
   gatewayLoaderCard: {
     backgroundColor: "#FFFFFF",
@@ -1002,24 +1129,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 4,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {
+      width: 0,
+      height: 2
+    },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-    elevation: 5,
+    elevation: 5
   },
   gatewayLoaderSpinner: {
-    marginRight: 20,
+    marginRight: 20
   },
   gatewayLoaderText: {
     fontSize: 16,
     color: "#666666",
-    flex: 1,
+    flex: 1
   },
   redirectionOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.6)",
     justifyContent: "center",
-    alignItems: "center",
+    alignItems: "center"
   },
   redirectionCard: {
     backgroundColor: "#FFFFFF",
@@ -1029,73 +1159,76 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: {
+      width: 0,
+      height: 4
+    },
     shadowOpacity: 0.1,
     shadowRadius: 12,
-    elevation: 8,
+    elevation: 8
   },
   redirectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 20
   },
   appIconCircle: {
     width: 64,
     height: 64,
     borderRadius: 32,
     justifyContent: "center",
-    alignItems: "center",
+    alignItems: "center"
   },
   redirectionSpinner: {
-    marginLeft: 16,
+    marginLeft: 16
   },
   redirectionText: {
     fontSize: 18,
     fontWeight: "700",
     color: "#1F2937",
     textAlign: "center",
-    marginBottom: 10,
+    marginBottom: 10
   },
   redirectionAppName: {
-    fontWeight: "800",
+    fontWeight: "800"
   },
   redirectionSubtext: {
     fontSize: 12,
     color: "#6B7280",
     textAlign: "center",
     lineHeight: 18,
-    paddingHorizontal: 10,
+    paddingHorizontal: 10
   },
   phonepeProcessingBox: {
     flex: 1,
     backgroundColor: "#161616",
     justifyContent: "center",
-    alignItems: "center",
+    alignItems: "center"
   },
   phonepeLoaderPill: {
     width: 60,
     height: 24,
     borderRadius: 12,
     backgroundColor: "#ECE3F5",
-    marginBottom: 24,
+    marginBottom: 24
   },
   phonepeProcessingTitle: {
     color: "#FFFFFF",
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "600"
   },
   phonepeSuccessContainer: {
     flex: 1,
     backgroundColor: "#249b4f",
     justifyContent: "center",
-    alignItems: "center",
+    alignItems: "center"
   },
   phonepeSuccessDot: {
     width: 4,
     height: 4,
     borderRadius: 2,
     backgroundColor: "rgba(255, 255, 255, 0.4)",
-    marginBottom: 40,
+    marginBottom: 40
   },
   phonepeSuccessCircle: {
     width: 80,
@@ -1104,25 +1237,25 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 24
   },
   phonepeSuccessTitle: {
     color: "#FFFFFF",
     fontSize: 22,
     fontWeight: "700",
-    marginBottom: 8,
+    marginBottom: 8
   },
   phonepeSuccessTime: {
     color: "#EBF4D0",
     fontSize: 15,
-    fontWeight: "500",
+    fontWeight: "500"
   },
   paytmProcessingBox: {
     flex: 1,
     backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 24,
+    paddingHorizontal: 24
   },
   paytmSpinnerContainer: {
     width: 90,
@@ -1130,14 +1263,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 32,
-    position: "relative",
+    position: "relative"
   },
   paytmSpinnerGlow: {
     position: "absolute",
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: "#00b9f1",
+    backgroundColor: "#00b9f1"
   },
   paytmSpinnerBgRing: {
     position: "absolute",
@@ -1145,7 +1278,7 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     borderWidth: 4,
-    borderColor: "#E1F0FC",
+    borderColor: "#E1F0FC"
   },
   paytmSpinnerRing: {
     position: "absolute",
@@ -1155,25 +1288,25 @@ const styles = StyleSheet.create({
     borderWidth: 4,
     borderColor: "transparent",
     borderTopColor: "#00b9f1",
-    borderRightColor: "#00b9f1",
+    borderRightColor: "#00b9f1"
   },
   paytmLockIcon: {
     justifyContent: "center",
-    alignItems: "center",
+    alignItems: "center"
   },
   paytmProcessingTitle: {
     color: "#002e6e",
     fontSize: 20,
     fontWeight: "700",
     marginBottom: 8,
-    textAlign: "center",
+    textAlign: "center"
   },
   paytmProcessingSub: {
     color: "#687B95",
     fontSize: 14,
     fontWeight: "500",
     textAlign: "center",
-    lineHeight: 20,
+    lineHeight: 20
   },
   paytmSecuredBadge: {
     flexDirection: "row",
@@ -1183,19 +1316,19 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    gap: 6,
+    gap: 6
   },
   paytmSecuredText: {
     color: "#002e6e",
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "600"
   },
   paytmSuccessContainer: {
     flex: 1,
     backgroundColor: "#F4F8FD",
     paddingTop: 50,
     paddingHorizontal: 20,
-    alignItems: "center",
+    alignItems: "center"
   },
   paytmSuccessHeader: {
     width: "100%",
@@ -1203,7 +1336,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 10,
-    marginBottom: 40,
+    marginBottom: 40
   },
   paytmSuccessTickContainer: {
     width: 100,
@@ -1211,14 +1344,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 20,
-    position: "relative",
+    position: "relative"
   },
   paytmSuccessRing: {
     position: "absolute",
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: "#D4F4E2",
+    backgroundColor: "#D4F4E2"
   },
   paytmSuccessCircle: {
     width: 80,
@@ -1229,23 +1362,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     elevation: 3,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {
+      width: 0,
+      height: 2
+    },
     shadowOpacity: 0.15,
-    shadowRadius: 4,
+    shadowRadius: 4
   },
   paytmSuccessTitle: {
     color: "#002e6e",
     fontSize: 22,
     fontWeight: "800",
     textAlign: "center",
-    marginBottom: 4,
+    marginBottom: 4
   },
   paytmSuccessSubtitle: {
     color: "#4A5A72",
     fontSize: 15,
     fontWeight: "600",
     textAlign: "center",
-    marginBottom: 30,
+    marginBottom: 30
   },
   paytmDetailsCard: {
     width: "100%",
@@ -1256,35 +1392,38 @@ const styles = StyleSheet.create({
     borderColor: "#EBF1F9",
     elevation: 2,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: {
+      width: 0,
+      height: 1
+    },
     shadowOpacity: 0.05,
-    shadowRadius: 3,
+    shadowRadius: 3
   },
   paytmDetailsHeader: {
     fontSize: 14,
     fontWeight: "700",
     color: "#002e6e",
-    marginBottom: 12,
+    marginBottom: 12
   },
   paytmDetailRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     paddingVertical: 8,
     borderBottomWidth: 0.5,
-    borderColor: "#F0F4FA",
+    borderColor: "#F0F4FA"
   },
   paytmDetailLabel: {
     fontSize: 13,
-    color: "#687B95",
+    color: "#687B95"
   },
   paytmDetailVal: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#1F2937",
+    color: "#1F2937"
   },
   paytmSuccessFooter: {
     position: "absolute",
     bottom: 30,
-    alignItems: "center",
-  },
+    alignItems: "center"
+  }
 });

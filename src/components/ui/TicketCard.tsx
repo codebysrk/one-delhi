@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ticket, TicketStatus, getRemainingValidity, isTicketExpired, getRouteNumberOnly, formatTimeTo12hr } from '../../utils/ticketHelper';
 import { InvalidStamp } from './InvalidStamp';
 import { COLORS, TYPOGRAPHY, SPACING, SHADOWS, RADII } from '../../theme/theme';
-
 interface TicketCardProps {
   ticket: Ticket;
   onPress: () => void;
@@ -15,20 +14,23 @@ interface TicketCardProps {
   use12hrFormat?: boolean;
   fullStampOpacity?: boolean;
 }
-
-export const TicketCard = React.memo(({ ticket, onPress, showTimer, largeText, showTID = true, hideDivider = false, compact = false, use12hrFormat = false, fullStampOpacity = false }: TicketCardProps) => {
+export const TicketCard = React.memo(({
+  ticket,
+  onPress,
+  showTimer,
+  largeText,
+  showTID = true,
+  hideDivider = false,
+  compact = false,
+  use12hrFormat = false,
+  fullStampOpacity = false
+}: TicketCardProps) => {
   const expired = isTicketExpired(ticket.timestamp, ticket.expiresAt);
   const isInvalid = ticket.status === TicketStatus.INVALID;
-  
   const showStamp = expired || isInvalid;
   const stampColor = COLORS.primary;
-
   const getFormattedActiveDateTime = () => {
-    const ts = typeof ticket.timestamp === 'number' 
-      ? ticket.timestamp 
-      : (ticket.timestamp as any)?.toMillis?.() 
-        || ((ticket.timestamp as any)?.seconds ? (ticket.timestamp as any).seconds * 1000 : ticket.timestamp);
-      
+    const ts = typeof ticket.timestamp === 'number' ? ticket.timestamp : (ticket.timestamp as any)?.toMillis?.() || ((ticket.timestamp as any)?.seconds ? (ticket.timestamp as any).seconds * 1000 : ticket.timestamp);
     const d = new Date(ts);
     const day = String(d.getDate()).padStart(2, '0');
     const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -36,25 +38,22 @@ export const TicketCard = React.memo(({ ticket, onPress, showTimer, largeText, s
     const hours = String(d.getHours()).padStart(2, '0');
     const mins = String(d.getMinutes()).padStart(2, '0');
     const secs = String(d.getSeconds()).padStart(2, '0');
-    
     if (use12hrFormat) {
       return `${day}-${month}-${year} ${formatTimeTo12hr(`${hours}:${mins}`)}`;
     }
     return `${day}-${month}-${year} ${hours}:${mins}:${secs}`;
   };
-
   const displayDateTime = !showStamp ? getFormattedActiveDateTime() : `${ticket.date} | ${formatTimeTo12hr(ticket.time)}`;
-
   const textStyle = [styles.mainText, largeText && styles.largeMainText];
   const secondaryTextStyle = [styles.secondaryText, largeText && styles.largeSecondaryText];
   const locationTextStyle = [styles.locationText, largeText && styles.largeLocationText];
   const totalTextStyle = [styles.totalText, largeText && styles.largeTotalText];
-
-  return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7} accessibilityLabel="Open ticket details">
+  return <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7} accessibilityLabel="Open ticket details">
       <View style={styles.headerStrip} />
       
-      <View style={[styles.body, compact && { paddingBottom: 8 }]}>
+      <View style={[styles.body, compact && {
+      paddingBottom: 8
+    }]}>
         <View style={styles.dataRow}>
           <Text style={textStyle}>
             {getRouteNumberOnly(ticket.route || ticket.id || 'Bus')}
@@ -76,115 +75,108 @@ export const TicketCard = React.memo(({ ticket, onPress, showTimer, largeText, s
           <Text style={locationTextStyle} numberOfLines={2}>{ticket.dest || ticket.dst || (ticket as any).to || 'Destination'}</Text>
         </View>
 
-        {showTID && (
-          <View style={[styles.tidContainer, hideDivider && { borderTopWidth: 0 }]}>
+        {showTID && <View style={[styles.tidContainer, hideDivider && {
+        borderTopWidth: 0
+      }]}>
             <Text style={styles.tidText}>{ticket.tid || ticket.id || 'T0000000000'}</Text>
-          </View>
-        )}
+          </View>}
 
-        {showTimer && !expired && (
-          <View style={styles.timerMini}>
+        {showTimer && !expired && <View style={styles.timerMini}>
             <Text style={styles.timerText}>
               Expires in: {getRemainingValidity(ticket.timestamp, ticket.expiresAt)}
             </Text>
-          </View>
-        )}
+          </View>}
 
-        {showStamp && (
-          <InvalidStamp 
-            text="INVALID" 
-            color={stampColor}
-            style={[
-              styles.stampOverlay, 
-              fullStampOpacity && { opacity: 0.85 }, 
-              compact && { left: '26%', top: '42%', bottom: undefined, right: undefined, justifyContent: 'flex-start', alignItems: 'flex-start' }
-            ]}
-            size={compact ? 30 : 55}
-            rotation={compact ? "-10deg" : "-12deg"}
-          />
-        )}
+        {showStamp && <InvalidStamp text="INVALID" color={stampColor} style={[styles.stampOverlay, fullStampOpacity && {
+        opacity: 0.85
+      }, compact && {
+        left: '26%',
+        top: '42%',
+        bottom: undefined,
+        right: undefined,
+        justifyContent: 'flex-start',
+        alignItems: 'flex-start'
+      }]} size={compact ? 30 : 55} rotation={compact ? "-10deg" : "-12deg"} />}
       </View>
-    </TouchableOpacity>
-  );
+    </TouchableOpacity>;
 });
-
 const styles = StyleSheet.create({
-  card: { 
-    backgroundColor: COLORS.white, 
-    overflow: 'hidden', 
-    borderWidth: 1, 
+  card: {
+    backgroundColor: COLORS.white,
+    overflow: 'hidden',
+    borderWidth: 1,
     borderColor: COLORS.border,
     width: '100%',
     ...SHADOWS.soft,
     borderBottomLeftRadius: 5,
-    borderBottomRightRadius: 5,
+    borderBottomRightRadius: 5
   },
-  headerStrip: { 
-    height: 16, 
-    backgroundColor: '#757575', 
-    marginTop: SPACING.sm 
+  headerStrip: {
+    height: 16,
+    backgroundColor: '#757575',
+    marginTop: SPACING.sm
   },
-  body: { 
-    paddingHorizontal: SPACING.lg, 
-    paddingVertical: SPACING.lg, 
-    position: 'relative' 
+  body: {
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.lg,
+    position: 'relative'
   },
-  dataRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
+  dataRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.sm 
+    marginBottom: SPACING.sm
   },
   destRow: {
     marginBottom: SPACING.xs
   },
-  mainText: { 
+  mainText: {
     ...TYPOGRAPHY.h4,
-    color: COLORS.text, 
-    fontWeight: '400',
+    color: COLORS.text,
+    fontWeight: '400'
   },
   largeMainText: {
     ...TYPOGRAPHY.h3,
-    fontWeight: '400',
+    fontWeight: '400'
   },
   secondaryText: {
     ...TYPOGRAPHY.bodyLarge,
-    color: COLORS.text,
+    color: COLORS.text
   },
   largeSecondaryText: {
     ...TYPOGRAPHY.h4,
-    fontWeight: '400',
+    fontWeight: '400'
   },
   locationText: {
     ...TYPOGRAPHY.bodyLarge,
     color: COLORS.text,
-    flex: 1,
+    flex: 1
   },
   largeLocationText: {
     ...TYPOGRAPHY.h4,
-    fontWeight: '400',
+    fontWeight: '400'
   },
   totalText: {
     ...TYPOGRAPHY.h3,
     color: COLORS.text,
-    fontWeight: '400',
+    fontWeight: '400'
   },
   largeTotalText: {
     ...TYPOGRAPHY.h3,
-    fontWeight: '400',
+    fontWeight: '400'
   },
   tidContainer: {
     alignItems: 'center',
     marginTop: 0,
     paddingTop: 0,
     borderTopWidth: 1,
-    borderTopColor: COLORS.surfaceVariant,
+    borderTopColor: COLORS.surfaceVariant
   },
-  tidText: { 
+  tidText: {
     ...TYPOGRAPHY.bodySmall,
     fontSize: 13,
     color: '#424242ff',
-    letterSpacing: 1,
+    letterSpacing: 1
   },
   timerMini: {
     marginTop: SPACING.md,
@@ -193,10 +185,10 @@ const styles = StyleSheet.create({
     borderRadius: RADII.sm,
     alignItems: 'center'
   },
-  timerText: { 
-    ...TYPOGRAPHY.bodySmall, 
-    color: COLORS.primary, 
-    fontWeight: '700' 
+  timerText: {
+    ...TYPOGRAPHY.bodySmall,
+    color: COLORS.primary,
+    fontWeight: '700'
   },
   stampOverlay: {
     position: 'absolute',
@@ -207,6 +199,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
-    opacity: 0.8,
+    opacity: 0.8
   }
 });

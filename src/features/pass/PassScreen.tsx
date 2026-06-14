@@ -1,15 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  TextInput, 
-  Modal,
-  FlatList,
-  Platform,
-  Alert
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, FlatList, Platform, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '../../components/layout/Screen';
 import { Header } from '../../components/layout/Header';
@@ -17,18 +7,43 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppStore } from '../../store/useAppStore';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
-
-const PASS_TYPES = [
-  { id: '1', label: 'DAILY ALL ROUTE NON AC PASS', fare: '₹40', sub: 'Daily non-ac bus pass for all routes' },
-  { id: '2', label: 'DAILY ALL ROUTE AC PASS', fare: '₹50', sub: 'Daily ac bus pass for all routes' },
-  { id: '3', label: 'MONTHLY GENERAL ALL ROUTE NON AC PASS', fare: '₹800', sub: 'Monthly non-ac pass for general routes' },
-  { id: '4', label: 'MONTHLY AIR PORT EXPRESS AC BUS PASS', fare: '₹1400', sub: 'Monthly pass for airport express routes' },
-  { id: '5', label: 'MONTHLY DELHI AND NCR AIR PORT AC BUS..', fare: '₹1800', sub: 'Monthly pass for NCR airport routes' },
-  { id: '6', label: 'MONTHLY GENERAL ALL ROUTE AC PASS', fare: '₹1000', sub: 'Monthly ac pass for general routes' },
-];
-
-export const PassScreen = ({ navigation }: any) => {
-  const { setShowFooter } = useAppStore();
+const PASS_TYPES = [{
+  id: '1',
+  label: 'DAILY ALL ROUTE NON AC PASS',
+  fare: '₹40',
+  sub: 'Daily non-ac bus pass for all routes'
+}, {
+  id: '2',
+  label: 'DAILY ALL ROUTE AC PASS',
+  fare: '₹50',
+  sub: 'Daily ac bus pass for all routes'
+}, {
+  id: '3',
+  label: 'MONTHLY GENERAL ALL ROUTE NON AC PASS',
+  fare: '₹800',
+  sub: 'Monthly non-ac pass for general routes'
+}, {
+  id: '4',
+  label: 'MONTHLY AIR PORT EXPRESS AC BUS PASS',
+  fare: '₹1400',
+  sub: 'Monthly pass for airport express routes'
+}, {
+  id: '5',
+  label: 'MONTHLY DELHI AND NCR AIR PORT AC BUS..',
+  fare: '₹1800',
+  sub: 'Monthly pass for NCR airport routes'
+}, {
+  id: '6',
+  label: 'MONTHLY GENERAL ALL ROUTE AC PASS',
+  fare: '₹1000',
+  sub: 'Monthly ac pass for general routes'
+}];
+export const PassScreen = ({
+  navigation
+}: any) => {
+  const {
+    setShowFooter
+  } = useAppStore();
   const [showPicker, setShowPicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedIdType, setSelectedIdType] = useState('Aadhaar Card');
@@ -40,27 +55,26 @@ export const PassScreen = ({ navigation }: any) => {
     dob: '',
     idLastDigits: ''
   });
-
   React.useEffect(() => {
     setShowFooter(false);
     return () => setShowFooter(true);
   }, []);
-
   const handleSelectPass = (pass: typeof PASS_TYPES[0]) => {
     setSelectedPass(pass);
     setShowPicker(false);
   };
-
   const onDateChange = (_event: any, selectedDate?: Date) => {
     setShowDatePicker(false);
     if (selectedDate) {
       const day = selectedDate.getDate().toString().padStart(2, '0');
       const month = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
       const year = selectedDate.getFullYear();
-      setFormData({ ...formData, dob: `${day}/${month}/${year}` });
+      setFormData({
+        ...formData,
+        dob: `${day}/${month}/${year}`
+      });
     }
   };
-
   const handleNextStep = () => {
     if (!formData.name.trim() || formData.name.trim().length < 3) {
       Alert.alert("Validation Error", "Please enter a valid full name (minimum 3 characters).");
@@ -78,8 +92,7 @@ export const PassScreen = ({ navigation }: any) => {
       Alert.alert("Validation Error", "Please enter the last 4 digits of your verification document.");
       return;
     }
-
-    navigation.navigate('BookingStack', { 
+    navigation.navigate('BookingStack', {
       screen: 'Payment',
       params: {
         ticketData: {
@@ -94,35 +107,25 @@ export const PassScreen = ({ navigation }: any) => {
           phone: formData.phone.trim(),
           dob: formData.dob,
           idType: selectedIdType,
-          idLastDigits: formData.idLastDigits.trim(),
+          idLastDigits: formData.idLastDigits.trim()
         }
       }
     });
   };
-
   const insets = useSafeAreaInsets();
-
-  return (
-    <ScreenContainer noPadding ignoreTopSafe style={styles.container}>
+  return <ScreenContainer noPadding ignoreTopSafe style={styles.container}>
       
-      {/* Header */}
-      <Header
-        title="Apply Pass"
-        onBackPress={() => navigation.goBack()}
-        backIconName="chevron-left"
-      />
+      {}
+      <Header title="Apply Pass" onBackPress={() => navigation.goBack()} backIconName="chevron-left" />
 
       <View style={styles.staticContent}>
-        {/* Pass Details Card */}
+        {}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Pass Details</Text>
           
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Pass Type</Text>
-            <TouchableOpacity 
-              style={styles.pickerContainer}
-              onPress={() => setShowPicker(true)}
-            >
+            <TouchableOpacity style={styles.pickerContainer} onPress={() => setShowPicker(true)}>
               <Text style={styles.pickerText} numberOfLines={1}>{selectedPass.label}</Text>
               <MaterialCommunityIcons name="chevron-down" color="#666" size={20} />
             </TouchableOpacity>
@@ -130,13 +133,19 @@ export const PassScreen = ({ navigation }: any) => {
           </View>
 
           <View style={styles.row}>
-            <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
+            <View style={[styles.inputGroup, {
+            flex: 1,
+            marginRight: 10
+          }]}>
               <Text style={styles.label}>Pass Fare</Text>
               <View style={styles.readonlyInput}>
                 <Text style={styles.fareText}>{selectedPass.fare}</Text>
               </View>
             </View>
-            <View style={[styles.inputGroup, { flex: 1, marginLeft: 10 }]}>
+            <View style={[styles.inputGroup, {
+            flex: 1,
+            marginLeft: 10
+          }]}>
               <Text style={styles.label}>Valid Till</Text>
               <View style={styles.readonlyInput}>
                 <Text style={styles.validText}>23:59,</Text>
@@ -145,170 +154,121 @@ export const PassScreen = ({ navigation }: any) => {
           </View>
         </View>
 
-        {/* Personal Details Card */}
+        {}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Personal Details</Text>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Full Name (will be shown on pass)</Text>
-            <TextInput 
-              style={styles.textInput}
-              placeholder="Enter full name"
-              placeholderTextColor="#999"
-              value={formData.name}
-              onChangeText={(val) => setFormData({...formData, name: val})}
-            />
+            <TextInput style={styles.textInput} placeholder="Enter full name" placeholderTextColor="#999" value={formData.name} onChangeText={val => setFormData({
+            ...formData,
+            name: val
+          })} />
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Phone number</Text>
-            <TextInput 
-              style={styles.textInput}
-              placeholder="Enter phone number"
-              placeholderTextColor="#999"
-              keyboardType="phone-pad"
-              value={formData.phone}
-              onChangeText={(val) => setFormData({...formData, phone: val})}
-            />
+            <TextInput style={styles.textInput} placeholder="Enter phone number" placeholderTextColor="#999" keyboardType="phone-pad" value={formData.phone} onChangeText={val => setFormData({
+            ...formData,
+            phone: val
+          })} />
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Birth Date</Text>
-            <TouchableOpacity 
-              style={styles.dateInputContainer}
-              onPress={() => setShowDatePicker(true)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.textInput, { flex: 1, borderWidth: 0, paddingLeft: 0, textAlignVertical: 'center', paddingTop: Platform.OS === 'ios' ? 12 : 0, color: formData.dob ? '#333' : '#999' }]}>
+            <TouchableOpacity style={styles.dateInputContainer} onPress={() => setShowDatePicker(true)} activeOpacity={0.7}>
+              <Text style={[styles.textInput, {
+              flex: 1,
+              borderWidth: 0,
+              paddingLeft: 0,
+              textAlignVertical: 'center',
+              paddingTop: Platform.OS === 'ios' ? 12 : 0,
+              color: formData.dob ? '#333' : '#999'
+            }]}>
                 {formData.dob || "DD/MM/YYYY"}
               </Text>
               <MaterialCommunityIcons name="calendar-month" color="#000" size={20} />
             </TouchableOpacity>
           </View>
 
-          {showDatePicker && (
-            <DateTimePicker
-              value={new Date(2000, 0, 1)}
-              mode="date"
-              display="default"
-              onChange={onDateChange}
-              maximumDate={new Date()}
-            />
-          )}
+          {showDatePicker && <DateTimePicker value={new Date(2000, 0, 1)} mode="date" display="default" onChange={onDateChange} maximumDate={new Date()} />}
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Verification Document</Text>
             <View style={styles.row}>
-              <TouchableOpacity 
-                style={[styles.pickerContainer, { flex: 1.2, marginRight: 10 }]}
-                onPress={() => setShowIdPicker(true)}
-              >
+              <TouchableOpacity style={[styles.pickerContainer, {
+              flex: 1.2,
+              marginRight: 10
+            }]} onPress={() => setShowIdPicker(true)}>
                 <Text style={styles.pickerText}>{selectedIdType}</Text>
                 <MaterialCommunityIcons name="chevron-down" color="#666" size={18} />
               </TouchableOpacity>
-              <TextInput 
-                style={[styles.textInput, { flex: 1, marginLeft: 10 }]}
-                placeholder="Last 4 digit"
-                placeholderTextColor="#CCC"
-                keyboardType="numeric"
-                maxLength={4}
-                value={formData.idLastDigits}
-                onChangeText={(val) => setFormData({...formData, idLastDigits: val})}
-              />
+              <TextInput style={[styles.textInput, {
+              flex: 1,
+              marginLeft: 10
+            }]} placeholder="Last 4 digit" placeholderTextColor="#CCC" keyboardType="numeric" maxLength={4} value={formData.idLastDigits} onChangeText={val => setFormData({
+              ...formData,
+              idLastDigits: val
+            })} />
             </View>
           </View>
         </View>
       </View>
 
-      {/* Pass Type Picker Modal */}
-      <Modal
-        visible={showPicker}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowPicker(false)}
-      >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
-          onPress={() => setShowPicker(false)}
-        >
+      {}
+      <Modal visible={showPicker} transparent={true} animationType="fade" onRequestClose={() => setShowPicker(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowPicker(false)}>
           <View style={styles.pickerModal}>
-            <FlatList
-              data={PASS_TYPES}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <TouchableOpacity 
-                  style={styles.pickerItem}
-                  onPress={() => handleSelectPass(item)}
-                >
+            <FlatList data={PASS_TYPES} keyExtractor={item => item.id} renderItem={({
+            item
+          }) => <TouchableOpacity style={styles.pickerItem} onPress={() => handleSelectPass(item)}>
                   <Text style={styles.pickerItemText}>{item.label}</Text>
-                </TouchableOpacity>
-              )}
-            />
+                </TouchableOpacity>} />
           </View>
         </TouchableOpacity>
       </Modal>
 
-      {/* ID Type Picker Modal */}
-      <Modal
-        visible={showIdPicker}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowIdPicker(false)}
-      >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
-          onPress={() => setShowIdPicker(false)}
-        >
+      {}
+      <Modal visible={showIdPicker} transparent={true} animationType="fade" onRequestClose={() => setShowIdPicker(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowIdPicker(false)}>
           <View style={styles.pickerModal}>
-            <FlatList
-              data={['Aadhaar Card', 'Driving License', 'PAN Card', 'Voter ID']}
-              keyExtractor={(item) => item}
-              renderItem={({ item }) => (
-                <TouchableOpacity 
-                  style={styles.pickerItem}
-                  onPress={() => {
-                    setSelectedIdType(item);
-                    setShowIdPicker(false);
-                  }}
-                >
+            <FlatList data={['Aadhaar Card', 'Driving License', 'PAN Card', 'Voter ID']} keyExtractor={item => item} renderItem={({
+            item
+          }) => <TouchableOpacity style={styles.pickerItem} onPress={() => {
+            setSelectedIdType(item);
+            setShowIdPicker(false);
+          }}>
                   <Text style={styles.pickerItemText}>{item}</Text>
-                </TouchableOpacity>
-              )}
-            />
+                </TouchableOpacity>} />
           </View>
         </TouchableOpacity>
       </Modal>
 
-      {/* Footer Button */}
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
-        <PrimaryButton 
-          title="Next Step"
-          onPress={handleNextStep}
-        />
+      {}
+      <View style={[styles.footer, {
+      paddingBottom: insets.bottom + 16
+    }]}>
+        <PrimaryButton title="Next Step" onPress={handleNextStep} />
       </View>
-    </ScreenContainer>
-  );
+    </ScreenContainer>;
 };
-
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#F8F9FA' 
+  container: {
+    flex: 1,
+    backgroundColor: '#F8F9FA'
   },
   header: {
     paddingHorizontal: 16,
     height: 60,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'green',
+    backgroundColor: 'green'
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: 'white',
-    marginLeft: 12,
+    marginLeft: 12
   },
   backBtn: {
     width: 40,
@@ -317,17 +277,20 @@ const styles = StyleSheet.create({
   },
   staticContent: {
     paddingHorizontal: 16,
-    paddingTop: 5,
+    paddingTop: 5
   },
   card: {
     backgroundColor: 'white',
     borderRadius: 12,
-    padding: 10, // Reduced from 12
-    marginBottom: 8, // Reduced from 12
+    padding: 10,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: '#F0F0F0',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {
+      width: 0,
+      height: 2
+    },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2
@@ -336,20 +299,20 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#333',
-    marginBottom: 8 // Reduced from 12
+    marginBottom: 8
   },
   inputGroup: {
-    marginBottom: 8 // Reduced from 12
+    marginBottom: 8
   },
   label: {
     fontSize: 14,
     color: '#888',
-    marginBottom: 2 // Reduced from 4
+    marginBottom: 2
   },
   subLabel: {
     fontSize: 12,
     color: '#999',
-    marginTop: 2 // Reduced from 4
+    marginTop: 2
   },
   pickerContainer: {
     height: 48,
@@ -399,7 +362,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E0E0E0',
     borderRadius: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 12
   },
   row: {
     flexDirection: 'row',
@@ -407,24 +370,27 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.1)', // Lighter overlay
-    justifyContent: 'flex-start', // Align to top
-    paddingTop: 140, // Position it near the Pass Type input
-    paddingHorizontal: 0 // Full width
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    justifyContent: 'flex-start',
+    paddingTop: 140,
+    paddingHorizontal: 0
   },
   pickerModal: {
     width: '100%',
     backgroundColor: 'white',
-    borderRadius: 0, // Squared corners like image
+    borderRadius: 0,
     elevation: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
+    shadowOffset: {
+      width: 0,
+      height: 10
+    },
     shadowOpacity: 0.3,
     shadowRadius: 20,
     paddingVertical: 10
   },
   pickerItem: {
-    paddingVertical: 18, // Increased padding
+    paddingVertical: 18,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#F5F5F5'
@@ -433,7 +399,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#000',
     fontWeight: '500',
-    textTransform: 'uppercase', // Match image all-caps
+    textTransform: 'uppercase',
     letterSpacing: 0.5
   },
   footer: {
@@ -451,7 +417,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#D32F2F',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: {
+      width: 0,
+      height: 4
+    },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4

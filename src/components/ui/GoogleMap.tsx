@@ -3,36 +3,48 @@ import { StyleSheet, View } from "react-native";
 import { WebView } from "react-native-webview";
 import * as Location from "expo-location";
 import { LEAFLET_CSS, LEAFLET_JS } from "./leafletAssets";
-
 export interface GoogleMapRef {
   centerMap: (lat: number, lng: number, zoom?: number) => void;
   updateUserLocation: (lat: number, lng: number) => void;
-  updateNearbyStops: (stops: { lat: number; lng: number; name: string }[]) => void;
-  drawRoute: (polyline: { latitude: number; longitude: number }[], routeNumber?: string) => void;
-  drawEVStations: (stations: { lat: number; lng: number; name: string }[]) => void;
+  updateNearbyStops: (stops: {
+    lat: number;
+    lng: number;
+    name: string;
+  }[]) => void;
+  drawRoute: (polyline: {
+    latitude: number;
+    longitude: number;
+  }[], routeNumber?: string) => void;
+  drawEVStations: (stations: {
+    lat: number;
+    lng: number;
+    name: string;
+  }[]) => void;
   triggerFocusAnimation: (lat: number, lng: number, zoom?: number) => void;
 }
-
 interface GoogleMapProps {
-  initialCenter?: { latitude: number; longitude: number };
+  initialCenter?: {
+    latitude: number;
+    longitude: number;
+  };
   initialZoom?: number;
   userLocation?: Location.LocationObject | null;
   onMapLoaded?: () => void;
   style?: any;
   animateOnLoad?: boolean;
 }
-
 export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
-  initialCenter = { latitude: 30.9010, longitude: 75.8573 },
+  initialCenter = {
+    latitude: 30.9010,
+    longitude: 75.8573
+  },
   initialZoom = 8,
   userLocation,
   onMapLoaded,
   style,
-  animateOnLoad = false,
+  animateOnLoad = false
 }, ref) => {
   const webViewRef = useRef<WebView>(null);
-
-  // Imperative handle to control Leaflet JS code via simple React ref calls
   useImperativeHandle(ref, () => ({
     centerMap: (lat: number, lng: number, zoom?: number) => {
       const js = `window.centerMap(${lat}, ${lng}, ${zoom}); true;`;
@@ -42,7 +54,7 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
       const js = `window.updateUserLocation(${lat}, ${lng}); true;`;
       webViewRef.current?.injectJavaScript(js);
     },
-    updateNearbyStops: (stops) => {
+    updateNearbyStops: stops => {
       const stopsJson = JSON.stringify(stops);
       const js = `window.updateNearbyStops('${stopsJson.replace(/'/g, "\\'")}'); true;`;
       webViewRef.current?.injectJavaScript(js);
@@ -52,7 +64,7 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
       const js = `window.drawRoute('${polylineJson.replace(/'/g, "\\'")}', '${routeNumber || "Bus"}'); true;`;
       webViewRef.current?.injectJavaScript(js);
     },
-    drawEVStations: (stations) => {
+    drawEVStations: stations => {
       const stationsJson = JSON.stringify(stations);
       const js = `window.drawEVStations('${stationsJson.replace(/'/g, "\\'")}'); true;`;
       webViewRef.current?.injectJavaScript(js);
@@ -60,24 +72,20 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
     triggerFocusAnimation: (lat: number, lng: number, zoom?: number) => {
       const js = `window.triggerFocusAnimation(${lat}, ${lng}, ${zoom || 15}); true;`;
       webViewRef.current?.injectJavaScript(js);
-    },
+    }
   }));
-
-  // Update user location on the map whenever userLocation prop changes
   useEffect(() => {
     if (userLocation) {
       const js = `window.updateUserLocation(${userLocation.coords.latitude}, ${userLocation.coords.longitude}); true;`;
       webViewRef.current?.injectJavaScript(js);
     }
   }, [userLocation]);
-
   const mapHtml = useMemo(() => {
     const centerLat = userLocation?.coords.latitude || initialCenter.latitude;
     const centerLng = userLocation?.coords.longitude || initialCenter.longitude;
     const mapStartLat = animateOnLoad ? 54.5260 : centerLat;
     const mapStartLng = animateOnLoad ? 15.2551 : centerLng;
-    const mapStartZoom = animateOnLoad ? 6 : (userLocation ? 15 : initialZoom);
-
+    const mapStartZoom = animateOnLoad ? 6 : userLocation ? 15 : initialZoom;
     return `
     <!DOCTYPE html>
     <html>
@@ -379,8 +387,7 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
     </body>
     </html>
     `;
-  }, [animateOnLoad]); // Only compile HTML once to keep WebView fast and smooth
-
+  }, [animateOnLoad]);
   const handleMessage = (event: any) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
@@ -397,28 +404,17 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
       console.log("[WebView Message]:", event.nativeEvent.data);
     }
   };
-
-  return (
-    <View style={[styles.container, style]}>
-      <WebView
-        ref={webViewRef}
-        source={{ html: mapHtml }}
-        style={styles.webView}
-        onMessage={handleMessage}
-        scrollEnabled={true}
-        showsVerticalScrollIndicator={false}
-        showsHorizontalScrollIndicator={false}
-        scalesPageToFit={false}
-      />
-    </View>
-  );
+  return <View style={[styles.container, style]}>
+      <WebView ref={webViewRef} source={{
+      html: mapHtml
+    }} style={styles.webView} onMessage={handleMessage} scrollEnabled={true} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} scalesPageToFit={false} />
+    </View>;
 });
-
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flex: 1
   },
   webView: {
-    flex: 1,
-  },
+    flex: 1
+  }
 });

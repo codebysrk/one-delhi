@@ -7,16 +7,12 @@ import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
-
 import { Asset } from 'expo-asset';
 import { NotificationListener } from './src/components/feedback/NotificationListener';
 import { checkForUpdate } from './src/utils/checkForUpdate';
-
 SplashScreen.preventAutoHideAsync();
-
 function cacheImages(images: any[]) {
   return images.map(image => {
     if (typeof image === 'string') {
@@ -26,13 +22,11 @@ function cacheImages(images: any[]) {
     }
   });
 }
-
 export default function App() {
   const [appIsReady, setAppIsReady] = useState(false);
   const [fontsLoaded] = useFonts({
-    'StencilBold': require('./assets/fonts/OPTIStencil-Bold.otf'),
+    'StencilBold': require('./assets/fonts/OPTIStencil-Bold.otf')
   });
-
   useEffect(() => {
     async function prepare() {
       try {
@@ -40,40 +34,28 @@ export default function App() {
           setAppIsReady(true);
           await SplashScreen.hideAsync();
         }
-
-        // Pre-load images in background without blocking the splash screen hide
-        cacheImages([
-          require('./assets/images/logo.webp'),
-          require('./assets/images/map-header-logo.webp'),
-          require('./assets/images/splash.png'),
-          require('./assets/images/transit_header.webp'),
-          require('./assets/images/ticket-first.webp'),
-          require('./assets/images/ticket-second.webp'),
-        ]);
+        cacheImages([require('./assets/images/logo.webp'), require('./assets/images/map-header-logo.webp'), require('./assets/images/splash.png'), require('./assets/images/transit_header.webp'), require('./assets/images/ticket-first.webp'), require('./assets/images/ticket-second.webp')]);
       } catch (e) {
         console.warn(e);
       }
     }
     prepare();
   }, [fontsLoaded]);
-
   useEffect(() => {
     if (appIsReady) {
       checkForUpdate();
     }
   }, [appIsReady]);
-
   if (!fontsLoaded || !appIsReady) {
     return null;
   }
-
-  return (
-    <SafeAreaProvider>
-      <GestureHandlerRootView style={{ flex: 1 }}>
+  return <SafeAreaProvider>
+      <GestureHandlerRootView style={{
+      flex: 1
+    }}>
         <StatusBar style="auto" />
         <NotificationListener />
         <RootNavigator />
       </GestureHandlerRootView>
-    </SafeAreaProvider>
-  );
+    </SafeAreaProvider>;
 }

@@ -1,23 +1,23 @@
 import React, { createContext, useContext, useState } from 'react';
-
 type PortalContextType = {
   portalContent: React.ReactNode | null;
   setPortalContent: (content: React.ReactNode | null) => void;
 };
-
 const PortalContext = createContext<PortalContextType | null>(null);
-
-export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const PortalProvider: React.FC<{
+  children: React.ReactNode;
+}> = ({
+  children
+}) => {
   const [portalContent, setPortalContent] = useState<React.ReactNode | null>(null);
-
-  return (
-    <PortalContext.Provider value={{ portalContent, setPortalContent }}>
+  return <PortalContext.Provider value={{
+    portalContent,
+    setPortalContent
+  }}>
       {children}
       {portalContent}
-    </PortalContext.Provider>
-  );
+    </PortalContext.Provider>;
 };
-
 export const usePortal = () => {
   const context = useContext(PortalContext);
   if (!context) {
@@ -25,14 +25,17 @@ export const usePortal = () => {
   }
   return context;
 };
-
-export const Portal: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { setPortalContent } = usePortal();
-
+export const Portal: React.FC<{
+  children: React.ReactNode;
+}> = ({
+  children
+}) => {
+  const {
+    setPortalContent
+  } = usePortal();
   React.useEffect(() => {
     setPortalContent(children);
     return () => setPortalContent(null);
   }, [children, setPortalContent]);
-
   return null;
 };

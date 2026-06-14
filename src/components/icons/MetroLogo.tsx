@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { SvgXml } from 'react-native-svg';
-
 const METRO_LOGO_SVG = `
 <svg width="278.83811" height="278.75578" viewBox="0 0 278.83811 278.75578">
   <g transform="matrix(1.2803064,0,0,1.2803064,-2.2885818,-2.4923649)">
@@ -11,18 +10,14 @@ const METRO_LOGO_SVG = `
   </g>
 </svg>
 `;
-
-export const MetroLogo = () => (
-  <View style={styles.metroLogoContainer}>
+export const MetroLogo = () => <View style={styles.metroLogoContainer}>
     <SvgXml xml={METRO_LOGO_SVG} width="30" height="30" />
-  </View>
-);
-
+  </View>;
 const styles = StyleSheet.create({
-  metroLogoContainer: { 
-    width: 70, 
-    height: 40, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
-  },
+  metroLogoContainer: {
+    width: 70,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center'
+  }
 });

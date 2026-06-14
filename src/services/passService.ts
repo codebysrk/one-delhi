@@ -1,5 +1,4 @@
 import { db } from './firebase';
-
 export interface BusPass {
   passId: string;
   userId: string;
@@ -17,7 +16,6 @@ export interface BusPass {
   paymentStatus: string;
   txnId: string;
 }
-
 export const savePass = async (passId: string, pass: BusPass): Promise<void> => {
   await db.collection("passes").doc(passId).set(pass);
 };

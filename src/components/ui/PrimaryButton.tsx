@@ -1,15 +1,6 @@
 import React from 'react';
-import {
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  ViewStyle,
-  TextStyle,
-  View,
-} from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle, View } from 'react-native';
 import { COLORS, TYPOGRAPHY, SHADOWS } from '../../theme/theme';
-
 interface PrimaryButtonProps {
   title: string;
   onPress: () => void;
@@ -22,7 +13,6 @@ interface PrimaryButtonProps {
   accessibilityLabel?: string;
   activeOpacity?: number;
 }
-
 export const PrimaryButton = React.memo(({
   title,
   onPress,
@@ -33,39 +23,17 @@ export const PrimaryButton = React.memo(({
   iconElement,
   iconPosition = 'right',
   accessibilityLabel,
-  activeOpacity = 0.8,
+  activeOpacity = 0.8
 }: PrimaryButtonProps) => {
   const isDisabled = disabled || loading;
-
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      disabled={isDisabled}
-      activeOpacity={activeOpacity}
-      accessibilityLabel={accessibilityLabel || title}
-      style={[
-        styles.button,
-        style,
-        isDisabled && styles.disabled,
-      ]}
-    >
-      {loading ? (
-        <ActivityIndicator color={COLORS.white} size="small" />
-      ) : (
-        <View style={styles.content}>
-          {iconElement && iconPosition === 'left' && (
-            <View style={styles.leftIconWrapper}>{iconElement}</View>
-          )}
+  return <TouchableOpacity onPress={onPress} disabled={isDisabled} activeOpacity={activeOpacity} accessibilityLabel={accessibilityLabel || title} style={[styles.button, style, isDisabled && styles.disabled]}>
+      {loading ? <ActivityIndicator color={COLORS.white} size="small" /> : <View style={styles.content}>
+          {iconElement && iconPosition === 'left' && <View style={styles.leftIconWrapper}>{iconElement}</View>}
           <Text style={[styles.text, textStyle]}>{title}</Text>
-          {iconElement && iconPosition === 'right' && (
-            <View style={styles.rightIconWrapper}>{iconElement}</View>
-          )}
-        </View>
-      )}
-    </TouchableOpacity>
-  );
+          {iconElement && iconPosition === 'right' && <View style={styles.rightIconWrapper}>{iconElement}</View>}
+        </View>}
+    </TouchableOpacity>;
 });
-
 const styles = StyleSheet.create({
   button: {
     backgroundColor: COLORS.primary,
@@ -74,28 +42,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
-    ...SHADOWS.soft,
+    ...SHADOWS.soft
   },
   disabled: {
     opacity: 0.6,
-    backgroundColor: COLORS.border,
+    backgroundColor: COLORS.border
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   text: {
     ...TYPOGRAPHY.button,
     color: COLORS.white,
     fontSize: 16,
     fontWeight: '600',
-    textAlign: 'center',
+    textAlign: 'center'
   },
   leftIconWrapper: {
-    marginRight: 8,
+    marginRight: 8
   },
   rightIconWrapper: {
-    marginLeft: 8,
-  },
+    marginLeft: 8
+  }
 });

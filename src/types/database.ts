@@ -7,7 +7,6 @@ export interface User {
   status: 'ACTIVE' | 'BANNED';
   createdAt: number;
 }
-
 export interface Device {
   deviceId: string;
   userId: string;
@@ -26,7 +25,6 @@ export interface Device {
   isCurrentDevice: boolean;
   forceLogout: boolean;
 }
-
 export interface Ticket {
   tid: string;
   userId: string;
@@ -53,16 +51,14 @@ export interface Ticket {
     minStops: number;
   };
 }
-
 export interface Notification {
   title: string;
   message: string;
   status: 'SENT' | 'PENDING';
-  targetRoute: string; // 'ALL' or specific route
+  targetRoute: string;
   readBy: Record<string, boolean>;
   timestamp: number;
 }
-
 export interface Route {
   route: string;
   directions: {
@@ -80,14 +76,12 @@ export interface Route {
     };
   };
 }
-
 export interface Stop {
   id: string;
   name: string;
   type: 'bus_stop';
   updatedAt: number;
 }
-
 export interface Log {
   userId: string;
   userName: string;
@@ -100,7 +94,6 @@ export interface Log {
   ipAddress: string;
   timestamp: number;
 }
-
 export interface Metadata {
   system: {
     activeCollections: string[];
