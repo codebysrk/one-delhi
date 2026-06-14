@@ -10,7 +10,7 @@ import {
   KeyboardAvoidingViewProps
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, SHADOWS, SPACING, LAYOUT } from '../../core/theme';
+import { COLORS, SHADOWS, SPACING, LAYOUT } from '../../theme/theme';
 
 export interface ScreenContainerProps {
   children: React.ReactNode;

@@ -3,7 +3,7 @@
     "name": "One Delhi",
     "slug": "railone-mobile",
     "scheme": "onedelhi",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "light",
@@ -27,7 +27,7 @@
     },
     "android": {
       "package": "com.onedelhi.app",
-      "versionCode": 4,
+      "versionCode": 5,
       "softwareKeyboardLayoutMode": "pan",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {

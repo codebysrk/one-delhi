@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ticket, TicketStatus, getRemainingValidity, isTicketExpired, getRouteNumberOnly, formatTimeTo12hr } from '../../utils/ticketHelper';
 import { InvalidStamp } from './InvalidStamp';
-import { COLORS, TYPOGRAPHY, SPACING, SHADOWS, RADII } from '../../core/theme';
+import { COLORS, TYPOGRAPHY, SPACING, SHADOWS, RADII } from '../../theme/theme';
 
 interface TicketCardProps {
   ticket: Ticket;
@@ -17,7 +17,7 @@ interface TicketCardProps {
 }
 
 export const TicketCard = React.memo(({ ticket, onPress, showTimer, largeText, showTID = true, hideDivider = false, compact = false, use12hrFormat = false, fullStampOpacity = false }: TicketCardProps) => {
-  const expired = isTicketExpired(ticket.timestamp);
+  const expired = isTicketExpired(ticket.timestamp, ticket.expiresAt);
   const isInvalid = ticket.status === TicketStatus.INVALID;
   
   const showStamp = expired || isInvalid;
@@ -85,7 +85,7 @@ export const TicketCard = React.memo(({ ticket, onPress, showTimer, largeText, s
         {showTimer && !expired && (
           <View style={styles.timerMini}>
             <Text style={styles.timerText}>
-              Expires in: {getRemainingValidity(ticket.timestamp)}
+              Expires in: {getRemainingValidity(ticket.timestamp, ticket.expiresAt)}
             </Text>
           </View>
         )}

@@ -124,11 +124,6 @@ export const TripPlanScreen = ({ navigation }: any) => {
               <MaterialCommunityIcons name="clock" size={24} color="#374151" />
             </TouchableOpacity>
           </View>
-
-          <TouchableOpacity style={styles.searchBtn} activeOpacity={0.8} onPress={handleSearch}>
-            <MaterialCommunityIcons name="magnify" size={22} color="white" />
-            <Text style={styles.searchBtnText}>Search Routes</Text>
-          </TouchableOpacity>
         </View>
 
 

@@ -17,12 +17,13 @@ import { ScreenContainer } from '../../components/layout/Screen';
 import { useForm, Controller } from 'react-hook-form';
 import * as z from 'zod';
 import { MaterialIcons } from '@expo/vector-icons';
-import { auth, db } from '../../services/firebase';
+import { auth } from '../../services/firebase';
+import { createUserProfile } from '../../services/userService';
 import { logAction } from '../../services/logService';
 import { useAppStore } from '../../store/useAppStore';
 import { registerDevice } from '../../services/deviceService';
 import { Toast } from '../../components/ui/Toast';
-import { COLORS, SHADOWS } from '../../core/theme';
+import { COLORS, SHADOWS } from '../../theme/theme';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
 
 const { height } = Dimensions.get('window');
@@ -170,12 +171,11 @@ export const SignupScreen = ({ navigation }: any) => {
         return;
       }
 
-      // 3. Create user document in Firestore
-      await db.collection('users').doc(user.uid).set({
+      // 3. Create user profile in Firestore
+      await createUserProfile(user.uid, {
         name: data.fullName,
         email: data.email,
         gender: data.gender || 'NOT_SPECIFIED',
-        createdAt: new Date().toISOString(),
         role: 'USER',
         status: 'ACTIVE',
       });

@@ -27,7 +27,7 @@ import Animated, {
   FadeInDown,
 } from "react-native-reanimated";
 import { FlashList } from "@shopify/flash-list";
-import { ANIMATIONS } from "../../core/theme";
+import { ANIMATIONS } from "../../theme/theme";
 
 // Lazy-loaded stops data — loaded only when first route is displayed.
 // Cached in module scope so repeated calls don't re-parse the 1.9MB JSON.
@@ -325,19 +325,20 @@ const SHEET_FULL_HEIGHT = SCREEN_HEIGHT * 0.98;
         let formattedData: RouteData;
         
         if (data.stops && Array.isArray(data.stops)) {
+          const rawStops = Array.from(new Set(data.stops.map((s: string) => s.trim()).filter(Boolean))) as string[];
           const coords = data.polylineCoordinates && data.polylineCoordinates.length > 0
             ? data.polylineCoordinates
-            : await findCoordinatesForStops(data.stops);
+            : await findCoordinatesForStops(rawStops);
 
           formattedData = {
             routeNumber: data.routeNumber || routeId,
-            origin: data.origin || data.stops[0] || "Unknown",
-            destination: data.destination || data.stops[data.stops.length - 1] || "Unknown",
+            origin: data.origin || rawStops[0] || "Unknown",
+            destination: data.destination || rawStops[rawStops.length - 1] || "Unknown",
             totalBuses: data.totalBuses || 11,
-            totalStops: data.totalStops || data.stops.length,
+            totalStops: rawStops.length,
             direction: data.direction,
             polylineCoordinates: coords,
-            stops: data.stops,
+            stops: rawStops,
           };
         } else if (data.directions) {
           const hasUp = !!(data.directions.up && Array.isArray(data.directions.up.stops) && data.directions.up.stops.length > 0);
@@ -349,17 +350,17 @@ const SHEET_FULL_HEIGHT = SCREEN_HEIGHT * 0.98;
             activeDirection = "UP";
           }
           const dirData = activeDirection === "UP" ? data.directions.up : data.directions.down;
-          const stopNames = dirData?.stops || [];
+          const stopNames = Array.from(new Set((dirData?.stops || []).map((s: string) => s.trim()).filter(Boolean))) as string[];
           const coords = dirData?.stop_coordinates && dirData.stop_coordinates.length > 0
             ? dirData.stop_coordinates
             : await findCoordinatesForStops(stopNames);
 
           formattedData = {
             routeNumber: data.route || routeId.replace(/UP|DOWN/g, ''),
-            origin: dirData?.from || dirData?.stops?.[0] || "Origin",
-            destination: dirData?.to || dirData?.stops?.[dirData?.stops.length - 1] || "Destination",
+            origin: dirData?.from || stopNames[0] || "Origin",
+            destination: dirData?.to || stopNames[stopNames.length - 1] || "Destination",
             totalBuses: 11, 
-            totalStops: dirData?.totalStops || dirData?.stops?.length || 0,
+            totalStops: stopNames.length,
             direction: activeDirection,
             polylineCoordinates: coords,
             stops: stopNames,

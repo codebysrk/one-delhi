@@ -15,7 +15,7 @@ import Animated, {
   interpolate,
   Extrapolate,
 } from "react-native-reanimated";
-import { COLORS, SHADOWS, RADII, SPACING, ANIMATIONS } from "../../core/theme";
+import { COLORS, SHADOWS, RADII, SPACING, ANIMATIONS } from "../../theme/theme";
 
 interface BottomSheetProps {
   children: React.ReactNode;

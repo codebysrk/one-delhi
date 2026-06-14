@@ -42,7 +42,7 @@ export const TicketScreen = ({ navigation, route }: any) => {
 
   const [showQR, setShowQR] = useState(false);
   const isExpired = activeTicket
-    ? isTicketExpired(activeTicket.timestamp)
+    ? isTicketExpired(activeTicket.timestamp, activeTicket.expiresAt)
     : false;
   const isInvalid = activeTicket?.status === "INVALID" || isExpired;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -107,10 +107,12 @@ export const TicketScreen = ({ navigation, route }: any) => {
 
   const insets = useSafeAreaInsets();
 
+  const themeColor = activeTicket.isPass ? "#1B5E20" : "#D32F2F";
+
   return (
-    <Screen noPadding ignoreTopSafe style={{ backgroundColor: "#D32F2F" }}>
+    <Screen noPadding ignoreTopSafe style={{ backgroundColor: themeColor }}>
       <Header
-        backgroundColor="#D32F2F"
+        backgroundColor={themeColor}
         textColor="white"
         backIconName="close"
         onBackPress={() => navigation.navigate("Main", { screen: "TicketsTab" })}
@@ -132,70 +134,140 @@ export const TicketScreen = ({ navigation, route }: any) => {
           {/* Elite Ticket / QR View Toggle */}
           {!showQR ? (
             <View style={styles.ticketCard}>
-              <View style={styles.cardHeaderArea}>
-                <Text style={styles.deptTitle}>Transport Dept. of Delhi</Text>
-              </View>
-
-              <View style={styles.validationSummary}>
-                <Text style={styles.validatedLabel}>VALIDATED</Text>
-                <Text style={styles.validatedValue}>
-                  ₹{Number(activeTicket.total).toFixed(1)}
+              <View style={[styles.cardHeaderArea, activeTicket.isPass && { backgroundColor: "#1B5E20" }]}>
+                <Text style={styles.deptTitle}>
+                  {activeTicket.isPass ? "Delhi Bus Pass" : "Transport Dept. of Delhi"}
                 </Text>
               </View>
 
-              <View style={styles.divider} />
+              {activeTicket.isPass ? (
+                <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 16 }}>
+                  <View style={styles.validationSummary}>
+                    <Text style={[styles.validatedLabel, { color: "#1B5E20" }]}>ACTIVE PASS</Text>
+                    <Text style={[styles.validatedValue, { color: "#1B5E20" }]}>
+                      ₹{Number(activeTicket.total).toFixed(1)}
+                    </Text>
+                  </View>
 
-              <View style={styles.dataRow}>
-                <View style={styles.dataCol}>
-                  <Text style={styles.label}>Bus Route</Text>
-                  <Text style={styles.largeValue}>{routeCode}</Text>
-                </View>
-                <View style={[styles.dataCol, { alignItems: "flex-end" }]}>
-                  <Text style={styles.label}>Fare</Text>
-                  <Text style={[styles.largeValue, { fontWeight: "700" }]}>
-                    ₹{Number(activeTicket.total).toFixed(1)}
+                  <View style={styles.divider} />
+
+                  <View style={styles.dataRow}>
+                    <View style={styles.dataCol}>
+                      <Text style={styles.label}>Pass Type</Text>
+                      <Text style={[styles.mediumValue, { color: "#1B5E20", fontWeight: "700" }]} numberOfLines={2}>
+                        {activeTicket.passName || "BUS PASS"}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={[styles.dataRow, { marginTop: 12 }]}>
+                    <View style={{ flex: 1.5 }}>
+                      <Text style={styles.label}>Holder Name</Text>
+                      <Text style={styles.mediumValue}>{activeTicket.holderName || "User"}</Text>
+                    </View>
+                    <View style={{ flex: 1, alignItems: "flex-end" }}>
+                      <Text style={styles.label}>Phone</Text>
+                      <Text style={styles.mediumValue}>{activeTicket.phone || "N/A"}</Text>
+                    </View>
+                  </View>
+
+                  <View style={[styles.dataRow, { marginTop: 12 }]}>
+                    <View style={{ flex: 1.5 }}>
+                      <Text style={styles.label}>Identity Document</Text>
+                      <Text style={styles.mediumValue}>
+                        {activeTicket.idType || "ID"}: ****{activeTicket.idLastDigits || "0000"}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1, alignItems: "flex-end" }}>
+                      <Text style={styles.label}>DOB</Text>
+                      <Text style={styles.mediumValue}>{activeTicket.dob || "N/A"}</Text>
+                    </View>
+                  </View>
+
+                  <View style={[styles.stopBox, { marginTop: 16, borderColor: "#1B5E20", backgroundColor: "#E8F5E9" }]}>
+                    <Text style={[styles.label, { color: "#2E7D32" }]}>Validity Period</Text>
+                    <Text style={[styles.stopText, { color: "#1B5E20", fontWeight: "600" }]}>
+                      Valid till: {activeTicket.date} | 23:59
+                    </Text>
+                  </View>
+
+                  <Text style={styles.tidLabel}>
+                    {activeTicket.tid || activeTicket.id || "T0000000000"}
                   </Text>
-                </View>
-              </View>
 
-              <View style={[styles.dataRow, { marginTop: 12 }]}>
-                <View style={{ flex: 2.5 }}>
-                  <Text style={styles.label}>Booking Time</Text>
-                  <Text style={styles.mediumValue}>
-                    {activeTicket.date} | {formatTimeTo12hr(activeTicket.time)}
+                  <PrimaryButton
+                    title="Show QR code"
+                    onPress={() => setShowQR(true)}
+                    accessibilityLabel="Show QR code"
+                    style={{ backgroundColor: "#1B5E20", marginTop: 8 }}
+                    iconElement={<MaterialCommunityIcons name="qrcode-scan" size={20} color="white" />}
+                    iconPosition="left"
+                  />
+                </View>
+              ) : (
+                <View>
+                  <View style={styles.validationSummary}>
+                    <Text style={styles.validatedLabel}>VALIDATED</Text>
+                    <Text style={styles.validatedValue}>
+                      ₹{Number(activeTicket.total).toFixed(1)}
+                    </Text>
+                  </View>
+
+                  <View style={styles.divider} />
+
+                  <View style={styles.dataRow}>
+                    <View style={styles.dataCol}>
+                      <Text style={styles.label}>Bus Route</Text>
+                      <Text style={styles.largeValue}>{routeCode}</Text>
+                    </View>
+                    <View style={[styles.dataCol, { alignItems: "flex-end" }]}>
+                      <Text style={styles.label}>Fare</Text>
+                      <Text style={[styles.largeValue, { fontWeight: "700" }]}>
+                        ₹{Number(activeTicket.total).toFixed(1)}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={[styles.dataRow, { marginTop: 12 }]}>
+                    <View style={{ flex: 2.5 }}>
+                      <Text style={styles.label}>Booking Time</Text>
+                      <Text style={styles.mediumValue}>
+                        {activeTicket.date} | {formatTimeTo12hr(activeTicket.time)}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1, alignItems: "flex-end" }}>
+                      <Text style={styles.label}>Bus Tickets</Text>
+                      <Text style={styles.mediumValue}>{activeTicket.qty}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.stopBox}>
+                    <Text style={styles.label}>Starting stop</Text>
+                    <Text style={styles.stopText}>
+                      {activeTicket.source || activeTicket.src || "Starting Point"}
+                    </Text>
+                  </View>
+
+                  <View style={[styles.stopBox, { marginTop: 12 }]}>
+                    <Text style={styles.label}>Ending stop</Text>
+                    <Text style={styles.stopText}>
+                      {activeTicket.dest || activeTicket.dst || "Destination"}
+                    </Text>
+                  </View>
+
+                  <Text style={styles.tidLabel}>
+                    {activeTicket.tid || activeTicket.id || "T0000000000"}
                   </Text>
+
+                  <PrimaryButton
+                    title="Show QR code"
+                    onPress={() => setShowQR(true)}
+                    accessibilityLabel="Show QR code"
+                    iconElement={<MaterialCommunityIcons name="qrcode-scan" size={20} color="white" />}
+                    iconPosition="left"
+                  />
                 </View>
-                <View style={{ flex: 1, alignItems: "flex-end" }}>
-                  <Text style={styles.label}>Bus Tickets</Text>
-                  <Text style={styles.mediumValue}>{activeTicket.qty}</Text>
-                </View>
-              </View>
-
-              <View style={styles.stopBox}>
-                <Text style={styles.label}>Starting stop</Text>
-                <Text style={styles.stopText}>
-                  {activeTicket.source || activeTicket.src || "Starting Point"}
-                </Text>
-              </View>
-
-              <View style={[styles.stopBox, { marginTop: 12 }]}>
-                <Text style={styles.label}>Ending stop</Text>
-                <Text style={styles.stopText}>
-                  {activeTicket.dest || activeTicket.dst || "Destination"}
-                </Text>
-              </View>
-
-              <Text style={styles.tidLabel}>
-                {activeTicket.tid || activeTicket.id || "T0000000000"}
-              </Text>
-
-              <PrimaryButton
-                title="Show QR code"
-                onPress={() => setShowQR(true)}
-                accessibilityLabel="Show QR code"
-                iconElement={<MaterialCommunityIcons name="qrcode-scan" size={20} color="white" />}
-                iconPosition="left"
-              />
+              )}
 
               {isInvalid && (
                 <View style={styles.cardStampOverlay}>

@@ -118,6 +118,7 @@ export async function checkForUpdate(): Promise<void> {
         Accept: 'application/vnd.github.v3+json',
         'User-Agent': 'one-delhi-app',
       },
+      cache: 'no-cache', // Prevents stale update checks
     });
 
     if (!response.ok) {

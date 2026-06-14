@@ -110,14 +110,24 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
           box-shadow: 0 0 8px rgba(59, 130, 246, 0.6);
         }
         
-        /* MapScreen Stops */
-        .stop-marker-nearby {
-          width: 10px;
-          height: 10px;
-          background: #ef4444;
+        /* MapScreen Stops - Grey Teardrop Pin */
+        .stop-marker-pin {
+          width: 28px;
+          height: 28px;
+          background: #7c7c7c; 
           border: 2px solid white;
-          border-radius: 50%;
-          box-shadow: 0 0 5px rgba(0,0,0,0.2);
+          border-radius: 50% 50% 50% 0; 
+          transform: rotate(-45deg);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        .stop-marker-pin svg {
+          transform: rotate(45deg);
+          width: 15px;
+          height: 15px;
+          fill: white;
         }
         
         /* Route Detail Stops - Grey circular markers with white bus SVG */
@@ -302,7 +312,12 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
         };
 
         // Helper 3: Draw Nearby Stops (MapScreen)
-        var nearbyStopIcon = L.divIcon({ className: '', html: '<div class="stop-marker-nearby"></div>', iconSize: [12, 12] });
+        var nearbyStopIcon = L.divIcon({ 
+          className: 'stop-pin-wrapper', 
+          html: '<svg width="30" height="30" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 3px rgba(0,0,0,0.25));"><path d="M12 2C8.14 2 5 5.14 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.86-3.14-7-7-7z" fill="#757575" /><g transform="translate(6, 4) scale(0.5)"><path d="M4 16c0 .88.39 1.67 1 2.22V20c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM6 6h12v4H6V6z" fill="#ffffff" /></g></svg>', 
+          iconSize: [30, 30],
+          iconAnchor: [15, 30]
+        });
         window.updateNearbyStops = function(stopsJson) {
           stopMarkers.clearLayers();
           var stops = JSON.parse(stopsJson);
@@ -313,10 +328,10 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
 
         // Helper 4: Draw Polyline Route and Bus Icon (RouteDetailScreen)
         var routeStopIcon = L.divIcon({ 
-          className: 'stop-icon-wrapper',
-          html: '<div class="stop-marker-route"><svg viewBox="0 0 24 24" width="11" height="11" fill="white"><path d="M18 11H6V6h12v5zm-1.5 5.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM7.5 16.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM20 10V6c0-2.21-1.79-4-4-4H8C5.79 2 4 3.79 4 6v4c0 .55.45 1 1 1v5c0 1.66 1.34 3 3 3l-1.5 1.5v.5c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h6v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-.5L16 18c1.66 0 3-1.34 3-3v-5c.55 0 1-.45 1-1z"/></svg></div>',
-          iconSize: [18, 18],
-          iconAnchor: [9, 9]
+          className: 'stop-pin-wrapper',
+          html: '<svg width="30" height="30" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 3px rgba(0,0,0,0.25));"><path d="M12 2C8.14 2 5 5.14 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.86-3.14-7-7-7z" fill="#757575" /><g transform="translate(6, 4) scale(0.5)"><path d="M4 16c0 .88.39 1.67 1 2.22V20c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM6 6h12v4H6V6z" fill="#ffffff" /></g></svg>', 
+          iconSize: [30, 30],
+          iconAnchor: [15, 30]
         });
         window.drawRoute = function(polylineJson, routeNumber) {
           routeMarkers.clearLayers();

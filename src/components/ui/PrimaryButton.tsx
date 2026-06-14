@@ -8,7 +8,7 @@ import {
   TextStyle,
   View,
 } from 'react-native';
-import { COLORS, TYPOGRAPHY, SHADOWS } from '../../core/theme';
+import { COLORS, TYPOGRAPHY, SHADOWS } from '../../theme/theme';
 
 interface PrimaryButtonProps {
   title: string;

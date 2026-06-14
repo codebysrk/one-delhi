@@ -31,15 +31,15 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
 } from "react-native-reanimated";
-import { db } from "../../services/firebase";
+import { getRoutes, getFareConfig } from "../../services/routeService";
 import { AppState, AppStateStatus } from "react-native";
 import {
   moderateScale,
   responsiveFontSize,
   responsiveHeight,
-} from "../../core/responsive";
+} from "../../utils/responsive";
 import { PrimaryButton } from "../../components/ui/PrimaryButton";
-import fareConfig from "../../config/fareConfig.json";
+import fareConfig from "../../constants/fareConfig.json";
 
 // --- 1. Separate Memoized Item Components for Peak Performance ---
 
@@ -53,9 +53,10 @@ interface Route {
 const getFareForDistance = (
   distanceKm: number,
   busType: "AC" | "Non-AC",
-  isNCR: boolean
+  isNCR: boolean,
+  currentFareConfig: typeof fareConfig
 ): { fare: number; slab: any } => {
-  const slabs = isNCR ? fareConfig.interstateSlabs : fareConfig.delhiSlabs;
+  const slabs = isNCR ? currentFareConfig.interstateSlabs : currentFareConfig.delhiSlabs;
   const applicableSlab = slabs.find(
     (slab) => {
       const maxLimit = slab.maxKm === null ? Infinity : slab.maxKm;
@@ -253,6 +254,26 @@ export const BookingScreen = ({ navigation }: any) => {
   const [timeLeftForLogic, setTimeLeftForLogic] = useState(180); // Still need this for navigation logic but we can update it less frequently or only at 0
   const [busType, setBusType] = useState<"AC" | "Non-AC">("AC");
   const [qty, setQty] = useState(1);
+  const [fareConfigState, setFareConfigState] = useState(fareConfig);
+
+  // Load dynamic fare config from Firestore with static fallback
+  useEffect(() => {
+    const fetchFareConfig = async () => {
+      try {
+        const data = await getFareConfig();
+        if (data && data.delhiSlabs && data.interstateSlabs) {
+          setFareConfigState({
+            delhiSlabs: data.delhiSlabs,
+            interstateSlabs: data.interstateSlabs,
+          });
+          console.log("[BookingScreen] Dynamic fare config loaded successfully.");
+        }
+      } catch (e) {
+        console.warn("[BookingScreen] Failed to fetch live fare config, using local fallback:", e);
+      }
+    };
+    fetchFareConfig();
+  }, []);
 
   const [routeSearch, setRouteSearch] = useState("");
   const [sourceSearch, setSourceSearch] = useState("");
@@ -420,11 +441,10 @@ export const BookingScreen = ({ navigation }: any) => {
   useEffect(() => {
     const fetchRoutes = async () => {
       try {
-        const querySnapshot = await db.collection("routes").get();
+        const list = await getRoutes();
         const fetchedRoutes: Route[] = [];
 
-        querySnapshot.forEach((docSnap) => {
-          const r = docSnap.data();
+        list.forEach((r) => {
           if (r.directions?.up && Array.isArray(r.directions.up.stops) && r.directions.up.stops.length > 0) {
             fetchedRoutes.push({
               id: `${r.route}UP`,
@@ -516,7 +536,7 @@ export const BookingScreen = ({ navigation }: any) => {
   // Auto fare calculation based on stop count and bus type
   const calculateAutoFare = useCallback(() => {
     if (!routeSearch || !sourceSearch || !destSearch || !selectedFullRouteId) {
-      return { fare: 0, slab: fareConfig.delhiSlabs[0], isValid: true };
+      return { fare: 0, slab: fareConfigState.delhiSlabs[0], isValid: true };
     }
 
     const foundRoute = dbRoutes.find(
@@ -526,14 +546,14 @@ export const BookingScreen = ({ navigation }: any) => {
     );
 
     if (!foundRoute) {
-      return { fare: 0, slab: fareConfig.delhiSlabs[0], isValid: false };
+      return { fare: 0, slab: fareConfigState.delhiSlabs[0], isValid: false };
     }
 
     const srcIdx = foundRoute.stops.indexOf(sourceSearch);
     const dstIdx = foundRoute.stops.indexOf(destSearch);
 
     if (srcIdx === -1 || dstIdx === -1) {
-      return { fare: 0, slab: fareConfig.delhiSlabs[0], isValid: false };
+      return { fare: 0, slab: fareConfigState.delhiSlabs[0], isValid: false };
     }
 
     const start = Math.min(srcIdx, dstIdx);
@@ -556,7 +576,7 @@ export const BookingScreen = ({ navigation }: any) => {
 
     const stopCount = Math.abs(dstIdx - srcIdx);
     const distanceKm = stopCount * 0.6; // Approximation: 1 stop ~ 0.6km
-    const { fare, slab } = getFareForDistance(distanceKm, busType, isInterstate);
+    const { fare, slab } = getFareForDistance(distanceKm, busType, isInterstate, fareConfigState);
     return { fare, slab, isInterstate, isValid: true };
   }, [
     routeSearch,
@@ -565,6 +585,7 @@ export const BookingScreen = ({ navigation }: any) => {
     selectedFullRouteId,
     busType,
     dbRoutes,
+    fareConfigState,
   ]);
 
   // Unified fare calculation function

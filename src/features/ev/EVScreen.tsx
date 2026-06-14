@@ -14,6 +14,7 @@ import { Screen } from "../../components/layout/Screen";
 import * as Location from "expo-location";
 import { MainHeader } from "../../components/layout/Header";
 import { useFocusEffect } from "@react-navigation/native";
+import { getEVStations, saveEVStation } from "../../services/evService";
 
 const EV_STATIONS = [
   {
@@ -126,6 +127,7 @@ export const EVScreen = ({ navigation }: any) => {
     null,
   );
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [stations, setStations] = useState<any[]>(EV_STATIONS);
 
   useEffect(() => {
     (async () => {
@@ -137,15 +139,44 @@ export const EVScreen = ({ navigation }: any) => {
   }, []);
 
   useEffect(() => {
+    const fetchStations = async () => {
+      try {
+        const list = await getEVStations();
+        if (list.length > 0) {
+          setStations(list);
+        } else {
+          // If Firestore ev_stations collection is empty, auto-seed it from local EV_STATIONS
+          console.log("[EVScreen] ev_stations Firestore collection is empty. Auto-seeding...");
+          for (const station of EV_STATIONS) {
+            try {
+              await saveEVStation(station);
+            } catch (seedErr) {
+              console.log("[EVScreen] Failed to seed station:", station.name, seedErr);
+            }
+          }
+          // Fetch again after seeding
+          const refetchedList = await getEVStations();
+          if (refetchedList.length > 0) {
+            setStations(refetchedList);
+          }
+        }
+      } catch (err) {
+        console.log("[EVScreen] Error fetching EV stations:", err);
+      }
+    };
+    fetchStations();
+  }, []);
+
+  useEffect(() => {
     if (mapLoaded) {
-      const stations = EV_STATIONS.map((s) => ({
+      const pins = stations.map((s) => ({
         lat: s.lat,
         lng: s.lng,
         name: s.name,
       }));
-      webViewRef.current?.drawEVStations(stations);
+      webViewRef.current?.drawEVStations(pins);
     }
-  }, [mapLoaded]);
+  }, [mapLoaded, stations]);
 
   // Trigger flyTo animation immediately to Delhi EV Station when map loaded
   useEffect(() => {
@@ -269,7 +300,7 @@ export const EVScreen = ({ navigation }: any) => {
            snapToAlignment="start"
            disableIntervalMomentum={true}
          >
-            {EV_STATIONS.map((item) => (
+            {stations.map((item) => (
               <TouchableOpacity
                 key={item.id}
                 style={styles.stationCard}

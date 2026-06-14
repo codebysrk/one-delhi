@@ -14,25 +14,10 @@ import { Header } from "../../components/layout/Header";
 import { FlashList } from "@shopify/flash-list";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Swipeable } from "react-native-gesture-handler";
-import { db, auth } from "../../services/firebase";
+import { auth } from "../../services/firebase";
+import { getRoutes, Route } from "../../services/routeService";
 import { useAppStore } from "../../store/useAppStore";
 import { logAction } from "../../services/logService";
-
-interface Route {
-  route: string;
-  directions: {
-    up: {
-      from: string;
-      to: string;
-      stops: string[];
-    };
-    down?: {
-      from: string;
-      to: string;
-      stops: string[];
-    };
-  };
-}
 
 export const SearchScreen = ({ navigation }: any) => {
   const { recentRoutes, addRecentRoute, removeRecentRoute } = useAppStore();
@@ -43,12 +28,8 @@ export const SearchScreen = ({ navigation }: any) => {
   useEffect(() => {
     const fetchRoutes = async () => {
       try {
-        const querySnapshot = await db.collection("routes").get();
-        const fetchedRoutes: Route[] = [];
-        querySnapshot.forEach((doc) => {
-          fetchedRoutes.push(doc.data() as Route);
-        });
-        setRoutes(fetchedRoutes);
+        const list = await getRoutes();
+        setRoutes(list);
       } catch (error) {
         console.error("Error fetching routes:", error);
         setRoutes([]);

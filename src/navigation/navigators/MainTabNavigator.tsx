@@ -12,7 +12,7 @@ import { TripPlanScreen } from '../../features/trips/TripPlanScreen';
 import { HelpScreen } from '../../features/profile/HelpScreen';
 import { SearchScreen } from '../../features/home/SearchScreen';
 import { useAppStore } from '../../store/useAppStore';
-import { COLORS, TYPOGRAPHY, LAYOUT, ANIMATIONS } from '../../core/theme';
+import { COLORS, TYPOGRAPHY, LAYOUT, ANIMATIONS } from '../../theme/theme';
 import { BrandingFooter } from '../../components/ui/BrandingFooter';
 
 const Stack = createNativeStackNavigator();

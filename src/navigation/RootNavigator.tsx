@@ -22,6 +22,7 @@ import { Image } from 'expo-image';
 
 import { Screen } from '../components/layout/Screen';
 import { Header } from '../components/layout/Header';
+import { BrandingFooter } from '../components/ui/BrandingFooter';
 
 const Stack = createNativeStackNavigator();
 
@@ -352,10 +353,16 @@ export const RootNavigator = () => {
             { transform: [{ translateX: splashAnim }] },
           ]}
         >
+          <View style={{ height: Platform.OS === 'android' ? 24 : 44 }} />
           <Image
             source={require('../../assets/images/splash.png')}
-            style={{ width: '100%', height: '100%' }}
-            contentFit="contain"
+            style={{ flex: 1, width: '100%' }}
+            contentFit="cover"
+          />
+          <BrandingFooter 
+            variant="ticket" 
+            containerStyle={styles.splashFooter} 
+            textStyle={styles.splashFooterText}
           />
         </Animated.View>
       )}
@@ -366,9 +373,20 @@ export const RootNavigator = () => {
 const styles = StyleSheet.create({
   initializingContainer: {
     flex: 1,
-    backgroundColor: '#D32F2F',
-    justifyContent: 'center',
+    backgroundColor: '#FFF',
+  },
+  splashFooter: {
+    width: '100%',
+    backgroundColor: '#A51F38',
+    paddingVertical: 2,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  splashFooterText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    fontWeight: '400',
+    textAlign: 'center',
   },
 });
 

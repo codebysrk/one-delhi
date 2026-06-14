@@ -114,4 +114,3 @@ export const ANIMATIONS = {
     duration: 200,
   }
 };
-

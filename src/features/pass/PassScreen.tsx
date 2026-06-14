@@ -7,7 +7,8 @@ import {
   TextInput, 
   Modal,
   FlatList,
-  Platform
+  Platform,
+  Alert
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '../../components/layout/Screen';
@@ -30,6 +31,8 @@ export const PassScreen = ({ navigation }: any) => {
   const { setShowFooter } = useAppStore();
   const [showPicker, setShowPicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedIdType, setSelectedIdType] = useState('Aadhaar Card');
+  const [showIdPicker, setShowIdPicker] = useState(false);
   const [selectedPass, setSelectedPass] = useState(PASS_TYPES[0]);
   const [formData, setFormData] = useState({
     name: '',
@@ -56,6 +59,45 @@ export const PassScreen = ({ navigation }: any) => {
       const year = selectedDate.getFullYear();
       setFormData({ ...formData, dob: `${day}/${month}/${year}` });
     }
+  };
+
+  const handleNextStep = () => {
+    if (!formData.name.trim() || formData.name.trim().length < 3) {
+      Alert.alert("Validation Error", "Please enter a valid full name (minimum 3 characters).");
+      return;
+    }
+    if (!formData.phone.trim() || formData.phone.trim().length !== 10) {
+      Alert.alert("Validation Error", "Please enter a valid 10-digit phone number.");
+      return;
+    }
+    if (!formData.dob) {
+      Alert.alert("Validation Error", "Please select your date of birth.");
+      return;
+    }
+    if (!formData.idLastDigits || formData.idLastDigits.trim().length !== 4) {
+      Alert.alert("Validation Error", "Please enter the last 4 digits of your verification document.");
+      return;
+    }
+
+    navigation.navigate('BookingStack', { 
+      screen: 'Payment',
+      params: {
+        ticketData: {
+          route: 'BUS PASS',
+          source: selectedPass.label,
+          dest: formData.name.trim(),
+          type: selectedPass.label.includes('AC') ? 'AC' : 'Non-AC',
+          total: selectedPass.fare.replace('₹', ''),
+          isPass: true,
+          passName: selectedPass.label,
+          holderName: formData.name.trim(),
+          phone: formData.phone.trim(),
+          dob: formData.dob,
+          idType: selectedIdType,
+          idLastDigits: formData.idLastDigits.trim(),
+        }
+      }
+    });
   };
 
   const insets = useSafeAreaInsets();
@@ -157,9 +199,12 @@ export const PassScreen = ({ navigation }: any) => {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Verification Document</Text>
             <View style={styles.row}>
-              <TouchableOpacity style={[styles.pickerContainer, { flex: 1.2, marginRight: 10 }]}>
-                <Text style={styles.pickerText}>Select ID</Text>
-                <MaterialCommunityIcons name="chevron-down" color="#CCC" size={18} />
+              <TouchableOpacity 
+                style={[styles.pickerContainer, { flex: 1.2, marginRight: 10 }]}
+                onPress={() => setShowIdPicker(true)}
+              >
+                <Text style={styles.pickerText}>{selectedIdType}</Text>
+                <MaterialCommunityIcons name="chevron-down" color="#666" size={18} />
               </TouchableOpacity>
               <TextInput 
                 style={[styles.textInput, { flex: 1, marginLeft: 10 }]}
@@ -204,19 +249,43 @@ export const PassScreen = ({ navigation }: any) => {
         </TouchableOpacity>
       </Modal>
 
+      {/* ID Type Picker Modal */}
+      <Modal
+        visible={showIdPicker}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowIdPicker(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setShowIdPicker(false)}
+        >
+          <View style={styles.pickerModal}>
+            <FlatList
+              data={['Aadhaar Card', 'Driving License', 'PAN Card', 'Voter ID']}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity 
+                  style={styles.pickerItem}
+                  onPress={() => {
+                    setSelectedIdType(item);
+                    setShowIdPicker(false);
+                  }}
+                >
+                  <Text style={styles.pickerItemText}>{item}</Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       {/* Footer Button */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <PrimaryButton 
           title="Next Step"
-          onPress={() => navigation.navigate('Payment', { 
-            ticketData: {
-              route: 'BUS PASS',
-              type: selectedPass.label.includes('AC') ? 'AC' : 'Non-AC',
-              total: selectedPass.fare.replace('₹', ''),
-              isPass: true,
-              passName: selectedPass.label
-            }
-          })}
+          onPress={handleNextStep}
         />
       </View>
     </ScreenContainer>

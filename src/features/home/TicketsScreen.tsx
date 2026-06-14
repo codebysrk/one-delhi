@@ -6,7 +6,7 @@ import { useAppStore } from "../../store/useAppStore";
 import { MetroLogo } from "../../components/icons/MetroLogo";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { TicketCard } from "../../components/ui/TicketCard";
-import { getLatestActiveTicket } from "../../utils/ticketHelper";
+import { getLatestActiveTicket, isTicketExpired } from "../../utils/ticketHelper";
 
 type RootStackParamList = {
   Booking: undefined;
@@ -65,6 +65,12 @@ export const TicketsScreen: React.FC<TicketsScreenProps> = ({ navigation }) => {
     [tickets, tick],
   );
 
+  // Find the latest valid active pass
+  const latestPass = useMemo(() => {
+    const activePasses = tickets.filter(t => t.isPass && t.status === 'Active' && !isTicketExpired(t.timestamp, t.expiresAt));
+    return activePasses[0] || null;
+  }, [tickets, tick]);
+
   const handleNavigate = useCallback((screen: keyof RootStackParamList) => {
     navigation.navigate(screen);
   }, [navigation]);
@@ -97,7 +103,7 @@ export const TicketsScreen: React.FC<TicketsScreenProps> = ({ navigation }) => {
 
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => (navigation as any).navigate("PassStack", { screen: "Pass" })}
+            onPress={() => (navigation as any).navigate("Pass")}
           >
             <Animated.View style={[styles.newBadgeCenter, { opacity: blinkAnim }]}>
               <Text style={styles.newBadgeText}>New</Text>
@@ -173,12 +179,22 @@ export const TicketsScreen: React.FC<TicketsScreenProps> = ({ navigation }) => {
               <Text style={styles.viewAll}>View all passes</Text>
             </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={styles.bottomEmptyCard}
-            onPress={() => (navigation as any).navigate("PassStack", { screen: "Pass" })}
-          >
-            <Text style={styles.bottomEmptyText}>Click to View</Text>
-          </TouchableOpacity>
+          {latestPass ? (
+            <TicketCard
+              ticket={latestPass}
+              onPress={() => (navigation as any).navigate("Ticket", { ticket: latestPass })}
+              showTimer={false}
+              largeText={true}
+              showTID={false}
+            />
+          ) : (
+            <TouchableOpacity
+              style={styles.bottomEmptyCard}
+              onPress={() => (navigation as any).navigate("Pass")}
+            >
+              <Text style={styles.bottomEmptyText}>Click to View</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </Screen>

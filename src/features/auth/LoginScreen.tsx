@@ -15,7 +15,8 @@ import {
 import { useForm, Controller } from 'react-hook-form';
 import { MaterialIcons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
-import { auth, db } from '../../services/firebase';
+import { auth } from '../../services/firebase';
+import { getUserProfile } from '../../services/userService';
 import { useAppStore } from '../../store/useAppStore';
 import { logAction } from '../../services/logService';
 import { registerDevice, clearForceLogout } from '../../services/deviceService';
@@ -23,7 +24,7 @@ import { registerDevice, clearForceLogout } from '../../services/deviceService';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '../../components/layout/Screen';
 import { Toast } from '../../components/ui/Toast';
-import { COLORS, SHADOWS } from '../../core/theme';
+import { COLORS, SHADOWS } from '../../theme/theme';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
 
 interface LoginForm {
@@ -112,8 +113,8 @@ export const LoginScreen = ({ navigation }: any) => {
 
       let userData: any = {};
       try {
-        const userDoc = await db.collection('users').doc(user.uid).get();
-        userData = userDoc.exists ? userDoc.data() : {};
+        const profile = await getUserProfile(user.uid);
+        userData = profile || {};
       } catch (err: any) {
         console.log("[LoginScreen] Profile fetch error:", err.code);
         if (err.code === 'permission-denied') {

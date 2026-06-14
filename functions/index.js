@@ -61,3 +61,122 @@ exports.adminDeleteUser = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError('internal', error.message);
   }
 });
+
+/**
+ * Commuter/Conductor utility to validate a ticket QR code:
+ * 1. Read ticket from Firestore
+ * 2. Verify status and expiresAt timestamp
+ * 3. Log validation event
+ */
+exports.validateTicket = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'The function must be called while authenticated.');
+  }
+
+  const { ticketId } = data;
+  if (!ticketId) {
+    throw new functions.https.HttpsError('invalid-argument', 'Ticket ID is required.');
+  }
+
+  const db = admin.firestore();
+  const ticketRef = db.collection('tickets').doc(ticketId);
+  const ticketSnap = await ticketRef.get();
+
+  if (!ticketSnap.exists) {
+    throw new functions.https.HttpsError('not-found', 'Ticket not found.');
+  }
+
+  const ticket = ticketSnap.data();
+  const now = Date.now();
+  
+  // Resolve expiresAt timestamp
+  const expiresAt = ticket.expiresAt 
+    ? (ticket.expiresAt.toMillis?.() || ticket.expiresAt)
+    : (ticket.timestamp?.toMillis?.() || ticket.timestamp || 0) + 2 * 60 * 60 * 1000;
+
+  if (ticket.status !== 'Active') {
+    return { success: false, reason: `Ticket is already ${ticket.status || 'Expired'}` };
+  }
+
+  if (now > expiresAt) {
+    // Update status to Expired
+    await ticketRef.update({ status: 'Expired' });
+    return { success: false, reason: 'Ticket has expired' };
+  }
+
+  // Mark ticket as validated
+  await ticketRef.update({ 
+    status: 'Validated',
+    validatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    validatedBy: context.auth.uid
+  });
+
+  // Log action
+  await db.collection('logs').add({
+    userId: context.auth.uid,
+    action: 'VALIDATE_TICKET',
+    details: `Ticket ${ticketId} successfully validated.`,
+    type: 'SYSTEM',
+    timestamp: admin.firestore.FieldValue.serverTimestamp()
+  });
+
+  return { success: true, message: 'Ticket validated successfully.' };
+});
+
+/**
+ * Daily scheduler/trigger to archive logs older than 30 days
+ * 1. Fetch logs where timestamp < now - 30 days
+ * 2. Copy to logs_archive
+ * 3. Delete from active logs
+ */
+exports.archiveOldLogs = functions.https.onCall(async (data, context) => {
+  // Guard check: Caller must be an admin
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'The function must be called while authenticated.');
+  }
+
+  const callerUid = context.auth.uid;
+  const db = admin.firestore();
+  const callerSnap = await db.collection('users').doc(callerUid).get();
+  
+  if (!callerSnap.exists || callerSnap.data().role !== 'admin') {
+    throw new functions.https.HttpsError('permission-denied', 'Only admins can trigger log archival.');
+  }
+
+  const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+  const cutoffTime = new Date(Date.now() - thirtyDaysInMs);
+
+  try {
+    const oldLogsSnap = await db.collection('logs')
+      .where('timestamp', '<', cutoffTime)
+      .limit(100) // Process in chunks of 100 to avoid memory/batch limits
+      .get();
+
+    if (oldLogsSnap.empty) {
+      return { success: true, message: 'No logs older than 30 days found to archive.' };
+    }
+
+    const batch = db.batch();
+    
+    oldLogsSnap.forEach((doc) => {
+      const logData = doc.data();
+      // Write to archive collection
+      const archiveRef = db.collection('logs_archive').doc(doc.id);
+      batch.set(archiveRef, { ...logData, archivedAt: admin.firestore.FieldValue.serverTimestamp() });
+      // Delete from active logs
+      batch.delete(doc.ref);
+    });
+
+    await batch.commit();
+    console.log(`Archived and purged ${oldLogsSnap.size} logs.`);
+    
+    return { 
+      success: true, 
+      message: `Archived and purged ${oldLogsSnap.size} logs successfully.`,
+      count: oldLogsSnap.size
+    };
+  } catch (error) {
+    console.error('Error archiving logs:', error);
+    throw new functions.https.HttpsError('internal', error.message);
+  }
+});

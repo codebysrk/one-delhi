@@ -59,8 +59,16 @@ export interface Ticket {
   date: string;
   time: string;
   timestamp: number;
+  expiresAt?: number;
   fareSource: string;
   isCustom?: boolean;
+  isPass?: boolean;
+  passName?: string;
+  holderName?: string;
+  phone?: string;
+  dob?: string;
+  idType?: string;
+  idLastDigits?: string;
   slab?: {
     acFare: number;
     nonACFare: number;
@@ -72,16 +80,23 @@ export interface Ticket {
 }
 
 /**
- * Utility to check if a ticket is expired (2 hours validity)
+ * Utility to check if a ticket is expired (2 hours validity or explicit expiresAt)
  */
-export const isTicketExpired = (timestamp: any): boolean => {
+export const isTicketExpired = (timestamp: any, expiresAt?: any): boolean => {
+  const now = Date.now();
+  if (expiresAt) {
+    const exp = typeof expiresAt === 'number'
+      ? expiresAt
+      : (expiresAt?.toMillis?.() || (expiresAt?.seconds ? expiresAt.seconds * 1000 : 0));
+    if (exp) return now > exp;
+  }
+  
   if (!timestamp) return false;
   const ts = typeof timestamp === 'number' 
     ? timestamp 
     : (timestamp?.toMillis?.() || (timestamp?.seconds ? timestamp.seconds * 1000 : 0));
   
   if (!ts) return false;
-  const now = Date.now();
   const twoHoursInMs = 2 * 60 * 60 * 1000;
   return (now - ts) > twoHoursInMs;
 };
@@ -89,15 +104,24 @@ export const isTicketExpired = (timestamp: any): boolean => {
 /**
  * Get remaining validity time in "01h 12m" format
  */
-export const getRemainingValidity = (timestamp: any): string => {
+export const getRemainingValidity = (timestamp: any, expiresAt?: any): string => {
   const ts = typeof timestamp === 'number' 
     ? timestamp 
     : (timestamp?.toMillis?.() || (timestamp?.seconds ? timestamp.seconds * 1000 : 0));
     
   if (!ts) return "Expired";
   const now = Date.now();
-  const twoHoursInMs = 2 * 60 * 60 * 1000;
-  const remainingMs = (ts + twoHoursInMs) - now;
+  let remainingMs = 0;
+  
+  if (expiresAt) {
+    const exp = typeof expiresAt === 'number'
+      ? expiresAt
+      : (expiresAt?.toMillis?.() || (expiresAt?.seconds ? expiresAt.seconds * 1000 : 0));
+    remainingMs = exp - now;
+  } else {
+    const twoHoursInMs = 2 * 60 * 60 * 1000;
+    remainingMs = (ts + twoHoursInMs) - now;
+  }
   
   if (remainingMs <= 0) return "Expired";
   
@@ -129,7 +153,7 @@ export const generateTicketId = (): string => {
  */
 export const getLatestActiveTicket = (tickets: Ticket[]): Ticket | null => {
   const activeOnes = tickets.filter(t => 
-    t.status === TicketStatus.ACTIVE && !isTicketExpired(t.timestamp)
+    t.status === TicketStatus.ACTIVE && !isTicketExpired(t.timestamp, t.expiresAt)
   );
   
   if (activeOnes.length === 0) return null;

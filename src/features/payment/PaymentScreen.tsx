@@ -18,7 +18,9 @@ import { Screen } from "../../components/layout/Screen";
 import { Header } from "../../components/layout/Header";
 import { useAppStore } from "../../store/useAppStore";
 import { generateTicketId } from "../../utils/ticketHelper";
-import { db, auth } from "../../services/firebase";
+import { auth } from "../../services/firebase";
+import { saveTicket } from "../../services/ticketService";
+import { savePass } from "../../services/passService";
 import firestore from "@react-native-firebase/firestore";
 import {
   PaytmIcon,
@@ -36,7 +38,7 @@ import { PaytmProcessingScreen } from "./PaytmProcessingScreen";
 import { PaytmSuccessScreen } from "./PaytmSuccessScreen";
 import { GenericProcessingScreen } from "./GenericProcessingScreen";
 import { GenericSuccessScreen } from "./GenericSuccessScreen";
-import { moderateScale, responsiveFontSize } from "../../core/responsive";
+import { moderateScale, responsiveFontSize } from "../../utils/responsive";
 import * as Haptics from "expo-haptics";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { PrimaryButton } from "../../components/ui/PrimaryButton";
@@ -180,6 +182,20 @@ export const PaymentScreen = ({ navigation, route }: any) => {
   const saveTicketInBackground = async () => {
     try {
       const now = new Date();
+      const nowMs = now.getTime();
+      let expiresAtMs = nowMs + 2 * 60 * 60 * 1000; // Default 2 hours
+
+      if (ticketData.isPass) {
+        const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        if (ticketData.passName && ticketData.passName.toUpperCase().includes("DAILY")) {
+          expiresAtMs = endOfDay.getTime();
+        } else if (ticketData.passName && ticketData.passName.toUpperCase().includes("MONTHLY")) {
+          const futureDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+          const endOfFutureDay = new Date(futureDate.getFullYear(), futureDate.getMonth(), futureDate.getDate(), 23, 59, 59, 999);
+          expiresAtMs = endOfFutureDay.getTime();
+        }
+      }
+
       const dateStr = `${now.getDate().toString().padStart(2, "0")} ${now.toLocaleString("en-GB", { month: "short" })}, ${now.getFullYear()}`;
       const timeStr = now.toLocaleTimeString("en-US", {
         hour: "2-digit",
@@ -194,6 +210,7 @@ export const PaymentScreen = ({ navigation, route }: any) => {
         date: dateStr,
         time: timeStr,
         timestamp: firestore.Timestamp.now(),
+        expiresAt: firestore.Timestamp.fromMillis(expiresAtMs),
         userId: auth.currentUser?.uid,
         deviceId: useAppStore.getState().deviceId,
         status: "Active",
@@ -204,13 +221,14 @@ export const PaymentScreen = ({ navigation, route }: any) => {
       addTicket({
         ...finalTicket,
         timestamp: finalTicket.timestamp.toMillis(),
+        expiresAt: expiresAtMs,
         fare: ticketData.total,
         status: "Active" as any,
         tid: tid,
       });
 
       // 2. Save to Firestore in background
-      db.collection("tickets").doc(tid).set(sanitizePayload(finalTicket))
+      saveTicket(tid, sanitizePayload(finalTicket))
         .then(() => {
           console.log("[PaymentScreen] Ticket synced online successfully.");
         })
@@ -219,6 +237,34 @@ export const PaymentScreen = ({ navigation, route }: any) => {
             "[OfflineSync] Offline mode active. Ticket saved locally and will sync when online.",
           );
         });
+
+      // 2b. If it is a pass, also save to passes collection
+      if (ticketData.isPass) {
+        const passDoc = {
+          passId: tid,
+          userId: auth.currentUser?.uid,
+          passType: ticketData.passName,
+          status: "ACTIVE",
+          validFrom: nowMs,
+          validTill: expiresAtMs,
+          createdAt: nowMs,
+          holderName: ticketData.holderName,
+          phone: ticketData.phone,
+          dob: ticketData.dob,
+          idType: ticketData.idType,
+          idLastDigits: ticketData.idLastDigits,
+          fare: ticketData.total,
+          paymentStatus: "PAID",
+          txnId: tid,
+        };
+        savePass(tid, sanitizePayload(passDoc))
+          .then(() => {
+            console.log("[PaymentScreen] Pass synced online successfully.");
+          })
+          .catch((err) => {
+            console.log("[OfflineSync] Offline/failed pass sync. Will retry online.", err);
+          });
+      }
 
       // 3. Log Action (Background)
       logAction({

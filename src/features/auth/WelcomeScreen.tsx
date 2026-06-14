@@ -11,7 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { ScreenContainer } from '../../components/layout/Screen';
-import { COLORS, SHADOWS } from '../../core/theme';
+import { COLORS, SHADOWS } from '../../theme/theme';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
 
 const { height } = Dimensions.get('window');

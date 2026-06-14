@@ -1,0 +1,100 @@
+[debug] [2026-06-14T10:14:28.200Z] ----------------------------------------------------------------------
+[debug] [2026-06-14T10:14:28.202Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\maish\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js functions:shell
+[debug] [2026-06-14T10:14:28.202Z] CLI Version:   15.19.0
+[debug] [2026-06-14T10:14:28.202Z] Platform:      win32
+[debug] [2026-06-14T10:14:28.202Z] Node Version:  v24.16.0
+[debug] [2026-06-14T10:14:28.202Z] Time:          Sun Jun 14 2026 15:44:28 GMT+0530 (India Standard Time)
+[debug] [2026-06-14T10:14:28.202Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-06-14T10:14:29.349Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-06-14T10:14:29.350Z] > authorizing via signed-in user (maishahrukhh@gmail.com)
+[debug] [2026-06-14T10:14:29.350Z] [iam] checking project onedelhii for permissions ["firebase.projects.get"]
+[debug] [2026-06-14T10:14:29.351Z] Checked if tokens are valid: true, expires at: 1781435615601
+[debug] [2026-06-14T10:14:29.351Z] Checked if tokens are valid: true, expires at: 1781435615601
+[debug] [2026-06-14T10:14:29.351Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/onedelhii:testIamPermissions [none]
+[debug] [2026-06-14T10:14:29.351Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/onedelhii:testIamPermissions  x-goog-user-project=onedelhii
+[debug] [2026-06-14T10:14:29.351Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/onedelhii:testIamPermissions {"permissions":["firebase.projects.get"]}
+[debug] [2026-06-14T10:14:31.038Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/onedelhii:testIamPermissions 200
+[debug] [2026-06-14T10:14:31.039Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/onedelhii:testIamPermissions {"permissions":["firebase.projects.get"]}
+[debug] [2026-06-14T10:14:31.043Z] [functions] Functions Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-06-14T10:14:31.059Z] defaultcredentials: writing to file C:\Users\maish\AppData\Roaming\firebase\maishahrukhh_gmail_com_application_default_credentials.json
+[debug] [2026-06-14T10:14:31.060Z] DEBUG: Setting GAC to C:\Users\maish\AppData\Roaming\firebase\maishahrukhh_gmail_com_application_default_credentials.json
+[debug] [2026-06-14T10:14:31.060Z] Checked if tokens are valid: true, expires at: 1781435615601
+[debug] [2026-06-14T10:14:31.060Z] Checked if tokens are valid: true, expires at: 1781435615601
+[debug] [2026-06-14T10:14:31.060Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/onedelhii/adminSdkConfig [none]
+[debug] [2026-06-14T10:14:32.319Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/onedelhii/adminSdkConfig 200
+[debug] [2026-06-14T10:14:32.319Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/onedelhii/adminSdkConfig {"projectId":"onedelhii","storageBucket":"onedelhii.firebasestorage.app"}
+[debug] [2026-06-14T10:14:32.343Z] [functions] Watching "S:\one-delhi\functions" for Cloud Functions...
+[debug] [2026-06-14T10:14:32.345Z] Validating nodejs source
+[warn] !  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory. 
+[warn] !  functions: Please note that there will be breaking changes when you upgrade. 
+[debug] [2026-06-14T10:14:37.284Z] > [functions] package.json contents: {
+  "name": "functions",
+  "description": "Cloud Functions for Firebase",
+  "scripts": {
+    "serve": "firebase serve --only functions",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "18"
+  },
+  "dependencies": {
+    "firebase-admin": "^11.11.1",
+    "firebase-functions": "^4.3.1"
+  },
+  "devDependencies": {
+    "firebase-functions-test": "^3.1.0"
+  },
+  "private": true
+}
+[debug] [2026-06-14T10:14:37.284Z] Building nodejs source
+[debug] [2026-06-14T10:14:37.284Z] Failed to find version of module node: reached end of search path S:\one-delhi\functions\node_modules
+[warn] !  functions: Your requested "node" version "18" doesn't match your global version "24". Using node@24 from host. 
+[info] i  functions: You are using a version of firebase-functions SDK (4.9.0) that does not have support for the newest Firebase Extensions features. Please update firebase-functions SDK to >=5.1.0 to use them correctly 
+[debug] [2026-06-14T10:14:37.286Z] Could not find functions.yaml. Must use http discovery
+[debug] [2026-06-14T10:14:37.292Z] Found firebase-functions binary at 'S:\one-delhi\functions\node_modules\.bin\firebase-functions'
+[info] Serving at port 8611
+
+[debug] [2026-06-14T10:14:37.589Z] Got response from /__/functions.yaml {"endpoints":{"adminDeleteUser":{"platform":"gcfv1","labels":{},"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"callableTrigger":{},"entryPoint":"adminDeleteUser"},"validateTicket":{"platform":"gcfv1","labels":{},"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"callableTrigger":{},"entryPoint":"validateTicket"},"archiveOldLogs":{"platform":"gcfv1","labels":{},"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"callableTrigger":{},"entryPoint":"archiveOldLogs"},"deduplicateRoutes":{"platform":"gcfv1","labels":{},"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"callableTrigger":{},"entryPoint":"deduplicateRoutes"}},"specVersion":"v1alpha1","requiredAPIs":[]}
+[debug] [2026-06-14T10:14:41.636Z] [functions] Loaded functions definitions from source: adminDeleteUser, validateTicket, archiveOldLogs, deduplicateRoutes.
+[debug] [2026-06-14T10:14:41.647Z] [functions[us-central1-adminDeleteUser]] http function initialized (http://127.0.0.1:5000/onedelhii/us-central1/adminDeleteUser).
+[debug] [2026-06-14T10:14:41.647Z] [functions[us-central1-validateTicket]] http function initialized (http://127.0.0.1:5000/onedelhii/us-central1/validateTicket).
+[debug] [2026-06-14T10:14:41.647Z] [functions[us-central1-archiveOldLogs]] http function initialized (http://127.0.0.1:5000/onedelhii/us-central1/archiveOldLogs).
+[debug] [2026-06-14T10:14:41.647Z] [functions[us-central1-deduplicateRoutes]] http function initialized (http://127.0.0.1:5000/onedelhii/us-central1/deduplicateRoutes).
+[info] i  functions: Loaded functions: adminDeleteUser, validateTicket, archiveOldLogs, deduplicateRoutes 
+[warn] !  functions: The following emulators are not running, calls to these services will affect production: firestore, database, pubsub, storage, eventarc, tasks 
+[debug] [2026-06-14T10:14:42.939Z] >>> [apiv2][query] POST http://127.0.0.1:5000/onedelhii/us-central1/deduplicateRoutes/ [none]
+[debug] [2026-06-14T10:14:42.939Z] >>> [apiv2][body] POST http://127.0.0.1:5000/onedelhii/us-central1/deduplicateRoutes/ {}
+[debug] [2026-06-14T10:14:42.946Z] [work-queue] {"queuedWork":["/onedelhii/us-central1/deduplicateRoutes/-2026-06-14T10:14:42.946Z"],"queueLength":1,"runningWork":[],"workRunningCount":0}
+[debug] [2026-06-14T10:14:42.946Z] [work-queue] {"queuedWork":[],"queueLength":0,"runningWork":["/onedelhii/us-central1/deduplicateRoutes/-2026-06-14T10:14:42.946Z"],"workRunningCount":1}
+[debug] [2026-06-14T10:14:42.946Z] Accepted request POST /onedelhii/us-central1/deduplicateRoutes/ --> us-central1-deduplicateRoutes
+[debug] [2026-06-14T10:14:42.947Z] DEBUG: [functions] Runtime ready! Sending request!
+[debug] [2026-06-14T10:14:42.947Z] DEBUG: [functions] Got req.url=/onedelhii/us-central1/deduplicateRoutes/, mapping to path=/
+[debug] [2026-06-14T10:14:42.956Z] DEBUG: [worker-pool] addWorker(us-central1-deduplicateRoutes)
+[debug] [2026-06-14T10:14:42.957Z] DEBUG: [worker-pool] Adding worker with key us-central1-deduplicateRoutes, total=1
+[debug] [2026-06-14T10:14:43.543Z] DEBUG: [runtime-status] [30216] Resolved module firebase-admin {"declared":true,"installed":true,"version":"11.11.1","resolution":"S:\\one-delhi\\functions\\node_modules\\firebase-admin\\lib\\index.js"}
+[debug] [2026-06-14T10:14:43.544Z] DEBUG: [runtime-status] [30216] Resolved module firebase-functions {"declared":true,"installed":true,"version":"4.9.0","resolution":"S:\\one-delhi\\functions\\node_modules\\firebase-functions\\lib\\v1\\index.js"}
+[debug] [2026-06-14T10:14:43.544Z] DEBUG: [runtime-status] [30216] Outgoing network have been stubbed. [{"name":"http","status":"mocked"},{"name":"http","status":"mocked"},{"name":"https","status":"mocked"},{"name":"https","status":"mocked"},{"name":"net","status":"mocked"}]
+[debug] [2026-06-14T10:14:43.544Z] DEBUG: [runtime-status] [30216] Resolved module firebase-functions {"declared":true,"installed":true,"version":"4.9.0","resolution":"S:\\one-delhi\\functions\\node_modules\\firebase-functions\\lib\\v1\\index.js"}
+[debug] [2026-06-14T10:14:43.616Z] DEBUG: [runtime-status] [30216] Resolved module firebase-admin {"declared":true,"installed":true,"version":"11.11.1","resolution":"S:\\one-delhi\\functions\\node_modules\\firebase-admin\\lib\\index.js"}
+[debug] [2026-06-14T10:14:43.617Z] DEBUG: [runtime-status] [30216] Resolved module firebase-functions {"declared":true,"installed":true,"version":"4.9.0","resolution":"S:\\one-delhi\\functions\\node_modules\\firebase-functions\\lib\\v1\\index.js"}
+[debug] [2026-06-14T10:14:43.665Z] DEBUG: [runtime-status] [30216] firebase-admin has been stubbed. {"adminResolution":{"declared":true,"installed":true,"version":"11.11.1","resolution":"S:\\one-delhi\\functions\\node_modules\\firebase-admin\\lib\\index.js"}}
+[debug] [2026-06-14T10:14:43.667Z] DEBUG: [runtime-status] [30216] initializeApp(DEFAULT) {"storageBucket":"onedelhii.firebasestorage.app","projectId":"onedelhii"}
+[debug] [2026-06-14T10:14:43.670Z] DEBUG: [runtime-status] [30216] Functions runtime initialized. {"cwd":"S:\\one-delhi\\functions","node_version":"24.16.0"}
+[debug] [2026-06-14T10:14:43.670Z] DEBUG: [runtime-status] [30216] Listening to port: \\?\pipe\fire_emu_9015a404e3e07124
+[debug] [2026-06-14T10:14:43.718Z] DEBUG: [worker-us-central1-deduplicateRoutes-c03f4f32-1e7a-412a-9d82-b431a7486f83]: IDLE
+[debug] [2026-06-14T10:14:43.718Z] DEBUG: [worker-pool] submitRequest(triggerId=us-central1-deduplicateRoutes)
+[debug] [2026-06-14T10:14:43.718Z] [functions] Beginning execution of "us-central1-deduplicateRoutes"
+[debug] [2026-06-14T10:14:43.718Z] DEBUG: [worker-us-central1-deduplicateRoutes-c03f4f32-1e7a-412a-9d82-b431a7486f83]: BUSY
+[info] >  {"severity":"WARNING","message":"Request body is missing data."} {"user":{"severity":"WARNING","message":"Request body is missing data."},"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-deduplicateRoutes"},"extension":{},"message":"\u001b[90m> \u001b[39m {\"severity\":\"WARNING\",\"message\":\"Request body is missing data.\"}"}}
+[info] >  {"severity":"ERROR","message":"Error: Invalid request, unable to process.\n    at entryFromArgs (S:\\one-delhi\\functions\\node_modules\\firebase-functions\\lib\\logger\\index.js:130:19)\n    at Object.error (S:\\one-delhi\\functions\\node_modules\\firebase-functions\\lib\\logger\\index.js:116:11)\n    at S:\\one-delhi\\functions\\node_modules\\firebase-functions\\lib\\common\\providers\\https.js:405:24\n    at S:\\one-delhi\\functions\\node_modules\\firebase-functions\\lib\\common\\providers\\https.js:394:25\n    at cors (S:\\one-delhi\\functions\\node_modules\\cors\\lib\\index.js:188:7)\n    at S:\\one-delhi\\functions\\node_modules\\cors\\lib\\index.js:224:17\n    at originCallback (S:\\one-delhi\\functions\\node_modules\\cors\\lib\\index.js:214:15)\n    at S:\\one-delhi\\functions\\node_modules\\cors\\lib\\index.js:219:13\n    at optionsCallback (S:\\one-delhi\\functions\\node_modules\\cors\\lib\\index.js:199:9)\n    at corsMiddleware (S:\\one-delhi\\functions\\node_modules\\cors\\lib\\index.js:204:7)"} {"user":{"severity":"ERROR","message":"Error: Invalid request, unable to process.\n    at entryFromArgs (S:\\one-delhi\\functions\\node_modules\\firebase-functions\\lib\\logger\\index.js:130:19)\n    at Object.error (S:\\one-delhi\\functions\\node_modules\\firebase-functions\\lib\\logger\\index.js:116:11)\n    at S:\\one-delhi\\functions\\node_modules\\firebase-functions\\lib\\common\\providers\\https.js:405:24\n    at S:\\one-delhi\\functions\\node_modules\\firebase-functions\\lib\\common\\providers\\https.js:394:25\n    at cors (S:\\one-delhi\\functions\\node_modules\\cors\\lib\\index.js:188:7)\n    at S:\\one-delhi\\functions\\node_modules\\cors\\lib\\index.js:224:17\n    at originCallback (S:\\one-delhi\\functions\\node_modules\\cors\\lib\\index.js:214:15)\n    at S:\\one-delhi\\functions\\node_modules\\cors\\lib\\index.js:219:13\n    at optionsCallback (S:\\one-delhi\\functions\\node_modules\\cors\\lib\\index.js:199:9)\n    at corsMiddleware (S:\\one-delhi\\functions\\node_modules\\cors\\lib\\index.js:204:7)"},"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-deduplicateRoutes"},"extension":{},"message":"\u001b[90m> \u001b[39m {\"severity\":\"ERROR\",\"message\":\"Error: Invalid request, unable to process.\\n    at entryFromArgs (S:\\\\one-delhi\\\\functions\\\\node_modules\\\\firebase-functions\\\\lib\\\\logger\\\\index.js:130:19)\\n    at Object.error (S:\\\\one-delhi\\\\functions\\\\node_modules\\\\firebase-functions\\\\lib\\\\logger\\\\index.js:116:11)\\n    at S:\\\\one-delhi\\\\functions\\\\node_modules\\\\firebase-functions\\\\lib\\\\common\\\\providers\\\\https.js:405:24\\n    at S:\\\\one-delhi\\\\functions\\\\node_modules\\\\firebase-functions\\\\lib\\\\common\\\\providers\\\\https.js:394:25\\n    at cors (S:\\\\one-delhi\\\\functions\\\\node_modules\\\\cors\\\\lib\\\\index.js:188:7)\\n    at S:\\\\one-delhi\\\\functions\\\\node_modules\\\\cors\\\\lib\\\\index.js:224:17\\n    at originCallback (S:\\\\one-delhi\\\\functions\\\\node_modules\\\\cors\\\\lib\\\\index.js:214:15)\\n    at S:\\\\one-delhi\\\\functions\\\\node_modules\\\\cors\\\\lib\\\\index.js:219:13\\n    at optionsCallback (S:\\\\one-delhi\\\\functions\\\\node_modules\\\\cors\\\\lib\\\\index.js:199:9)\\n    at corsMiddleware (S:\\\\one-delhi\\\\functions\\\\node_modules\\\\cors\\\\lib\\\\index.js:204:7)\"}"}}
+[debug] [2026-06-14T10:14:43.748Z] DEBUG: Finishing up request with event=finish
+[debug] [2026-06-14T10:14:43.748Z] [functions] Finished "us-central1-deduplicateRoutes" in 29.4062ms
+[debug] [2026-06-14T10:14:43.748Z] DEBUG: [worker-us-central1-deduplicateRoutes-c03f4f32-1e7a-412a-9d82-b431a7486f83]: IDLE
+[debug] [2026-06-14T10:14:43.748Z] DEBUG: Finishing up request with event=close
+[debug] [2026-06-14T10:14:43.748Z] [work-queue] {"queuedWork":[],"queueLength":0,"runningWork":[],"workRunningCount":0}
+[debug] [2026-06-14T10:14:43.748Z] <<< [apiv2][status] POST http://127.0.0.1:5000/onedelhii/us-central1/deduplicateRoutes/ 400
+[debug] [2026-06-14T10:14:43.748Z] <<< [apiv2][body] POST http://127.0.0.1:5000/onedelhii/us-central1/deduplicateRoutes/ {"error":{"message":"Bad Request","status":"INVALID_ARGUMENT"}}

@@ -34,7 +34,8 @@ import Animated, {
 import { useAppStore } from "../../store/useAppStore";
 import { BottomSheet } from "../../components/layout/BottomSheet";
 import { MainHeader } from "../../components/layout/Header";
-import { ANIMATIONS } from "../../core/theme";
+import { ANIMATIONS } from "../../theme/theme";
+import { getStops } from "../../services/routeService";
 
 const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
   const dLat = lat1 - lat2;
@@ -68,6 +69,7 @@ export const MapScreen = ({ navigation }: any) => {
 
   const [mapLoaded, setMapLoaded] = useState(false);
   const [stopsToShow, setStopsToShow] = useState<any[]>([]);
+  const [dbStops, setDbStops] = useState<{ id: string; name: string }[]>([]);
 
   const translateY = useSharedValue(SNAP_MID);
   const [canScroll, setCanScroll] = useState(false);
@@ -253,10 +255,83 @@ export const MapScreen = ({ navigation }: any) => {
     loadStops();
   }, [location]);
 
-  // Nearby stops markers are no longer drawn on the map as per user request to keep only intended visuals.
   useEffect(() => {
-    // Intentionally left empty to prevent drawing red dots/markers on the map
-  }, [stopsToShow, mapLoaded]);
+    const fetchAndDrawDbStops = async () => {
+      if (!mapLoaded) return;
+      try {
+        const list = await getStops();
+        const stopsData = list.map(item => {
+          return {
+            id: item.id,
+            name: item.name || "",
+            stop_id: item.id || "",
+            lat: item.lat,
+            lng: item.lng,
+          };
+        });
+        setDbStops(stopsData);
+
+        const rawStops: any[] = require("../../../assets/stops.json");
+        const stopsToDraw: { lat: number; lng: number; name: string }[] = [];
+        const seenNames = new Set<string>();
+        const seenCoords = new Set<string>();
+
+        stopsData.forEach((dbStop) => {
+          let lat: number | undefined;
+          let lng: number | undefined;
+          let name = dbStop.name;
+
+          if (dbStop.lat && dbStop.lng) {
+            lat = Number(dbStop.lat);
+            lng = Number(dbStop.lng);
+          } else {
+            let matched = rawStops.find(
+              (s) =>
+                (dbStop.stop_id && s.stop_id === dbStop.stop_id) ||
+                (dbStop.name && s.stop_name.toLowerCase().trim() === dbStop.name.toLowerCase().trim())
+            );
+
+            if (!matched && dbStop.name) {
+              matched = rawStops.find(
+                (s) =>
+                  s.stop_name.toLowerCase().includes(dbStop.name.toLowerCase().trim()) ||
+                  dbStop.name.toLowerCase().trim().includes(s.stop_name.toLowerCase())
+              );
+            }
+
+            if (matched) {
+              lat = matched.stop_lat;
+              lng = matched.stop_lon;
+              name = dbStop.name || matched.stop_name;
+            }
+          }
+
+          if (lat !== undefined && lng !== undefined && name) {
+            const nameKey = name.toLowerCase().trim();
+            const coordKey = `${lat.toFixed(5)},${lng.toFixed(5)}`;
+
+            if (!seenNames.has(nameKey) && !seenCoords.has(coordKey)) {
+              seenNames.add(nameKey);
+              seenCoords.add(coordKey);
+              stopsToDraw.push({
+                lat,
+                lng,
+                name,
+              });
+            }
+          }
+        });
+
+        if (stopsToDraw.length > 0) {
+          webViewRef.current?.updateNearbyStops(stopsToDraw);
+        }
+      } catch (error) {
+        console.error("Error fetching or mapping db stops:", error);
+      }
+    };
+
+    fetchAndDrawDbStops();
+  }, [mapLoaded]);
 
   const renderStopItem = useCallback(
     ({ item, index }: any) => (
