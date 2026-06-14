@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { StyleSheet, Animated, ViewStyle, StyleProp } from 'react-native';
+import { COLORS } from '../../theme/theme';
 interface SkeletonProps {
   width?: number | string;
   height?: number | string;
@@ -33,6 +34,6 @@ export const Skeleton: React.FC<SkeletonProps> = ({
 };
 const styles = StyleSheet.create({
   skeleton: {
-    backgroundColor: '#E1E9EE'
+    backgroundColor: COLORS.surfaceVariant
   }
 });

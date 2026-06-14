@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { View, Text, StyleSheet, Animated, StatusBar, Easing } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { COLORS } from "../../theme/theme";
+
 interface PendingScreenProps {
   visible: boolean;
   onAnimationEnd: () => void;
@@ -105,7 +107,7 @@ export const PendingScreen: React.FC<PendingScreenProps> = ({
       translateY: mainTranslateY
     }]
   }]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent={true} />
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} translucent={true} />
       
       {status === "processing" ? <View style={styles.container}>
           <Animated.View style={{
@@ -113,12 +115,12 @@ export const PendingScreen: React.FC<PendingScreenProps> = ({
           rotate: spin
         }]
       }}>
-            <MaterialCommunityIcons name="loading" size={64} color="#00B9F1" />
+            <MaterialCommunityIcons name="loading" size={64} color={COLORS.info} />
           </Animated.View>
           <Text style={styles.processingText}>Processing Payment...</Text>
           <Text style={styles.processingSubtext}>Confirming transaction with bank</Text>
         </View> : <View style={styles.container}>
-          {}
+          
           <View style={styles.checkWrapper}>
             <Animated.View style={[styles.ripple, {
           opacity: rippleOpacity,
@@ -131,7 +133,7 @@ export const PendingScreen: React.FC<PendingScreenProps> = ({
             scale: tickScale
           }]
         }]}>
-              <MaterialCommunityIcons name="check-bold" size={48} color="#FFFFFF" />
+              <MaterialCommunityIcons name="check-bold" size={48} color={COLORS.white} />
             </Animated.View>
           </View>
 
@@ -153,7 +155,7 @@ export const PendingScreen: React.FC<PendingScreenProps> = ({
           </Animated.View>
         </View>}
 
-      {}
+      
       <View style={styles.footer}>
         <View style={styles.securedBadge}>
           <MaterialCommunityIcons name="shield-check" size={18} color="#09B360" />
@@ -165,7 +167,7 @@ export const PendingScreen: React.FC<PendingScreenProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.background,
     zIndex: 99999,
     elevation: 99999,
     justifyContent: "space-between",
@@ -182,13 +184,13 @@ const styles = StyleSheet.create({
   processingText: {
     fontSize: 22,
     fontWeight: "600",
-    color: "#1F2937",
+    color: COLORS.text,
     marginTop: 24,
     textAlign: "center"
   },
   processingSubtext: {
     fontSize: 14,
-    color: "#6B7280",
+    color: COLORS.textSecondary,
     marginTop: 8,
     textAlign: "center"
   },
@@ -216,7 +218,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     elevation: 4,
-    shadowColor: "#000",
+    shadowColor: COLORS.black,
     shadowOffset: {
       width: 0,
       height: 2
@@ -239,34 +241,34 @@ const styles = StyleSheet.create({
   successAmount: {
     fontSize: 36,
     fontWeight: "800",
-    color: "#1F2937",
+    color: COLORS.text,
     marginTop: 15
   },
   detailsCard: {
     marginTop: 25,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: COLORS.surface,
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#F3F4F6",
+    borderColor: COLORS.border,
     width: "85%",
     alignItems: "center"
   },
   detailsText: {
     fontSize: 16,
-    color: "#4B5563",
+    color: COLORS.textSecondary,
     textAlign: "center"
   },
   detailsSubtext: {
     fontSize: 14,
-    color: "#6B7280",
+    color: COLORS.textMuted,
     marginTop: 6,
     textAlign: "center"
   },
   boldText: {
     fontWeight: "600",
-    color: "#1F2937"
+    color: COLORS.text
   },
   footer: {
     alignItems: "center",

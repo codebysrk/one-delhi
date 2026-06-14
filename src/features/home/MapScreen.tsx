@@ -11,7 +11,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withSpring, interpolate, Ex
 import { useAppStore } from "../../store/useAppStore";
 import { BottomSheet } from "../../components/layout/BottomSheet";
 import { MainHeader } from "../../components/layout/Header";
-import { ANIMATIONS } from "../../theme/theme";
+import { ANIMATIONS, COLORS } from "../../theme/theme";
 import { getStops } from "../../services/routeService";
 const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
   const dLat = lat1 - lat2;
@@ -262,19 +262,19 @@ export const MapScreen = ({
         left: 20
       }]}>
           <TouchableOpacity onPress={showSheet} style={styles.fabInner}>
-            <MaterialCommunityIcons name="arrow-up-circle" size={40} color="#b92121ff" />
+            <MaterialCommunityIcons name="arrow-up-circle" size={40} color={COLORS.primary} />
           </TouchableOpacity>
         </Animated.View>
         <Animated.View style={[styles.mapControls, animatedMapControlsStyle, {
         right: 20
       }]}>
           <TouchableOpacity style={styles.controlFab}>
-            <MaterialCommunityIcons name="bus" size={24} color="#000" />
+            <MaterialCommunityIcons name="bus" size={24} color={COLORS.black} />
           </TouchableOpacity>
           <TouchableOpacity style={[styles.controlFab, {
           marginTop: 12
         }]} onPress={centerOnUser}>
-            <MaterialCommunityIcons name="crosshairs-gps" size={24} color="#000" />
+            <MaterialCommunityIcons name="crosshairs-gps" size={24} color={COLORS.black} />
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -296,7 +296,7 @@ export const MapScreen = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFF"
+    backgroundColor: COLORS.background
   },
   headerArea: {
     overflow: "hidden",
@@ -315,10 +315,10 @@ const styles = StyleSheet.create({
     right: 10,
     width: 8,
     height: 8,
-    backgroundColor: "#FACC15",
+    backgroundColor: COLORS.accent,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: "white"
+    borderColor: COLORS.white
   },
   mapBody: {
     flex: 1,
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
   controlFab: {
     width: 40,
     height: 40,
-    backgroundColor: "white",
+    backgroundColor: COLORS.white,
     borderRadius: 28,
     justifyContent: "center",
     alignItems: "center",
@@ -363,18 +363,18 @@ const styles = StyleSheet.create({
     borderRadius: 22
   },
   activeTabBtn: {
-    backgroundColor: "#C0282C"
+    backgroundColor: COLORS.primary
   },
   inactiveTabBtn: {
-    backgroundColor: "#A3A3A3"
+    backgroundColor: COLORS.textMuted
   },
   activeTabText: {
-    color: "white",
+    color: COLORS.white,
     fontWeight: "700",
     fontSize: 14
   },
   inactiveTabText: {
-    color: "white",
+    color: COLORS.white,
     fontWeight: "700",
     fontSize: 14
   },
@@ -391,28 +391,28 @@ const styles = StyleSheet.create({
   stopMain: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#000"
+    color: COLORS.black
   },
   stopDir: {
     fontSize: 12,
-    color: "#666",
+    color: COLORS.textSecondary,
     marginTop: 1.5
   },
   greenBtn: {
     borderWidth: 1.1,
-    borderColor: "#10B981",
+    borderColor: COLORS.success,
     paddingHorizontal: 9,
     paddingVertical: 5,
     borderRadius: 15
   },
   greenBtnText: {
-    color: "#10B981",
+    color: COLORS.success,
     fontWeight: "700",
     fontSize: 11.5
   },
   divider: {
     height: 1,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: COLORS.border,
     marginHorizontal: 20
   }
 });

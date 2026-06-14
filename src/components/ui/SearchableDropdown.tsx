@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { FlashList } from "@shopify/flash-list";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Portal } from "./Portal";
+import { COLORS } from "../../theme/theme";
 export interface SearchableDropdownProps<T> {
   data: T[];
   value: string;
@@ -181,8 +182,15 @@ function SearchableDropdownInner<T>({
   const isKeyboardOpen = currentKeyboardHeight > 0;
   const normalSpaceBelow = screenHeight - inputBottom - dropdownGap;
   const keyboardSpaceBelow = remainingHeight - inputBottom - dropdownGap - keyboardBuffer;
-  const isFew = totalContentHeight <= keyboardSpaceBelow;
-  const openUpward = isKeyboardOpen ? isFew ? false : true : normalSpaceBelow < (maxHeight ?? 320) && spaceAbove > normalSpaceBelow;
+  const spaceBelow = isKeyboardOpen ? keyboardSpaceBelow : normalSpaceBelow;
+  let openUpward = false;
+  if (totalContentHeight <= spaceBelow) {
+    openUpward = false;
+  } else if (totalContentHeight <= spaceAbove) {
+    openUpward = true;
+  } else {
+    openUpward = spaceAbove > spaceBelow;
+  }
   const keyboardTopY = remainingHeight;
   const availableHeightAbove = keyboardTopY - statusBarHeight;
   const shouldPinToStatusBar = isKeyboardOpen && openUpward && totalContentHeight >= availableHeightAbove;
@@ -192,10 +200,10 @@ function SearchableDropdownInner<T>({
       if (shouldPinToStatusBar) {
         dropdownHeight = availableHeightAbove;
       } else {
-        dropdownHeight = totalContentHeight;
+        dropdownHeight = Math.min(totalContentHeight, spaceAbove);
       }
     } else {
-      dropdownHeight = totalContentHeight;
+      dropdownHeight = Math.min(totalContentHeight, keyboardSpaceBelow);
     }
   } else {
     const preferredMaxHeight = maxHeight ?? (variant === "route" ? 550 : 320);
@@ -310,14 +318,14 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "transparent",
     borderRadius: 8,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: COLORS.inputBg,
     paddingLeft: 8,
     paddingRight: 12,
     height: 58
   },
   inputContainerFocused: {
-    borderColor: "#000",
-    backgroundColor: "#FFF"
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.white
   },
   inputContainerDisabled: {
     opacity: 1
@@ -332,7 +340,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: "100%",
     fontSize: 18,
-    color: "#000",
+    color: COLORS.text,
     padding: 0,
     margin: 0,
     textAlignVertical: "center"
@@ -343,10 +351,10 @@ const styles = StyleSheet.create({
   },
   dropdownPanel: {
     position: "absolute",
-    backgroundColor: "#FFF",
+    backgroundColor: COLORS.white,
     borderRadius: 0,
     elevation: 8,
-    shadowColor: "#000",
+    shadowColor: COLORS.black,
     shadowOffset: {
       width: 0,
       height: 4
@@ -354,40 +362,40 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 12,
     borderWidth: 1,
-    borderColor: "#F0F0F0",
+    borderColor: COLORS.border,
     overflow: "hidden"
   },
   separator: {
     height: 1,
-    backgroundColor: "#f5f5f5ff"
+    backgroundColor: COLORS.border
   },
   emptyContainer: {
     padding: 24,
     alignItems: "center"
   },
   emptyText: {
-    color: "#999",
+    color: COLORS.textMuted,
     fontSize: 14
   },
   itemPressed: {
-    backgroundColor: "#F9FAFB"
+    backgroundColor: COLORS.surfaceVariant
   },
   simpleItem: {
     height: 52,
     paddingHorizontal: 16,
     justifyContent: "center",
-    backgroundColor: "#FFF"
+    backgroundColor: COLORS.white
   },
   simpleItemText: {
     fontSize: 15,
-    color: "#333"
+    color: COLORS.text
   },
   routeItem: {
     height: 84,
     paddingVertical: 12,
     paddingHorizontal: 16,
     flexDirection: "row",
-    backgroundColor: "#FFF"
+    backgroundColor: COLORS.white
   },
   routeItemLeft: {
     width: 28,
@@ -412,13 +420,13 @@ const styles = StyleSheet.create({
     height: 12,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: "#EF4444",
-    backgroundColor: "#FFF"
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.white
   },
   pathLine: {
     width: 1.5,
     flex: 1,
-    backgroundColor: "#EF4444",
+    backgroundColor: COLORS.primary,
     marginVertical: 0
   },
   routeItemRight: {
@@ -427,7 +435,7 @@ const styles = StyleSheet.create({
   routeNumber: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#111",
+    color: COLORS.text,
     height: 20,
     lineHeight: 20,
     marginBottom: 6
@@ -439,6 +447,6 @@ const styles = StyleSheet.create({
   },
   stopText: {
     fontSize: 13,
-    color: "#666"
+    color: COLORS.textSecondary
   }
 });

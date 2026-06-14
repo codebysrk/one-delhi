@@ -10,6 +10,7 @@ import { auth } from "../../services/firebase";
 import { getRoutes, Route } from "../../services/routeService";
 import { useAppStore } from "../../store/useAppStore";
 import { logAction } from "../../services/logService";
+import { COLORS } from "../../theme/theme";
 export const SearchScreen = ({
   navigation
 }: any) => {
@@ -194,16 +195,16 @@ export const SearchScreen = ({
   }, [renderRouteItem, removeRecentRoute]);
   const insets = useSafeAreaInsets();
   return <Screen noPadding ignoreTopSafe style={{
-    backgroundColor: '#FFF'
+    backgroundColor: COLORS.white
   }}>
-      <Header onBackPress={() => navigation.goBack()} backgroundColor="#FFFFFF" textColor="#000000" height={50} showShadow={true}>
+      <Header onBackPress={() => navigation.goBack()} backgroundColor={COLORS.white} textColor={COLORS.text} height={50} showShadow={true}>
         <View style={styles.inputWrapper}>
           <TextInput style={styles.searchInput} placeholder="Search 500+ Route" placeholderTextColor="#999" value={searchQuery} onChangeText={setSearchQuery} multiline={false} scrollEnabled textAlign="left" numberOfLines={1} />
         </View>
       </Header>
 
       {searchQuery.length > 0 ? loading ? <View style={styles.loaderBox}>
-            <ActivityIndicator size="large" color="#D32F2F" />
+             <ActivityIndicator size="large" color={COLORS.primary} />
           </View> : <FlashList data={filteredRoutes} renderItem={renderRouteItem} keyExtractor={item => item.id} estimatedItemSize={80} contentContainerStyle={StyleSheet.flatten([styles.listContent, {
       paddingBottom: insets.bottom + 20
     }])} ListEmptyComponent={<View style={styles.emptyBox}>
@@ -327,11 +328,11 @@ const styles = StyleSheet.create({
   },
   clearText: {
     fontSize: 14,
-    color: "#D32F2F",
+    color: COLORS.primary,
     fontWeight: "600"
   },
   deleteAction: {
-    backgroundColor: "#D32F2F",
+    backgroundColor: COLORS.primary,
     justifyContent: "center",
     alignItems: "center",
     width: 70,

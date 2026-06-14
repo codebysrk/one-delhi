@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Screen } from "../../components/layout/Screen";
 import * as Location from "expo-location";
 import { MainHeader } from "../../components/layout/Header";
+import { COLORS } from "../../theme/theme";
 import { useFocusEffect } from "@react-navigation/native";
 import { getEVStations, saveEVStation } from "../../services/evService";
 const EV_STATIONS = [{
@@ -194,12 +195,12 @@ export const EVScreen = ({
         {}
         <View style={styles.floatingBox}>
           <TouchableOpacity style={styles.fab}>
-            <MaterialCommunityIcons name="filter" size={28} color="#333" />
+            <MaterialCommunityIcons name="filter" size={28} color={COLORS.secondary} />
           </TouchableOpacity>
           <TouchableOpacity style={[styles.fab, {
           marginTop: 15
         }]} onPress={() => location && webViewRef.current?.centerMap(location.coords.latitude, location.coords.longitude, 14)}>
-            <MaterialCommunityIcons name="crosshairs-gps" size={28} color="#333" />
+            <MaterialCommunityIcons name="crosshairs-gps" size={28} color={COLORS.secondary} />
           </TouchableOpacity>
         </View>
 
@@ -213,9 +214,9 @@ export const EVScreen = ({
               <Text style={styles.tabLabel}>EV Stations</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.tabBtn, activeTab === "Parking" ? styles.activeParking : styles.inactiveTab]} onPress={() => setActiveTab("Parking")}>
-              <MaterialCommunityIcons name="alpha-p-circle" size={22} color="#E67E22" />
+              <MaterialCommunityIcons name="alpha-p-circle" size={22} color={COLORS.warning} />
               <Text style={[styles.tabLabel, {
-              color: "#333"
+              color: COLORS.secondary
             }]}>
                 Parking Spots
               </Text>
@@ -254,7 +255,7 @@ export const EVScreen = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5"
+    backgroundColor: COLORS.surface
   },
   fullScreenMap: {
     ...StyleSheet.absoluteFillObject,
@@ -275,7 +276,7 @@ const styles = StyleSheet.create({
   },
   headerOverlayColor: {
     flex: 1,
-    backgroundColor: "rgba(190, 31, 31, 0.22)"
+    backgroundColor: `${COLORS.primary}38`
   },
   contentOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -295,7 +296,7 @@ const styles = StyleSheet.create({
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.25)",
+    backgroundColor: `${COLORS.black}40`,
     marginHorizontal: 16,
     height: 52,
     borderRadius: 26,
@@ -303,7 +304,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: "white",
+    color: COLORS.white,
     fontSize: 17,
     marginLeft: 12
   },
@@ -316,7 +317,7 @@ const styles = StyleSheet.create({
   fab: {
     width: 50,
     height: 50,
-    backgroundColor: "white",
+    backgroundColor: COLORS.white,
     borderRadius: 27,
     justifyContent: "center",
     alignItems: "center",
@@ -327,7 +328,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "white",
+    backgroundColor: COLORS.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingTop: 15,
@@ -350,18 +351,18 @@ const styles = StyleSheet.create({
     elevation: 2
   },
   activeEv: {
-    backgroundColor: "#C0392B"
+    backgroundColor: COLORS.primary
   },
   activeParking: {
-    backgroundColor: "#f0f0f0",
+    backgroundColor: COLORS.surfaceVariant,
     borderWidth: 1,
-    borderColor: "#ddd"
+    borderColor: COLORS.border
   },
   inactiveTab: {
-    backgroundColor: "#f0f0f0"
+    backgroundColor: COLORS.surfaceVariant
   },
   tabLabel: {
-    color: "white",
+    color: COLORS.white,
     marginLeft: 8,
     fontSize: 13,
     fontWeight: "700"
@@ -373,14 +374,14 @@ const styles = StyleSheet.create({
   stationCard: {
     width: Dimensions.get("window").width - 20,
     minHeight: 140,
-    backgroundColor: "white",
+    backgroundColor: COLORS.white,
     borderRadius: 5,
     padding: 15,
     marginRight: 10,
     borderWidth: 1,
     elevation: 1,
-    borderColor: "#eee",
-    shadowColor: "#000000ff",
+    borderColor: COLORS.border,
+    shadowColor: COLORS.black,
     shadowOffset: {
       width: 0,
       height: 1
@@ -396,7 +397,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 17,
     fontWeight: "800",
-    color: "#333",
+    color: COLORS.secondary,
     marginRight: 10
   },
   badgeContainer: {
@@ -405,29 +406,29 @@ const styles = StyleSheet.create({
     gap: 5
   },
   availBadge: {
-    backgroundColor: "#e6f9ed",
+    backgroundColor: `${COLORS.success}20`,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12
   },
   availText: {
-    color: "#27ae60",
+    color: COLORS.success,
     fontSize: 10,
     fontWeight: "700"
   },
   distBadge: {
-    backgroundColor: "#fceaea",
+    backgroundColor: `${COLORS.primary}18`,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12
   },
   distText: {
-    color: "#c0392b",
+    color: COLORS.primary,
     fontSize: 10,
     fontWeight: "700"
   },
   navBtn: {
-    backgroundColor: "#c0392b",
+    backgroundColor: COLORS.primary,
     width: 30,
     height: 30,
     borderRadius: 8,
@@ -438,17 +439,17 @@ const styles = StyleSheet.create({
     }]
   },
   cardAddress: {
-    color: "#7f8c8d",
+    color: COLORS.textMuted,
     fontSize: 13,
     marginBottom: 10
   },
   line: {
     height: 1,
-    backgroundColor: "#eee",
+    backgroundColor: COLORS.border,
     marginBottom: 10
   },
   supportsText: {
-    color: "#888",
+    color: COLORS.textMuted,
     fontSize: 12,
     fontWeight: "600"
   }

@@ -11,6 +11,7 @@ import { getLatestTicket, getRouteNumberOnly, formatTimeTo12hr, isTicketExpired 
 import QRCode from "react-native-qrcode-svg";
 import { useKeepAwake } from "expo-keep-awake";
 import { InvalidStamp } from "../../components/ui/InvalidStamp";
+import { COLORS } from "../../theme/theme";
 import * as ScreenCapture from "expo-screen-capture";
 import { usePreventScreenCapture } from "expo-screen-capture";
 import { logAction } from "../../services/logService";
@@ -76,7 +77,7 @@ export const TicketScreen = ({
   }
   const routeCode = getRouteNumberOnly(activeTicket.route);
   const insets = useSafeAreaInsets();
-  const themeColor = activeTicket.isPass ? "#1B5E20" : "#D32F2F";
+  const themeColor = activeTicket.isPass ? COLORS.success : COLORS.primary;
   return <Screen noPadding ignoreTopSafe style={{
     backgroundColor: themeColor
   }}>
@@ -267,7 +268,7 @@ export const TicketScreen = ({
                 </View>}
 
               {isInvalid && <View style={styles.cardStampOverlay}>
-                  <InvalidStamp text="INVALID" color="#D32F2F" rotation="-15deg" />
+                  <InvalidStamp text="INVALID" color={themeColor} rotation="-15deg" />
                 </View>}
             </View> : <TouchableOpacity onPress={() => setShowQR(false)} style={[styles.qrCardMain, {
           backgroundColor: 'white'
@@ -299,7 +300,7 @@ export const TicketScreen = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#D32F2F"
+    backgroundColor: COLORS.primary
   },
   safeArea: {
     flex: 1
@@ -332,11 +333,11 @@ const styles = StyleSheet.create({
     width: "100%"
   },
   ticketCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.white,
     width: "100%",
     borderRadius: 5,
     padding: 15,
-    shadowColor: "#000",
+    shadowColor: COLORS.black,
     shadowOffset: {
       width: 0,
       height: 10
@@ -346,14 +347,14 @@ const styles = StyleSheet.create({
     elevation: 12
   },
   qrCardMain: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.white,
     marginTop: 50,
     width: 320,
     height: 320,
     borderRadius: 5,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: COLORS.black,
     shadowOffset: {
       width: 0,
       height: 15
@@ -365,7 +366,7 @@ const styles = StyleSheet.create({
   deptTitle: {
     fontSize: 18,
     fontWeight: "500",
-    color: "#000",
+    color: COLORS.black,
     textAlign: "center",
     marginBottom: 8,
     letterSpacing: 0.1
@@ -380,19 +381,19 @@ const styles = StyleSheet.create({
     marginBottom: 10
   },
   validatedLabel: {
-    color: "#000000cb",
+    color: COLORS.black,
     fontSize: 18,
     fontWeight: "400",
     letterSpacing: 0.5
   },
   validatedValue: {
-    color: "#000",
+    color: COLORS.black,
     fontSize: 18,
     fontWeight: "400"
   },
   divider: {
     height: 1,
-    backgroundColor: "#000000",
+    backgroundColor: COLORS.black,
     marginBottom: 12
   },
   dataRow: {
@@ -403,18 +404,18 @@ const styles = StyleSheet.create({
     flex: 1
   },
   label: {
-    color: "#3e3e3eff",
+    color: COLORS.textSecondary,
     fontSize: 13,
     fontWeight: "400",
     marginBottom: 2
   },
   largeValue: {
-    color: "#000",
+    color: COLORS.black,
     fontSize: 18,
     fontWeight: "400"
   },
   mediumValue: {
-    color: "#000",
+    color: COLORS.black,
     fontSize: 16,
     fontWeight: "400"
   },
@@ -422,13 +423,13 @@ const styles = StyleSheet.create({
     marginTop: 12
   },
   stopText: {
-    color: "#000",
+    color: COLORS.black,
     fontSize: 17,
     fontWeight: "400",
     lineHeight: 20
   },
   tidLabel: {
-    color: "#424242ff",
+    color: COLORS.textSecondary,
     fontSize: 13,
     textAlign: "center",
     marginTop: 10,
@@ -436,7 +437,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5
   },
   qrButton: {
-    backgroundColor: "#D32F2F",
+    backgroundColor: COLORS.primary,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -444,7 +445,7 @@ const styles = StyleSheet.create({
     gap: 10
   },
   qrButtonText: {
-    color: "#FFFFFF",
+    color: COLORS.white,
     fontSize: 17,
     fontWeight: "700"
   },
@@ -456,18 +457,18 @@ const styles = StyleSheet.create({
     marginTop: 15
   },
   hideQRText: {
-    color: "#A00E0E",
+    color: COLORS.primaryDark,
     fontWeight: "bold",
     fontSize: 15
   },
   statusPill: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.white,
     marginTop: 30,
     marginBottom: 5,
     paddingHorizontal: 20,
     paddingVertical: 9,
     borderRadius: 8,
-    shadowColor: "#000",
+    shadowColor: COLORS.black,
     shadowOffset: {
       width: 0,
       height: 2
@@ -477,7 +478,7 @@ const styles = StyleSheet.create({
     elevation: 2
   },
   statusPillText: {
-    color: "#D32F2F",
+    color: COLORS.primary,
     fontSize: 15,
     fontWeight: "500"
   },
@@ -507,7 +508,7 @@ const styles = StyleSheet.create({
   },
   errorContainer: {
     flex: 1,
-    backgroundColor: "#A00E0E",
+    backgroundColor: COLORS.primaryDark,
     justifyContent: "center",
     alignItems: "center",
     padding: 20
@@ -525,7 +526,7 @@ const styles = StyleSheet.create({
     borderRadius: 25
   },
   errorBackBtnText: {
-    color: "#D32F2F",
+    color: COLORS.primary,
     fontWeight: "bold"
   }
 });

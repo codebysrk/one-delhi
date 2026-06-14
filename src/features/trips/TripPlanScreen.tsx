@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, StatusBar, ScrollV
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { MainHeader } from '../../components/layout/Header';
 import { useAppStore } from '../../store/useAppStore';
+import { COLORS } from '../../theme/theme';
 export const TripPlanScreen = ({
   navigation
 }: any) => {
@@ -32,7 +33,7 @@ export const TripPlanScreen = ({
     }]);
   };
   return <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#A51F38" translucent />
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.primaryLight} translucent />
       
       {}
       <MainHeader style={styles.headerArea} showSearch={false} imageOpacity={0.9} rightElement={<TouchableOpacity onPress={() => navigation.navigate('Settings')}>
@@ -44,36 +45,36 @@ export const TripPlanScreen = ({
         <View style={styles.planCard}>
           <View style={styles.inputRow}>
             <View style={styles.iconColumn}>
-              <MaterialCommunityIcons name="circle-outline" size={22} color="#E57373" />
+              <MaterialCommunityIcons name="circle-outline" size={22} color={COLORS.primaryLight} />
               <View style={styles.verticalLine} />
-              <MaterialCommunityIcons name="map-marker-outline" size={22} color="#D1D5DB" />
+              <MaterialCommunityIcons name="map-marker-outline" size={22} color={COLORS.textMuted} />
             </View>
             
             <View style={styles.fieldsColumn}>
               <View style={styles.inputWrapper}>
-                <TextInput placeholder="My Location" placeholderTextColor="#9CA3AF" style={styles.input} value={sourceText} onChangeText={setSourceText} />
+                <TextInput placeholder="My Location" placeholderTextColor={COLORS.textMuted} style={styles.input} value={sourceText} onChangeText={setSourceText} />
                 {sourceText.length > 0 && <TouchableOpacity style={styles.clearBtn} activeOpacity={0.6} onPress={() => setSourceText('')}>
-                    <MaterialCommunityIcons name="close" size={20} color="#9CA3AF" />
+                    <MaterialCommunityIcons name="close" size={20} color={COLORS.textMuted} />
                   </TouchableOpacity>}
               </View>
               
               <View style={styles.dividerContainer}>
                 <View style={styles.divider} />
                 <TouchableOpacity style={styles.swapBtn} activeOpacity={0.8} onPress={handleSwap}>
-                  <MaterialCommunityIcons name="swap-vertical" size={20} color="#374151" />
+                  <MaterialCommunityIcons name="swap-vertical" size={20} color={COLORS.textSecondary} />
                 </TouchableOpacity>
               </View>
 
               <View style={styles.inputWrapper}>
-                <TextInput placeholder="Destination Stop" placeholderTextColor="#9CA3AF" style={styles.input} value={destText} onChangeText={setDestText} />
+                <TextInput placeholder="Destination Stop" placeholderTextColor={COLORS.textMuted} style={styles.input} value={destText} onChangeText={setDestText} />
                 {destText.length > 0 && <TouchableOpacity style={styles.clearBtn} activeOpacity={0.6} onPress={() => setDestText('')}>
-                    <MaterialCommunityIcons name="close" size={20} color="#9CA3AF" />
+                    <MaterialCommunityIcons name="close" size={20} color={COLORS.textMuted} />
                   </TouchableOpacity>}
               </View>
             </View>
 
             <TouchableOpacity style={styles.clockBtn} activeOpacity={0.8}>
-              <MaterialCommunityIcons name="clock" size={24} color="#374151" />
+              <MaterialCommunityIcons name="clock" size={24} color={COLORS.textSecondary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -82,7 +83,7 @@ export const TripPlanScreen = ({
         {}
         <View style={styles.filterCard}>
           <Text style={styles.filterText}>Filter: <Text>Bus + Metro + Auto</Text></Text>
-          <MaterialCommunityIcons name="filter" size={24} color="#333" />
+          <MaterialCommunityIcons name="filter" size={24} color={COLORS.text} />
         </View>
 
         {}
@@ -95,7 +96,7 @@ export const TripPlanScreen = ({
         
         <ScrollView style={styles.recentList} showsVerticalScrollIndicator={false}>
           {recentTrips.length === 0 ? <View style={styles.emptyRecent}>
-              <MaterialCommunityIcons name="history" size={38} color="#D1D5DB" />
+              <MaterialCommunityIcons name="history" size={38} color={COLORS.textMuted} />
               <Text style={styles.emptyRecentText}>No recent searches</Text>
             </View> : recentTrips.map(trip => <View key={trip.id}>
                 <TouchableOpacity style={styles.recentItem} activeOpacity={0.7} onPress={() => {
@@ -103,12 +104,12 @@ export const TripPlanScreen = ({
             setDestText(trip.dest);
           }}>
                   <View style={styles.recentItemLeft}>
-                    <MaterialCommunityIcons name="clock-outline" size={20} color="#9CA3AF" />
+                    <MaterialCommunityIcons name="clock-outline" size={20} color={COLORS.textMuted} />
                     <View style={styles.recentTripDetails}>
                       <Text style={styles.recentTripText} numberOfLines={1}>
                         {trip.source}
                       </Text>
-                      <MaterialCommunityIcons name="arrow-right" size={14} color="#9CA3AF" style={{
+                      <MaterialCommunityIcons name="arrow-right" size={14} color={COLORS.textMuted} style={{
                   marginHorizontal: 6
                 }} />
                       <Text style={styles.recentTripText} numberOfLines={1}>
@@ -117,7 +118,7 @@ export const TripPlanScreen = ({
                     </View>
                   </View>
                   <TouchableOpacity style={styles.deleteBtn} onPress={() => removeRecentTrip(trip.id)} activeOpacity={0.6}>
-                    <MaterialCommunityIcons name="close" size={18} color="#9CA3AF" />
+                    <MaterialCommunityIcons name="close" size={18} color={COLORS.textMuted} />
                   </TouchableOpacity>
                 </TouchableOpacity>
                 <View style={styles.recentDivider} />
@@ -129,7 +130,7 @@ export const TripPlanScreen = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white'
+    backgroundColor: COLORS.background
   },
   headerArea: {
     overflow: 'hidden'
@@ -139,7 +140,7 @@ const styles = StyleSheet.create({
   },
   headerOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(168, 28, 20, 0.7)'
+    backgroundColor: 'rgba(198, 40, 40, 0.7)'
   },
   topBar: {
     flexDirection: 'row',
@@ -158,11 +159,11 @@ const styles = StyleSheet.create({
     marginTop: 5
   },
   planCard: {
-    backgroundColor: 'white',
+    backgroundColor: COLORS.background,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#e5e7ebc8'
+    borderColor: COLORS.border
   },
   inputRow: {
     flexDirection: 'row',
@@ -177,7 +178,7 @@ const styles = StyleSheet.create({
   verticalLine: {
     width: 2,
     height: 24,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: COLORS.border,
     marginVertical: 4
   },
   fieldsColumn: {
@@ -193,7 +194,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#1F2937',
+    color: COLORS.text,
     padding: 0
   },
   clearBtn: {
@@ -209,14 +210,14 @@ const styles = StyleSheet.create({
   divider: {
     width: '100%',
     height: 1,
-    backgroundColor: '#F3F4F6'
+    backgroundColor: COLORS.surfaceVariant
   },
   swapBtn: {
     position: 'absolute',
     width: 28,
     height: 28,
     borderRadius: 10,
-    backgroundColor: '#f5f5f5ff',
+    backgroundColor: COLORS.surfaceVariant,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10
@@ -232,7 +233,7 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   searchBtn: {
-    backgroundColor: '#A51F38',
+    backgroundColor: COLORS.primary,
     borderRadius: 12,
     height: 48,
     flexDirection: 'row',
@@ -240,7 +241,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 16,
     gap: 8,
-    shadowColor: '#A51F38',
+    shadowColor: COLORS.primary,
     shadowOffset: {
       width: 0,
       height: 4
@@ -250,12 +251,12 @@ const styles = StyleSheet.create({
     elevation: 3
   },
   searchBtnText: {
-    color: 'white',
+    color: COLORS.white,
     fontSize: 16,
     fontWeight: '700'
   },
   filterCard: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: COLORS.surface,
     borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',
@@ -266,10 +267,10 @@ const styles = StyleSheet.create({
   },
   filterText: {
     fontSize: 16,
-    color: '#333'
+    color: COLORS.textSecondary
   },
   recentHeader: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: COLORS.surfaceVariant,
     paddingHorizontal: 16,
     paddingVertical: 8,
     marginTop: 18,
@@ -281,12 +282,12 @@ const styles = StyleSheet.create({
   },
   recentTitle: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.textSecondary,
     fontWeight: '600'
   },
   clearAllText: {
     fontSize: 13,
-    color: '#A51F38',
+    color: COLORS.primary,
     fontWeight: '600'
   },
   recentList: {
@@ -301,7 +302,7 @@ const styles = StyleSheet.create({
   },
   emptyRecentText: {
     fontSize: 14,
-    color: '#9CA3AF'
+    color: COLORS.textMuted
   },
   recentItem: {
     flexDirection: 'row',
@@ -323,7 +324,7 @@ const styles = StyleSheet.create({
   },
   recentTripText: {
     fontSize: 15,
-    color: '#374151',
+    color: COLORS.text,
     flex: 1
   },
   deleteBtn: {
@@ -331,6 +332,6 @@ const styles = StyleSheet.create({
   },
   recentDivider: {
     height: 1,
-    backgroundColor: '#F3F4F6'
+    backgroundColor: COLORS.border
   }
 });

@@ -6,6 +6,7 @@ import { Header } from '../../components/layout/Header';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { db } from '../../services/firebase';
 import { useAppStore } from '../../store/useAppStore';
+import { COLORS } from '../../theme/theme';
 const ICON_MAP: Record<string, JSX.Element> = {
   alert: <MaterialCommunityIcons name="alert" color="#C0282C" size={22} />,
   info: <MaterialCommunityIcons name="information" color="#3B82F6" size={22} />,
@@ -45,41 +46,37 @@ export const NotificationScreen = ({
       unsubscribe();
     };
   }, []);
-  const renderItem = ({
-    item
-  }: {
-    item: any;
-  }) => {
-    const isUnread = item.timestamp > initialLastSeen.current;
+  const renderItem = ({ item }: { item: any }) => {
+    const isUnread = !item.read;
     return <View style={[styles.notificationItem, isUnread && styles.unreadItem]}>
         {isUnread && <View style={styles.unreadDot} />}
         <View style={styles.iconContainer}>
-          {ICON_MAP[item.type] || ICON_MAP['general']}
+          {ICON_MAP[item.type] || ICON_MAP.general}
         </View>
         <View style={styles.textContainer}>
           <View style={styles.itemHeader}>
             <Text style={[styles.itemTitle, isUnread && styles.unreadTitle]} numberOfLines={1}>{item.title}</Text>
-          <Text style={styles.itemTime}>
-            {item.timestamp ? new Date(item.timestamp).toLocaleDateString('en-IN', {
+            <Text style={styles.itemTime}>
+              {item.timestamp ? new Date(item.timestamp).toLocaleDateString('en-IN', {
               day: '2-digit',
               month: 'short'
             }) : ''}
-          </Text>
+            </Text>
+          </View>
+          <Text style={styles.itemMessage}>{item.message}</Text>
         </View>
-        <Text style={styles.itemMessage}>{item.message}</Text>
-      </View>
-    </View>;
+      </View>;
   };
   const insets = useSafeAreaInsets();
   return <ScreenContainer noPadding ignoreTopSafe style={{
-    backgroundColor: '#FFF'
+    backgroundColor: COLORS.white
   }}>
-      <Header title="Notifications" onBackPress={() => navigation.goBack()} backgroundColor="#FFFFFF" textColor="#000000" height={50} titleStyle={{
+      <Header title="Notifications" onBackPress={() => navigation.goBack()} backgroundColor={COLORS.white} textColor={COLORS.text} height={50} titleStyle={{
       fontSize: 18
     }} showShadow={true} />
 
       {loading ? <View style={styles.center}>
-          <ActivityIndicator size="large" color="#D32F2F" />
+          <ActivityIndicator size="large" color={COLORS.primary} />
         </View> : notifications.length === 0 ? <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No notifications available</Text>
           <View style={styles.emptyDivider} />
@@ -179,7 +176,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#D32F2F',
+    backgroundColor: COLORS.primary,
     zIndex: 1
   },
   unreadTitle: {

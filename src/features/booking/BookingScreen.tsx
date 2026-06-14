@@ -12,6 +12,7 @@ import * as Haptics from "expo-haptics";
 import { useFocusEffect } from "@react-navigation/native";
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from "react-native-reanimated";
 import { getRoutes, getFareConfig } from "../../services/routeService";
+import { COLORS } from "../../theme/theme";
 import { AppState, AppStateStatus } from "react-native";
 import { moderateScale, responsiveFontSize, responsiveHeight } from "../../utils/responsive";
 import { PrimaryButton } from "../../components/ui/PrimaryButton";
@@ -678,7 +679,7 @@ export const BookingScreen = ({
                   setTimeout(() => {
                     sourceDropdownRef.current?.focus();
                   }, 100);
-                }} variant="route" searchKeys={["route", "source", "dest"]} displayKey="route" keyExtractor={(item: any) => item.id} placeholder="Current Route" leftIcon={<MaterialIcons name="route" size={24} color="#000" />} storageKey="recent_routes" maxHeight={responsiveHeight(65)} onFocus={() => {
+                }} variant="route" searchKeys={["route", "source", "dest"]} displayKey="route" keyExtractor={(item: any) => item.id} placeholder="Current Route" leftIcon={<MaterialIcons name="route" size={24} color={COLORS.text} />} storageKey="recent_routes" maxHeight={responsiveHeight(65)} onFocus={() => {
                   setRouteSearch("");
                   setSelectedFullRouteId("");
                   setSourceSearch("");
@@ -696,7 +697,7 @@ export const BookingScreen = ({
                   setTimeout(() => {
                     destDropdownRef.current?.focus();
                   }, 100);
-                }} variant="simple" searchKeys={["name"]} displayKey="name" keyExtractor={(item: any) => item.id} placeholder="Source Stop" editable={!!selectedFullRouteId && routeSearch.length > 0} leftIcon={<MaterialCommunityIcons name="circle" size={18} color="#000" />} containerStyle={{
+                }} variant="simple" searchKeys={["name"]} displayKey="name" keyExtractor={(item: any) => item.id} placeholder="Source Stop" editable={!!selectedFullRouteId && routeSearch.length > 0} leftIcon={<MaterialCommunityIcons name="circle" size={18} color={COLORS.text} />} containerStyle={{
                   marginBottom: 12
                 }} maxHeight={responsiveHeight(40)} onFocus={() => {
                   setSourceSearch("");
@@ -707,7 +708,7 @@ export const BookingScreen = ({
                     <SearchableDropdown ref={destDropdownRef} data={destDropdownData} value={destSearch} onChangeText={setDestSearch} onSelect={(item: any) => {
                   setDestSearch(item.name);
                   destDropdownRef.current?.blur();
-                }} variant="simple" searchKeys={["name"]} displayKey="name" keyExtractor={(item: any) => item.id} placeholder="Destination Stop" editable={!!selectedFullRouteId && routeSearch.length > 0 && sourceSearch.length > 0} leftIcon={<MaterialCommunityIcons name="map-marker" size={24} color="#000" />} maxHeight={responsiveHeight(40)} onFocus={() => {
+                }} variant="simple" searchKeys={["name"]} displayKey="name" keyExtractor={(item: any) => item.id} placeholder="Destination Stop" editable={!!selectedFullRouteId && routeSearch.length > 0 && sourceSearch.length > 0} leftIcon={<MaterialCommunityIcons name="map-marker" size={24} color={COLORS.text} />} maxHeight={responsiveHeight(40)} onFocus={() => {
                   setDestSearch("");
                 }} />
                   </View>
@@ -739,9 +740,9 @@ export const BookingScreen = ({
                     <Text style={styles.customInputLabel}>Route Info (Manual)</Text>
                     <View style={[styles.inputBox, styles.customInputBox, customErrors.route && styles.inputBoxError]}>
                       <View style={styles.inputIcon}>
-                        <MaterialIcons name="route" size={24} color="#000" />
+                        <MaterialIcons name="route" size={24} color={COLORS.text} />
                       </View>
-                      <TextInput style={[styles.input, styles.customInput]} placeholder="e.g. 502, 857, 429A" placeholderTextColor="#9CA3AF" value={customRoute} onChangeText={text => {
+                      <TextInput style={[styles.input, styles.customInput]} placeholder="e.g. 502, 857, 429A" placeholderTextColor={COLORS.textMuted} value={customRoute} onChangeText={text => {
                     setCustomRoute(text.toUpperCase());
                     setCustomErrors(prev => ({
                       ...prev,
@@ -761,9 +762,9 @@ export const BookingScreen = ({
                     marginBottom: 6
                   }]}>
                         <View style={styles.inputIcon}>
-                          <MaterialCommunityIcons name="circle" size={18} color="#000" />
+                          <MaterialCommunityIcons name="circle" size={18} color={COLORS.text} />
                         </View>
-                        <TextInput style={[styles.input, styles.customInput]} placeholder="Boarding Stop" placeholderTextColor="#9CA3AF" value={customSource} onChangeText={text => {
+                        <TextInput style={[styles.input, styles.customInput]} placeholder="Boarding Stop" placeholderTextColor={COLORS.textMuted} value={customSource} onChangeText={text => {
                       setCustomSource(text);
                       setCustomErrors(prev => ({
                         ...prev,
@@ -773,9 +774,9 @@ export const BookingScreen = ({
                       </View>
                       <View style={[styles.inputBox, styles.customInputBox, customErrors.dest && styles.inputBoxError]}>
                         <View style={styles.inputIcon}>
-                          <MaterialCommunityIcons name="map-marker" size={24} color="#000" />
+                          <MaterialCommunityIcons name="map-marker" size={24} color={COLORS.text} />
                         </View>
-                        <TextInput style={[styles.input, styles.customInput]} placeholder="Destination Stop" placeholderTextColor="#9CA3AF" value={customDest} onChangeText={text => {
+                        <TextInput style={[styles.input, styles.customInput]} placeholder="Destination Stop" placeholderTextColor={COLORS.textMuted} value={customDest} onChangeText={text => {
                       setCustomDest(text);
                       setCustomErrors(prev => ({
                         ...prev,
@@ -795,7 +796,7 @@ export const BookingScreen = ({
                       dest: false
                     }));
                   }} activeOpacity={0.8}>
-                        <MaterialCommunityIcons name="swap-vertical" size={22} color="#D32F2F" />
+                        <MaterialCommunityIcons name="swap-vertical" size={22} color={COLORS.primary} />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -823,7 +824,7 @@ export const BookingScreen = ({
                       {}
                       <View style={[styles.customFareInputChip, (isCustomInputActive || customFareInput && ![5, 10, 15, 20, 25].includes(customFare)) && styles.customFareInputChipActive, customErrors.fare && styles.customFareInputChipError]}>
                         <Text style={styles.customFareChipSymbol}>₹</Text>
-                        <TextInput style={styles.customFareChipInput} placeholder="Other" placeholderTextColor="#9CA3AF" keyboardType="numeric" value={customFareInput} onChangeText={val => {
+                        <TextInput style={styles.customFareChipInput} placeholder="Other" placeholderTextColor={COLORS.textMuted} keyboardType="numeric" value={customFareInput} onChangeText={val => {
                       setCustomFareInput(val);
                       const num = parseFloat(val);
                       setCustomFare(isNaN(num) ? 0 : num);
@@ -869,19 +870,19 @@ export const BookingScreen = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#D32F2F"
+    backgroundColor: COLORS.primary
   },
   timerContainer: {
     alignItems: "center",
     paddingBottom: moderateScale(12)
   },
   timerPill: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.white,
     paddingHorizontal: moderateScale(8),
     paddingVertical: moderateScale(4),
     borderRadius: moderateScale(8),
     elevation: 4,
-    shadowColor: "#000",
+    shadowColor: COLORS.black,
     shadowOffset: {
       width: 0,
       height: 4
@@ -891,7 +892,7 @@ const styles = StyleSheet.create({
   },
   timerText: {
     fontSize: responsiveFontSize(16),
-    color: "#000000"
+    color: COLORS.text
   },
   timerBold: {
     fontWeight: "600"
@@ -914,13 +915,13 @@ const styles = StyleSheet.create({
     flexDirection: "column"
   },
   card: {
-    backgroundColor: "#FFF",
+    backgroundColor: COLORS.white,
     borderRadius: moderateScale(8),
     paddingTop: moderateScale(24),
     paddingBottom: moderateScale(12),
     paddingHorizontal: moderateScale(16),
     elevation: 2,
-    shadowColor: "#000",
+    shadowColor: COLORS.black,
     shadowOffset: {
       width: 0,
       height: 2
@@ -934,11 +935,11 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: responsiveFontSize(16),
     fontWeight: "500",
-    color: "#111",
+    color: COLORS.text,
     marginBottom: moderateScale(4)
   },
   inputBox: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: COLORS.inputBg,
     borderRadius: moderateScale(8),
     flexDirection: "row",
     alignItems: "center",
@@ -950,12 +951,12 @@ const styles = StyleSheet.create({
     borderColor: "transparent"
   },
   inputBoxFocused: {
-    borderColor: "#D32F2F",
-    backgroundColor: "#FFF"
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.white
   },
   inputBoxDisabled: {
     opacity: 0.5,
-    backgroundColor: "#E5E7EB"
+    backgroundColor: COLORS.border
   },
   inputIcon: {
     width: moderateScale(30),
@@ -966,7 +967,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: "100%",
     fontSize: responsiveFontSize(18),
-    color: "#000",
+    color: COLORS.text,
     fontWeight: "400",
     paddingLeft: moderateScale(4),
     paddingVertical: 0,
@@ -977,7 +978,7 @@ const styles = StyleSheet.create({
     width: moderateScale(12),
     height: moderateScale(12),
     borderRadius: moderateScale(6),
-    backgroundColor: "#000"
+    backgroundColor: COLORS.black
   },
   typeRow: {
     flexDirection: "row",
@@ -988,39 +989,39 @@ const styles = StyleSheet.create({
     height: moderateScale(38),
     borderRadius: moderateScale(8),
     borderWidth: 1,
-    borderColor: "#E5E7EB",
-    backgroundColor: "#FFF",
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.white,
     justifyContent: "center",
     alignItems: "center",
     minWidth: moderateScale(75)
   },
   typeBtnActive: {
-    backgroundColor: "#D32F2F",
-    borderColor: "#D32F2F"
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary
   },
   typeBtnActiveNonAC: {
-    backgroundColor: "#11C76A",
-    borderColor: "#11C76A"
+    backgroundColor: COLORS.success,
+    borderColor: COLORS.success
   },
   typeBtnText: {
     fontSize: responsiveFontSize(17),
     fontWeight: "500",
-    color: "#333"
+    color: COLORS.textSecondary
   },
   typeBtnTextActive: {
-    color: "#FFF"
+    color: COLORS.white
   },
   bottom: {
-    backgroundColor: "#FFF",
+    backgroundColor: COLORS.white,
     paddingHorizontal: moderateScale(16),
     paddingTop: moderateScale(16),
     borderTopWidth: 1,
-    borderTopColor: "#E5E7EB"
+    borderTopColor: COLORS.border
   },
   bottomLabel: {
     fontSize: responsiveFontSize(16),
     fontWeight: "normal",
-    color: "#111",
+    color: COLORS.text,
     marginBottom: moderateScale(8)
   },
   qtyRow: {
@@ -1033,22 +1034,22 @@ const styles = StyleSheet.create({
     height: moderateScale(43),
     borderRadius: moderateScale(8),
     borderWidth: 1,
-    borderColor: "#DDD",
-    backgroundColor: "#FFF",
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.white,
     justifyContent: "center",
     alignItems: "center"
   },
   qtyBtnActive: {
-    backgroundColor: "#D32F2F",
-    borderColor: "#D32F2F"
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary
   },
   qtyBtnText: {
     fontSize: responsiveFontSize(18),
     fontWeight: "500",
-    color: "#333"
+    color: COLORS.textSecondary
   },
   qtyBtnTextActive: {
-    color: "#FFF"
+    color: COLORS.white
   },
   fareRow: {
     flexDirection: "row",
@@ -1063,16 +1064,16 @@ const styles = StyleSheet.create({
   },
   oldPrice: {
     fontSize: responsiveFontSize(28),
-    color: "#000000",
+    color: COLORS.textSecondary,
     textDecorationLine: "line-through"
   },
   newPrice: {
     fontSize: responsiveFontSize(28),
-    color: "#D32F2F",
+    color: COLORS.primary,
     fontWeight: "normal"
   },
   tollBadge: {
-    backgroundColor: "#0ea5e9",
+    backgroundColor: COLORS.info,
     paddingHorizontal: moderateScale(10),
     height: moderateScale(40),
     justifyContent: "center",
@@ -1080,14 +1081,14 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(6)
   },
   tollText: {
-    color: "#FFF",
+    color: COLORS.white,
     fontSize: responsiveFontSize(14),
     lineHeight: 16,
     textAlign: "center",
     fontWeight: "normal"
   },
   discountBadge: {
-    backgroundColor: "#11C76A",
+    backgroundColor: COLORS.success,
     paddingHorizontal: moderateScale(10),
     height: moderateScale(40),
     justifyContent: "center",
@@ -1095,20 +1096,20 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(6)
   },
   discountText: {
-    color: "#FFF",
+    color: COLORS.white,
     fontSize: responsiveFontSize(18),
     fontWeight: "normal"
   },
   buyBtn: {
-    backgroundColor: "#D32F2F",
+    backgroundColor: COLORS.primary,
     paddingVertical: moderateScale(12),
     alignItems: "center"
   },
   buyBtnDisabled: {
-    backgroundColor: "#9CA3AF"
+    backgroundColor: COLORS.textMuted
   },
   buyText: {
-    color: "#FFF",
+    color: COLORS.white,
     fontSize: responsiveFontSize(20),
     fontWeight: "normal",
     letterSpacing: 1
@@ -1122,10 +1123,10 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent"
   },
   routeDropdown: {
-    backgroundColor: "#FFF",
+    backgroundColor: COLORS.white,
     borderRadius: moderateScale(4),
     elevation: 20,
-    shadowColor: "#000",
+    shadowColor: COLORS.black,
     shadowOffset: {
       width: 0,
       height: 4
@@ -1134,13 +1135,13 @@ const styles = StyleSheet.create({
     shadowRadius: moderateScale(8),
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "#DDD"
+    borderColor: COLORS.border
   },
   stopDropdown: {
-    backgroundColor: "#FFF",
+    backgroundColor: COLORS.white,
     borderRadius: moderateScale(4),
     elevation: 20,
-    shadowColor: "#000",
+    shadowColor: COLORS.black,
     shadowOffset: {
       width: 0,
       height: 4
@@ -1149,7 +1150,7 @@ const styles = StyleSheet.create({
     shadowRadius: moderateScale(8),
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "#E5E7EB"
+    borderColor: COLORS.border
   },
   routeItem: {
     paddingVertical: moderateScale(10),
@@ -1168,7 +1169,7 @@ const styles = StyleSheet.create({
   routeNumberText: {
     fontSize: responsiveFontSize(18),
     fontWeight: "500",
-    color: "#000"
+    color: COLORS.text
   },
   routePathContainer: {
     flexDirection: "column",
@@ -1194,17 +1195,17 @@ const styles = StyleSheet.create({
     height: moderateScale(12),
     borderRadius: moderateScale(6),
     borderWidth: 1,
-    borderColor: "#D32F2F",
-    backgroundColor: "#FFF"
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.white
   },
   routeLine: {
     width: moderateScale(2),
     height: "100%",
-    backgroundColor: "#D32F2F"
+    backgroundColor: COLORS.primary
   },
   routeTerminalLabel: {
     fontSize: responsiveFontSize(15),
-    color: "#6B7280",
+    color: COLORS.textSecondary,
     fontWeight: "400",
     lineHeight: responsiveFontSize(16),
     flex: 1
@@ -1214,8 +1215,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(16),
     justifyContent: "center",
     borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
-    backgroundColor: "#FAFAFA"
+    borderBottomColor: COLORS.border,
+    backgroundColor: COLORS.surface
   },
   stopItemRow: {
     flexDirection: "row",
@@ -1224,7 +1225,7 @@ const styles = StyleSheet.create({
   },
   stopItemText: {
     fontSize: responsiveFontSize(16),
-    color: "#000",
+    color: COLORS.text,
     fontWeight: "400"
   },
   emptyItem: {
@@ -1232,13 +1233,13 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   emptyItemText: {
-    color: "#9CA3AF",
+    color: COLORS.textMuted,
     fontSize: responsiveFontSize(14),
     fontWeight: "500"
   },
   segmentContainer: {
     flexDirection: "row",
-    backgroundColor: "#F3F4F6",
+    backgroundColor: COLORS.surfaceVariant,
     borderRadius: moderateScale(8),
     padding: moderateScale(4),
     marginBottom: moderateScale(20)
@@ -1250,9 +1251,9 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(6)
   },
   segmentBtnActive: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.white,
     elevation: 2,
-    shadowColor: "#000",
+    shadowColor: COLORS.black,
     shadowOffset: {
       width: 0,
       height: 1
@@ -1262,11 +1263,11 @@ const styles = StyleSheet.create({
   },
   segmentBtnText: {
     fontSize: responsiveFontSize(15),
-    color: "#6B7280",
+    color: COLORS.textSecondary,
     fontWeight: "500"
   },
   segmentBtnTextActive: {
-    color: "#D32F2F",
+    color: COLORS.primary,
     fontWeight: "700"
   },
   fareChipsRow: {
@@ -1281,20 +1282,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: moderateScale(6),
     borderWidth: 1,
-    borderColor: "#E5E7EB",
-    backgroundColor: "#F9FAFB"
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceVariant
   },
   fareChipActive: {
-    backgroundColor: "#FFEBEE",
-    borderColor: "#D32F2F"
+    backgroundColor: 'rgba(165, 31, 56, 0.1)',
+    borderColor: COLORS.primary
   },
   fareChipText: {
     fontSize: responsiveFontSize(14),
-    color: "#4B5563",
+    color: COLORS.textSecondary,
     fontWeight: "500"
   },
   fareChipTextActive: {
-    color: "#D32F2F",
+    color: COLORS.primary,
     fontWeight: "700"
   },
   customFareInputChip: {
@@ -1304,21 +1305,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(10),
     borderRadius: moderateScale(6),
     borderWidth: 1,
-    borderColor: "#E5E7EB",
-    backgroundColor: "#F9FAFB",
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceVariant,
     minWidth: moderateScale(80)
   },
   customFareInputChipActive: {
-    backgroundColor: "#FFEBEE",
-    borderColor: "#D32F2F"
+    backgroundColor: 'rgba(165, 31, 56, 0.1)',
+    borderColor: COLORS.primary
   },
   customFareInputChipError: {
-    borderColor: "#D32F2F",
-    backgroundColor: "#FFEBEE"
+    borderColor: COLORS.primary,
+    backgroundColor: 'rgba(165, 31, 56, 0.1)'
   },
   customFareChipSymbol: {
     fontSize: responsiveFontSize(14),
-    color: "#4B5563",
+    color: COLORS.textSecondary,
     marginRight: moderateScale(2),
     fontWeight: "500"
   },
@@ -1326,30 +1327,30 @@ const styles = StyleSheet.create({
     flex: 1,
     height: "100%",
     fontSize: responsiveFontSize(14),
-    color: "#000",
+    color: COLORS.text,
     padding: 0,
     margin: 0,
     fontWeight: "500"
   },
   inputBoxError: {
-    borderColor: "#D32F2F",
+    borderColor: COLORS.primary,
     borderWidth: 1.5,
-    backgroundColor: "#FFEBEE"
+    backgroundColor: 'rgba(165, 31, 56, 0.1)'
   },
   swapBtn: {
     position: "absolute",
     right: moderateScale(16),
     top: moderateScale(37),
-    backgroundColor: "#FFF",
+    backgroundColor: COLORS.white,
     width: moderateScale(36),
     height: moderateScale(36),
     borderRadius: moderateScale(18),
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: COLORS.border,
     justifyContent: "center",
     alignItems: "center",
     elevation: 3,
-    shadowColor: "#000",
+    shadowColor: COLORS.black,
     shadowOffset: {
       width: 0,
       height: 2
@@ -1364,7 +1365,7 @@ const styles = StyleSheet.create({
   historyLabel: {
     fontSize: responsiveFontSize(14),
     fontWeight: "600",
-    color: "#6B7280",
+    color: COLORS.textSecondary,
     marginBottom: moderateScale(6)
   },
   historyChipsRow: {
@@ -1372,17 +1373,17 @@ const styles = StyleSheet.create({
     gap: moderateScale(8)
   },
   historyChip: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: COLORS.surfaceVariant,
     paddingHorizontal: moderateScale(12),
     paddingVertical: moderateScale(6),
     borderRadius: moderateScale(16),
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: COLORS.border,
     maxWidth: moderateScale(220)
   },
   historyChipText: {
     fontSize: responsiveFontSize(13),
-    color: "#374151",
+    color: COLORS.text,
     fontWeight: "500"
   },
   customInputSection: {
@@ -1391,7 +1392,7 @@ const styles = StyleSheet.create({
   customInputLabel: {
     fontSize: responsiveFontSize(14),
     fontWeight: "500",
-    color: "#4B5563",
+    color: COLORS.textSecondary,
     marginBottom: moderateScale(2)
   },
   customInputBox: {

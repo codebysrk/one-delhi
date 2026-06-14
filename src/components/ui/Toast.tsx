@@ -49,18 +49,18 @@ export const Toast = ({
     switch (type) {
       case 'success':
         return {
-          bg: COLORS.success || '#4CAF50',
+          bg: COLORS.success,
           icon: 'check-circle-outline'
         };
       case 'error':
         return {
-          bg: COLORS.error || '#FF5252',
+          bg: COLORS.error,
           icon: 'alert-circle-outline'
         };
       case 'info':
       default:
         return {
-          bg: COLORS.text || '#111827',
+          bg: COLORS.text,
           icon: 'information-outline'
         };
     }

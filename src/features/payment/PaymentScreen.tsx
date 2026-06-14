@@ -18,6 +18,7 @@ import { PhonePeConfirmScreen } from "./PhonePeConfirmScreen";
 import { PhonePeProcessingScreen } from "./PhonePeProcessingScreen";
 import { PhonePeSuccessScreen } from "./PhonePeSuccessScreen";
 import { PaytmProcessingScreen } from "./PaytmProcessingScreen";
+import { COLORS } from "../../theme/theme";
 import { PaytmSuccessScreen } from "./PaytmSuccessScreen";
 import { GenericProcessingScreen } from "./GenericProcessingScreen";
 import { GenericSuccessScreen } from "./GenericSuccessScreen";
@@ -360,7 +361,6 @@ export const PaymentScreen = ({
           <Text style={styles.sectionTitle}>UPI</Text>
         </View>
 
-        {}
         <View style={styles.upiGrid}>
           <TouchableOpacity style={styles.upiCard} onPress={() => openSimulation("Paytm")} disabled={isRedirecting || isSimulating} accessibilityLabel="Pay with Paytm" activeOpacity={0.7}>
             <View style={{
@@ -400,7 +400,7 @@ export const PaymentScreen = ({
           width: '100%'
         }}>
             <View style={styles.othersLeft}>
-              <MaterialCommunityIcons name="credit-card" size={28} color="#D32F2F" />
+              <MaterialCommunityIcons name="credit-card" size={28} color={COLORS.primary} />
               <Text style={styles.othersText}>Wallet, Cards or Net banking</Text>
             </View>
             <MaterialCommunityIcons name="chevron-right" size={26} color="#666" />
@@ -597,7 +597,7 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   timerPill: {
-    backgroundColor: "#D32F2F",
+    backgroundColor: COLORS.primary,
     paddingHorizontal: moderateScale(8),
     paddingVertical: moderateScale(4),
     borderRadius: moderateScale(8),
@@ -634,7 +634,7 @@ const styles = StyleSheet.create({
   settingsTitle: {
     fontSize: responsiveFontSize(13),
     fontWeight: "bold",
-    color: "#D32F2F",
+    color: COLORS.primary,
     marginLeft: 6
   },
   settingsDesc: {

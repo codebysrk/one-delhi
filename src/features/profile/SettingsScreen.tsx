@@ -6,6 +6,7 @@ import { Header } from "../../components/layout/Header";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAppStore } from "../../store/useAppStore";
 import { auth } from "../../services/firebase";
+import { COLORS } from "../../theme/theme";
 export const SettingsScreen = ({
   navigation
 }: any) => {
@@ -108,42 +109,42 @@ export const SettingsScreen = ({
     hasButton: false
   }];
   const otherItems = [{
-    icon: <MaterialCommunityIcons name="translate" size={22} color="#C0392B" />,
+    icon: <MaterialCommunityIcons name="translate" size={22} color={COLORS.primary} />,
     label: "Change language"
   }, {
-    icon: <MaterialCommunityIcons name="information-outline" size={22} color="#C0392B" />,
+    icon: <MaterialCommunityIcons name="information-outline" size={22} color={COLORS.primary} />,
     label: "About Us"
   }, {
-    icon: <MaterialCommunityIcons name="phone" size={22} color="#C0392B" />,
+    icon: <MaterialCommunityIcons name="phone" size={22} color={COLORS.primary} />,
     label: "Helplines"
   }, {
-    icon: <MaterialCommunityIcons name="shield-check-outline" size={22} color="#C0392B" />,
+    icon: <MaterialCommunityIcons name="shield-check-outline" size={22} color={COLORS.primary} />,
     label: "Privacy Policy"
   }, {
-    icon: <MaterialCommunityIcons name="history" size={22} color="#C0392B" />,
+    icon: <MaterialCommunityIcons name="history" size={22} color={COLORS.primary} />,
     label: "Refund Policy"
   }, {
-    icon: <MaterialCommunityIcons name="file-document-outline" size={22} color="#C0392B" />,
+    icon: <MaterialCommunityIcons name="file-document-outline" size={22} color={COLORS.primary} />,
     label: "Terms of Service"
   }, {
-    icon: <MaterialCommunityIcons name="car" size={22} color="#C0392B" />,
+    icon: <MaterialCommunityIcons name="car" size={22} color={COLORS.primary} />,
     label: "Last mile bookings"
   }, {
-    icon: <MaterialCommunityIcons name="qrcode-scan" size={22} color="#C0392B" />,
+    icon: <MaterialCommunityIcons name="qrcode-scan" size={22} color={COLORS.primary} />,
     label: "Validate Pass/Ticket"
   }];
   const insets = useSafeAreaInsets();
   return <Screen noPadding ignoreTopSafe style={{
-    backgroundColor: "#FFF"
+    backgroundColor: COLORS.white
   }} keyboardSafe>
-      <Header title="Settings" centerTitle={true} onBackPress={() => navigation.goBack()} backgroundColor="#FFFFFF" textColor="#000000" height={50} titleStyle={{
+      <Header title="Settings" centerTitle={true} onBackPress={() => navigation.goBack()} backgroundColor={COLORS.white} textColor={COLORS.text} height={50} titleStyle={{
       fontSize: 22
     }} showShadow={true} rightElement={isEditing || user && name !== user.displayName ? <TouchableOpacity onPress={handleSave} disabled={loading} style={styles.saveBtn} accessibilityLabel="Save profile">
-              {loading ? <ActivityIndicator size="small" color="#A51F38" /> : <Text style={styles.saveText}>Save</Text>}
+              {loading ? <ActivityIndicator size="small" color={COLORS.primary} /> : <Text style={styles.saveText}>Save</Text>}
             </TouchableOpacity> : <TouchableOpacity onPress={handleLogout} style={[styles.saveBtn, {
       backgroundColor: 'transparent'
     }]} accessibilityLabel="Logout">
-              <MaterialCommunityIcons name="logout" size={24} color="#C0392B" />
+              <MaterialCommunityIcons name="logout" size={24} color={COLORS.primary} />
             </TouchableOpacity>} />
 
       <ScrollView style={styles.mainContent} contentContainerStyle={{
@@ -185,7 +186,7 @@ export const SettingsScreen = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFF"
+    backgroundColor: COLORS.white
   },
   saveBtn: {
     width: 50,
@@ -194,7 +195,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end"
   },
   saveText: {
-    color: "#A51F38",
+    color: COLORS.primary,
     fontWeight: "700",
     fontSize: 16
   },
@@ -207,7 +208,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    color: "#C0392B",
+    color: COLORS.primary,
     fontWeight: "500",
     marginBottom: 12
   },
@@ -221,7 +222,7 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 18,
-    color: "#333",
+    color: COLORS.textSecondary,
     fontWeight: "400"
   },
   infoRight: {
@@ -232,26 +233,26 @@ const styles = StyleSheet.create({
   },
   infoValue: {
     fontSize: 18,
-    color: "#333",
+    color: COLORS.textSecondary,
     fontWeight: "400",
     marginRight: 12,
     textAlign: "right"
   },
   editInput: {
     fontSize: 18,
-    color: "#000",
+    color: COLORS.text,
     fontWeight: "500",
     marginRight: 12,
     textAlign: "right",
     borderBottomWidth: 1,
-    borderBottomColor: "#C0392B",
+    borderBottomColor: COLORS.primary,
     minWidth: 120
   },
   redCircleBtn: {
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "#C0392B",
+    backgroundColor: COLORS.primary,
     justifyContent: "center",
     alignItems: "center"
   },
@@ -269,7 +270,7 @@ const styles = StyleSheet.create({
   },
   otherLabel: {
     fontSize: 18,
-    color: "#333",
+    color: COLORS.textSecondary,
     fontWeight: "400"
   },
   footer: {
@@ -278,12 +279,12 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   footerLabel: {
-    color: "#414141ff",
+    color: COLORS.textSecondary,
     fontSize: 13,
     fontWeight: "400"
   },
   versionNumber: {
-    color: "#414141ff",
+    color: COLORS.textSecondary,
     fontSize: 13,
     fontWeight: "400",
     marginTop: 4

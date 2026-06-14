@@ -7,6 +7,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppStore } from '../../store/useAppStore';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
+import { COLORS } from '../../theme/theme';
 const PASS_TYPES = [{
   id: '1',
   label: 'DAILY ALL ROUTE NON AC PASS',
@@ -411,12 +412,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F9FA'
   },
   nextBtn: {
-    backgroundColor: '#D32F2F',
+    backgroundColor: COLORS.primary,
     height: 56,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#D32F2F',
+    shadowColor: COLORS.primary,
     shadowOffset: {
       width: 0,
       height: 4

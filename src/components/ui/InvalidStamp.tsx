@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { COLORS } from '../../theme/theme';
 interface InvalidStampProps {
   text?: string;
   color?: string;
@@ -9,7 +10,7 @@ interface InvalidStampProps {
 }
 export const InvalidStamp = React.memo(({
   text = "INVALID",
-  color = "#971d1dff",
+  color = COLORS.primary,
   rotation = "-12deg",
   style,
   size = 35

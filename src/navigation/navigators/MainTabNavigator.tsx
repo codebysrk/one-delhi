@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
     flex: 1
   },
   tabBar: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
     height: LAYOUT.tabBarHeight,

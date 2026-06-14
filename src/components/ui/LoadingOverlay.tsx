@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { Modal } from 'react-native';
+import { COLORS } from '../../theme/theme';
 interface LoadingOverlayProps {
   visible: boolean;
   message?: string;
@@ -13,7 +14,7 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
   return <Modal transparent animationType="fade" visible={visible} statusBarTranslucent>
       <View style={styles.overlay}>
         <View style={styles.card}>
-          <ActivityIndicator size="large" color="#00796B" style={styles.spinner} />
+          <ActivityIndicator size="large" color={COLORS.primary} style={styles.spinner} />
           {message ? <Text style={styles.message}>{message}</Text> : null}
         </View>
       </View>
@@ -27,14 +28,14 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     width: '88%',
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 24,
     paddingHorizontal: 24,
     borderRadius: 4,
-    shadowColor: '#000',
+    shadowColor: COLORS.black,
     shadowOffset: {
       width: 0,
       height: 2
@@ -48,7 +49,7 @@ const styles = StyleSheet.create({
   },
   message: {
     fontSize: 16,
-    color: '#666666',
+    color: COLORS.textSecondary,
     flex: 1
   }
 });

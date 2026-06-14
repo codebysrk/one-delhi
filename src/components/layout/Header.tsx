@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ViewStyle, TextStyle } from '
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { COLORS } from '../../theme/theme';
 import { HeaderBackgroundSvg } from './HeaderBackgroundSvg';
 export interface HeaderProps {
   title?: string;
@@ -28,7 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
   title,
   onBackPress,
   rightElement,
-  backgroundColor = '#D32F2F',
+  backgroundColor = COLORS.primary,
   textColor = 'white',
   backIconName = 'arrow-left',
   style,
@@ -142,7 +143,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden'
   },
   shadow: {
-    shadowColor: '#000',
+    shadowColor: COLORS.black,
     shadowOffset: {
       width: 0,
       height: 2

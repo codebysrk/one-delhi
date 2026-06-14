@@ -12,7 +12,7 @@ import * as Location from "expo-location";
 import { BottomSheet } from "../../components/layout/BottomSheet";
 import Animated, { useSharedValue, useAnimatedStyle, interpolate, Extrapolate, withSpring, FadeInDown } from "react-native-reanimated";
 import { FlashList } from "@shopify/flash-list";
-import { ANIMATIONS } from "../../theme/theme";
+import { COLORS, ANIMATIONS } from "../../theme/theme";
 let _stopsCache: any[] | null = null;
 const getStopsData = async (): Promise<any[]> => {
   if (_stopsCache) return _stopsCache;
@@ -502,7 +502,7 @@ const styles = StyleSheet.create({
     marginBottom: 20
   },
   backBtnError: {
-    backgroundColor: "#D32F2F",
+    backgroundColor: COLORS.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8
@@ -634,7 +634,7 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: "#D32F2F",
+    backgroundColor: COLORS.primary,
     marginTop: 3,
     zIndex: 2
   },
@@ -643,7 +643,7 @@ const styles = StyleSheet.create({
     height: 14,
     borderRadius: 7,
     borderWidth: 2,
-    borderColor: "#D32F2F",
+    borderColor: COLORS.primary,
     backgroundColor: "#FFFFFF",
     marginTop: 3,
     zIndex: 2
@@ -653,7 +653,7 @@ const styles = StyleSheet.create({
     top: 17,
     bottom: -8,
     width: 2,
-    backgroundColor: "#D32F2F",
+    backgroundColor: COLORS.primary,
     zIndex: 1
   },
   textColumn: {

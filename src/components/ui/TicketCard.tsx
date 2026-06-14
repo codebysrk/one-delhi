@@ -28,7 +28,7 @@ export const TicketCard = React.memo(({
   const expired = isTicketExpired(ticket.timestamp, ticket.expiresAt);
   const isInvalid = ticket.status === TicketStatus.INVALID;
   const showStamp = expired || isInvalid;
-  const stampColor = COLORS.primary;
+  const stampColor = ticket.isPass ? COLORS.success : COLORS.primary;
   const getFormattedActiveDateTime = () => {
     const ts = typeof ticket.timestamp === 'number' ? ticket.timestamp : (ticket.timestamp as any)?.toMillis?.() || ((ticket.timestamp as any)?.seconds ? (ticket.timestamp as any).seconds * 1000 : ticket.timestamp);
     const d = new Date(ts);
@@ -49,45 +49,45 @@ export const TicketCard = React.memo(({
   const locationTextStyle = [styles.locationText, largeText && styles.largeLocationText];
   const totalTextStyle = [styles.totalText, largeText && styles.largeTotalText];
   return <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7} accessibilityLabel="Open ticket details">
-      <View style={styles.headerStrip} />
-      
-      <View style={[styles.body, compact && {
+    <View style={styles.headerStrip} />
+
+    <View style={[styles.body, compact && {
       paddingBottom: 8
     }]}>
-        <View style={styles.dataRow}>
-          <Text style={textStyle}>
-            {getRouteNumberOnly(ticket.route || ticket.id || 'Bus')}
-          </Text>
-          <Text style={textStyle}>₹{(Number(ticket.qty || 1) * Number(ticket.baseFare || 10)).toFixed(1)}</Text>
-        </View>
- 
-        <View style={styles.dataRow}>
-          <Text style={secondaryTextStyle}>{displayDateTime}</Text>
-          <Text style={secondaryTextStyle}>x {ticket.qty || 1}</Text>
-        </View>
- 
-        <View style={styles.dataRow}>
-          <Text style={locationTextStyle} numberOfLines={1}>{ticket.source || ticket.src || (ticket as any).from || 'Boarding'}</Text>
-          <Text style={totalTextStyle}>₹{Number(ticket.total || ticket.fare || 0).toFixed(1)}</Text>
-        </View>
- 
-        <View style={styles.destRow}>
-          <Text style={locationTextStyle} numberOfLines={2}>{ticket.dest || ticket.dst || (ticket as any).to || 'Destination'}</Text>
-        </View>
+      <View style={styles.dataRow}>
+        <Text style={textStyle}>
+          {getRouteNumberOnly(ticket.route || ticket.id || 'Bus')}
+        </Text>
+        <Text style={textStyle}>₹{(Number(ticket.qty || 1) * Number(ticket.baseFare || 10)).toFixed(1)}</Text>
+      </View>
 
-        {showTID && <View style={[styles.tidContainer, hideDivider && {
+      <View style={styles.dataRow}>
+        <Text style={secondaryTextStyle}>{displayDateTime}</Text>
+        <Text style={secondaryTextStyle}>x {ticket.qty || 1}</Text>
+      </View>
+
+      <View style={styles.dataRow}>
+        <Text style={locationTextStyle} numberOfLines={1}>{ticket.source || ticket.src || (ticket as any).from || 'Boarding'}</Text>
+        <Text style={totalTextStyle}>₹{Number(ticket.total || ticket.fare || 0).toFixed(1)}</Text>
+      </View>
+
+      <View style={styles.destRow}>
+        <Text style={locationTextStyle} numberOfLines={2}>{ticket.dest || ticket.dst || (ticket as any).to || 'Destination'}</Text>
+      </View>
+
+      {showTID && <View style={[styles.tidContainer, hideDivider && {
         borderTopWidth: 0
       }]}>
-            <Text style={styles.tidText}>{ticket.tid || ticket.id || 'T0000000000'}</Text>
-          </View>}
+        <Text style={styles.tidText}>{ticket.tid || ticket.id || 'T0000000000'}</Text>
+      </View>}
 
-        {showTimer && !expired && <View style={styles.timerMini}>
-            <Text style={styles.timerText}>
-              Expires in: {getRemainingValidity(ticket.timestamp, ticket.expiresAt)}
-            </Text>
-          </View>}
+      {showTimer && !expired && <View style={styles.timerMini}>
+        <Text style={styles.timerText}>
+          Expires in: {getRemainingValidity(ticket.timestamp, ticket.expiresAt)}
+        </Text>
+      </View>}
 
-        {showStamp && <InvalidStamp text="INVALID" color={stampColor} style={[styles.stampOverlay, fullStampOpacity && {
+      {showStamp && <InvalidStamp text="INVALID" color={stampColor} style={[styles.stampOverlay, fullStampOpacity && {
         opacity: 0.85
       }, compact && {
         left: '26%',
@@ -97,8 +97,8 @@ export const TicketCard = React.memo(({
         justifyContent: 'flex-start',
         alignItems: 'flex-start'
       }]} size={compact ? 30 : 55} rotation={compact ? "-10deg" : "-12deg"} />}
-      </View>
-    </TouchableOpacity>;
+    </View>
+  </TouchableOpacity>;
 });
 const styles = StyleSheet.create({
   card: {
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   },
   headerStrip: {
     height: 16,
-    backgroundColor: '#757575',
+    backgroundColor: COLORS.textMuted,
     marginTop: SPACING.sm
   },
   body: {
@@ -175,13 +175,13 @@ const styles = StyleSheet.create({
   tidText: {
     ...TYPOGRAPHY.bodySmall,
     fontSize: 13,
-    color: '#424242ff',
+    color: COLORS.textSecondary,
     letterSpacing: 1
   },
   timerMini: {
     marginTop: SPACING.md,
     paddingVertical: SPACING.sm,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: COLORS.surfaceVariant,
     borderRadius: RADII.sm,
     alignItems: 'center'
   },

@@ -47,10 +47,12 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
   const webViewRef = useRef<WebView>(null);
   useImperativeHandle(ref, () => ({
     centerMap: (lat: number, lng: number, zoom?: number) => {
+      if (isNaN(lat) || isNaN(lng)) return;
       const js = `window.centerMap(${lat}, ${lng}, ${zoom}); true;`;
       webViewRef.current?.injectJavaScript(js);
     },
     updateUserLocation: (lat: number, lng: number) => {
+      if (isNaN(lat) || isNaN(lng)) return;
       const js = `window.updateUserLocation(${lat}, ${lng}); true;`;
       webViewRef.current?.injectJavaScript(js);
     },
@@ -70,22 +72,23 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
       webViewRef.current?.injectJavaScript(js);
     },
     triggerFocusAnimation: (lat: number, lng: number, zoom?: number) => {
+      if (isNaN(lat) || isNaN(lng)) return;
       const js = `window.triggerFocusAnimation(${lat}, ${lng}, ${zoom || 15}); true;`;
       webViewRef.current?.injectJavaScript(js);
     }
   }));
   useEffect(() => {
-    if (userLocation) {
+    if (userLocation && !isNaN(userLocation.coords.latitude) && !isNaN(userLocation.coords.longitude)) {
       const js = `window.updateUserLocation(${userLocation.coords.latitude}, ${userLocation.coords.longitude}); true;`;
       webViewRef.current?.injectJavaScript(js);
     }
   }, [userLocation]);
   const mapHtml = useMemo(() => {
-    const centerLat = userLocation?.coords.latitude || initialCenter.latitude;
-    const centerLng = userLocation?.coords.longitude || initialCenter.longitude;
+    const centerLat = userLocation && !isNaN(userLocation.coords.latitude) ? userLocation.coords.latitude : initialCenter.latitude;
+    const centerLng = userLocation && !isNaN(userLocation.coords.longitude) ? userLocation.coords.longitude : initialCenter.longitude;
     const mapStartLat = animateOnLoad ? 54.5260 : centerLat;
     const mapStartLng = animateOnLoad ? 15.2551 : centerLng;
-    const mapStartZoom = animateOnLoad ? 6 : userLocation ? 15 : initialZoom;
+    const mapStartZoom = animateOnLoad ? 6 : (userLocation && !isNaN(userLocation.coords.latitude) ? 15 : initialZoom);
     return `
     <!DOCTYPE html>
     <html>
@@ -120,10 +123,10 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
         
         /* MapScreen Stops - Grey Teardrop Pin */
         .stop-marker-pin {
-          width: 28px;
-          height: 28px;
+          width: 22px;
+          height: 22px;
           background: #7c7c7c; 
-          border: 2px solid white;
+          border: 1.5px solid white;
           border-radius: 50% 50% 50% 0; 
           transform: rotate(-45deg);
           display: flex;
@@ -133,8 +136,8 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
         }
         .stop-marker-pin svg {
           transform: rotate(45deg);
-          width: 15px;
-          height: 15px;
+          width: 12px;
+          height: 12px;
           fill: white;
         }
         
@@ -180,17 +183,24 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
           line-height: 1;
         }
         
-        /* EV Charger Pins */
+        /* EV Charger Pins - Green teardrop with EV charger SVG */
         .ev-marker { 
-          width: 32px; height: 32px; background: #10B981; 
-          border: 2.5px solid white; border-radius: 50% 50% 50% 0; 
+          width: 30px; height: 30px; background: #08b968; 
+          border-radius: 50% 50% 50% 0; 
           transform: rotate(-45deg);
           display: flex; justify-content: center; align-items: center;
-          box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+          box-shadow: 0 3px 6px rgba(0,0,0,0.3);
         }
-        .ev-marker i { 
-          transform: rotate(45deg); color: #000; font-size: 16px; 
-          font-family: Arial; font-style: normal; font-weight: bold;
+        .ev-marker-inner {
+          width: 20px; height: 20px; background: #fff;
+          border-radius: 50%; border: 2px solid #000;
+          display: flex; justify-content: center; align-items: center;
+          transform: rotate(45deg);
+        }
+        .ev-marker-inner svg { 
+          width: 15px;
+          height: 15px;
+          fill: #000;
         }
       </style>
     </head>
@@ -253,7 +263,7 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
         var polyline = null;
 
         // Initialize User Location if provided initially
-        ${userLocation ? `
+        ${userLocation && !isNaN(userLocation.coords.latitude) && !isNaN(userLocation.coords.longitude) ? `
           userMarker = L.marker([${userLocation.coords.latitude}, ${userLocation.coords.longitude}], {
             icon: L.divIcon({ className: '', html: '<div class="user-marker"></div>', iconSize: [10, 10] })
           }).addTo(map);
@@ -268,6 +278,10 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
 
         // Helper: Trigger Flying/Panning Focus Animation
         window.triggerFocusAnimation = function(lat, lng, zoom) {
+          if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) {
+            window.log("triggerFocusAnimation called with invalid LatLng: (" + lat + ", " + lng + ")");
+            return;
+          }
           var targetZoom = zoom || 15;
           window.log("triggerFocusAnimation called for: " + lat + ", " + lng);
           // तुरंत बिना एनीमेशन के यूरोप (lat: 54.5260, lng: 15.2551) पर ज़ूम 0 सेट करें
@@ -288,6 +302,10 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
 
         // Helper 1: Center Map (With premium distance-aware transitions to completely prevent Leaflet's shaking/vibration bug)
         window.centerMap = function(lat, lng, zoom) {
+          if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) {
+            window.log("centerMap called with invalid LatLng: (" + lat + ", " + lng + ")");
+            return;
+          }
           var targetZoom = zoom || 15;
           var currentCenter = map.getCenter();
           var currentZoom = map.getZoom();
@@ -309,6 +327,10 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
 
         // Helper 2: Update/Draw User Location Blue Dot
         window.updateUserLocation = function(lat, lng) {
+          if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) {
+            window.log("updateUserLocation called with invalid LatLng: (" + lat + ", " + lng + ")");
+            return;
+          }
           var latlng = [lat, lng];
           if (userMarker) {
             userMarker.setLatLng(latlng);
@@ -322,9 +344,9 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
         // Helper 3: Draw Nearby Stops (MapScreen)
         var nearbyStopIcon = L.divIcon({ 
           className: 'stop-pin-wrapper', 
-          html: '<svg width="30" height="30" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 3px rgba(0,0,0,0.25));"><path d="M12 2C8.14 2 5 5.14 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.86-3.14-7-7-7z" fill="#757575" /><g transform="translate(6, 4) scale(0.5)"><path d="M4 16c0 .88.39 1.67 1 2.22V20c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM6 6h12v4H6V6z" fill="#ffffff" /></g></svg>', 
-          iconSize: [30, 30],
-          iconAnchor: [15, 30]
+          html: '<svg width="22" height="22" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 3px rgba(0,0,0,0.25));"><path d="M12 2C8.14 2 5 5.14 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.86-3.14-7-7-7z" fill="#757575" /><g transform="translate(6, 4) scale(0.5)"><path d="M4 16c0 .88.39 1.67 1 2.22V20c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM6 6h12v4H6V6z" fill="#ffffff" /></g></svg>', 
+          iconSize: [22, 22],
+          iconAnchor: [11, 22]
         });
         window.updateNearbyStops = function(stopsJson) {
           stopMarkers.clearLayers();
@@ -337,9 +359,9 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
         // Helper 4: Draw Polyline Route and Bus Icon (RouteDetailScreen)
         var routeStopIcon = L.divIcon({ 
           className: 'stop-pin-wrapper',
-          html: '<svg width="30" height="30" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 3px rgba(0,0,0,0.25));"><path d="M12 2C8.14 2 5 5.14 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.86-3.14-7-7-7z" fill="#757575" /><g transform="translate(6, 4) scale(0.5)"><path d="M4 16c0 .88.39 1.67 1 2.22V20c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM6 6h12v4H6V6z" fill="#ffffff" /></g></svg>', 
-          iconSize: [30, 30],
-          iconAnchor: [15, 30]
+          html: '<svg width="22" height="22" viewBox="0 0 24 24" style="filter: drop-shadow(0 2px 3px rgba(0,0,0,0.25));"><path d="M12 2C8.14 2 5 5.14 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.86-3.14-7-7-7z" fill="#757575" /><g transform="translate(6, 4) scale(0.5)"><path d="M4 16c0 .88.39 1.67 1 2.22V20c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM6 6h12v4H6V6z" fill="#ffffff" /></g></svg>', 
+          iconSize: [22, 22],
+          iconAnchor: [11, 22]
         });
         window.drawRoute = function(polylineJson, routeNumber) {
           routeMarkers.clearLayers();
@@ -369,12 +391,12 @@ export const GoogleMap = forwardRef<GoogleMapRef, GoogleMapProps>(({
           busMarker = L.marker(mid, {icon: busIcon}).addTo(map);
         };
 
-        // Helper 5: Draw EV Station Pins (EVScreen)
+        // Helper 5: Draw EV Station Pins (EVScreen) - Green teardrop with EV charger SVG
         var evIcon = L.divIcon({
           className: '',
-          html: '<div class="ev-marker"><i>⚡</i></div>',
-          iconSize: [32, 32],
-          iconAnchor: [16, 32]
+          html: '<div class="ev-marker"><div class="ev-marker-inner"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19.77,7.23L19.78,7.22L16.06,3.5L15,4.56L17.11,6.67C16.17,7.03 15.5,7.93 15.5,9A2.5,2.5 0 0,0 18,11.5C18.36,11.5 18.69,11.42 19,11.29V18.5A1,1 0 0,1 18,19.5A1,1 0 0,1 17,18.5V14A2,2 0 0,0 15,12H14V5A2,2 0 0,0 12,3H6A2,2 0 0,0 4,5V21H14V13.5H15.5V18.5A2.5,2.5 0 0,0 18,21A2.5,2.5 0 0,0 20.5,18.5V9C20.5,8.31 20.22,7.68 19.77,7.23M18,10A1,1 0 0,1 17,9A1,1 0 0,1 18,8A1,1 0 0,1 19,9A1,1 0 0,1 18,10M8,18V13.5H6L10,6V11H12L8,18Z"/></svg></div></div>',
+          iconSize: [30, 30],
+          iconAnchor: [15, 30]
         });
         window.drawEVStations = function(stationsJson) {
           evMarkers.clearLayers();

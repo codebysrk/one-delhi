@@ -9,6 +9,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { TicketCard } from "../../components/ui/TicketCard";
 import { useAppStore } from "../../store/useAppStore";
 import { Skeleton } from "../../components/ui/Skeleton";
+import { COLORS } from "../../theme/theme";
 export const HistoryScreen = ({
   navigation
 }: any) => {
@@ -57,9 +58,9 @@ export const HistoryScreen = ({
   const insets = useSafeAreaInsets();
   if (loading) {
     return <Screen noPadding ignoreTopSafe style={{
-      backgroundColor: '#FFF'
+      backgroundColor: COLORS.white
     }}>
-        <Header backgroundColor="#FFFFFF" textColor="#000000" height={50} showShadow={true} />
+        <Header backgroundColor={COLORS.white} textColor={COLORS.text} height={50} showShadow={true} />
         <View style={styles.listContent}>
           {[1, 2, 3, 4, 5].map(i => <View key={i} style={styles.cardWrapper}>
               <Skeleton width="100%" height={150} borderRadius={0} />
@@ -68,13 +69,13 @@ export const HistoryScreen = ({
       </Screen>;
   }
   return <Screen noPadding ignoreTopSafe style={{
-    backgroundColor: '#FFF'
+    backgroundColor: COLORS.white
   }}>
-      <Header onBackPress={() => navigation.goBack()} backgroundColor="#FFFFFF" textColor="#000000" height={50} showShadow={true} />
+      <Header onBackPress={() => navigation.goBack()} backgroundColor={COLORS.white} textColor={COLORS.text} height={50} showShadow={true} />
 
       {cachedTickets.length > 0 ? <FlashList data={cachedTickets} renderItem={renderTicketItem} keyExtractor={item => item.id || item.tid} contentContainerStyle={StyleSheet.flatten([styles.listContent, {
       paddingBottom: insets.bottom + 20
-    }])} showsVerticalScrollIndicator={false} estimatedItemSize={160} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#D32F2F"]} />} /> : <View style={[styles.emptyContainer, {
+    }])} showsVerticalScrollIndicator={false} estimatedItemSize={160} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />} /> : <View style={[styles.emptyContainer, {
       paddingBottom: insets.bottom + 20
     }]}>
           <MaterialCommunityIcons name="ticket-outline" size={100} color="#E5E7EB" />
@@ -112,7 +113,7 @@ const styles = StyleSheet.create({
     marginBottom: 30
   },
   bookNowBtn: {
-    backgroundColor: "#D32F2F",
+    backgroundColor: COLORS.primary,
     paddingHorizontal: 30,
     paddingVertical: 14,
     borderRadius: 0

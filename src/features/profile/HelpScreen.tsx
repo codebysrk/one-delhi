@@ -7,6 +7,8 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { FlashList } from "@shopify/flash-list";
 import { MainHeader } from "../../components/layout/Header";
 import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
+import { COLORS } from "../../theme/theme";
+
 export const HelpScreen = ({
   navigation
 }: any) => {
@@ -316,7 +318,7 @@ export const HelpScreen = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF"
+    backgroundColor: COLORS.background
   },
   headerArea: {
     overflow: "hidden"
@@ -324,9 +326,9 @@ const styles = StyleSheet.create({
   tabSection: {
     flexDirection: "row",
     height: 48,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.background,
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB"
+    borderBottomColor: COLORS.border
   },
   tabItem: {
     flex: 1,
@@ -337,7 +339,7 @@ const styles = StyleSheet.create({
   tabDivider: {
     width: 1,
     height: "50%",
-    backgroundColor: "#F3F4F6",
+    backgroundColor: COLORS.surfaceVariant,
     alignSelf: "center"
   },
   activeIndicator: {
@@ -345,15 +347,15 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: "50%",
     height: 2,
-    backgroundColor: "#C0282C"
+    backgroundColor: COLORS.primary
   },
   tabLabel: {
     fontSize: 14,
-    color: "#111827",
+    color: COLORS.text,
     fontWeight: "400"
   },
   activeTabLabel: {
-    color: "#111827",
+    color: COLORS.text,
     fontWeight: "400"
   },
   mainWrapper: {
@@ -364,7 +366,7 @@ const styles = StyleSheet.create({
     paddingBottom: 120
   },
   stickyTitleWrapper: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.background,
     paddingHorizontal: 20,
     paddingTop: 4,
     paddingBottom: 10,
@@ -377,7 +379,7 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: 22,
     fontWeight: "600",
-    color: "#000000"
+    color: COLORS.text
   },
   faqCategory: {
     paddingHorizontal: 20,
@@ -387,7 +389,7 @@ const styles = StyleSheet.create({
   categoryHeader: {
     fontSize: 17,
     fontWeight: "800",
-    color: "#C0282C"
+    color: COLORS.primary
   },
   faqRowItemWrapper: {
     paddingHorizontal: 20
@@ -404,7 +406,7 @@ const styles = StyleSheet.create({
   faqItemTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#333333ff",
+    color: COLORS.text,
     flex: 1,
     paddingRight: 16,
     lineHeight: 18
@@ -417,10 +419,10 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   plusStatus: {
-    backgroundColor: "#4B5563"
+    backgroundColor: COLORS.textSecondary
   },
   minusStatus: {
-    backgroundColor: "#C0282C"
+    backgroundColor: COLORS.primary
   },
   faqDetailBox: {
     paddingTop: 2,
@@ -428,12 +430,12 @@ const styles = StyleSheet.create({
   },
   faqDetailText: {
     fontSize: 13,
-    color: "#4B5563",
+    color: COLORS.textSecondary,
     lineHeight: 20
   },
   rowDivider: {
     height: 1,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: COLORS.surfaceVariant,
     marginTop: 0
   },
   noComplaintsBox: {
@@ -443,7 +445,7 @@ const styles = StyleSheet.create({
   },
   noComplaintsText: {
     fontSize: 20,
-    color: "#000000ff",
+    color: COLORS.text,
     textAlign: "center",
     lineHeight: 26,
     fontWeight: "500",
@@ -454,27 +456,27 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.background,
     paddingHorizontal: 20,
     paddingTop: 15
   },
   actionHint: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#000000",
+    color: COLORS.text,
     marginBottom: 4,
     textAlign: "center"
   },
   actionBtn: {
     width: "100%",
-    backgroundColor: "#C0282C",
+    backgroundColor: COLORS.primary,
     height: 52,
     borderRadius: 0,
     justifyContent: "center",
     alignItems: "center"
   },
   actionBtnText: {
-    color: "#FFFFFF",
+    color: COLORS.white,
     fontSize: 18,
     fontWeight: "500"
   }

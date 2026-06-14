@@ -13,6 +13,7 @@ import { ProfileStack } from './navigators/ProfileStack';
 import { linking } from './linking';
 import { useAppStore } from '../store/useAppStore';
 import { db, auth } from '../services/firebase';
+import { COLORS } from '../theme/theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { registerDevice, listenToDeviceSecurity, clearForceLogout } from '../services/deviceService';
 import { logAction } from '../services/logService';
@@ -24,9 +25,9 @@ const Stack = createNativeStackNavigator();
 export const ComingSoon = ({
   navigation
 }: any) => <Screen noPadding ignoreTopSafe style={{
-  backgroundColor: '#FFF'
+  backgroundColor: COLORS.white
 }}>
-    <Header title="Coming Soon" onBackPress={() => navigation.goBack()} backgroundColor="#FFFFFF" textColor="#000000" height={50} showShadow={true} />
+    <Header title="Coming Soon" onBackPress={() => navigation.goBack()} backgroundColor={COLORS.white} textColor={COLORS.text} height={50} showShadow={true} />
     <View style={{
     flex: 1,
     justifyContent: 'center',
@@ -37,21 +38,21 @@ export const ComingSoon = ({
       width: 120,
       height: 120,
       borderRadius: 60,
-      backgroundColor: '#FEF2F2',
+      backgroundColor: COLORS.surfaceVariant,
       justifyContent: 'center',
       alignItems: 'center',
       marginBottom: 25
     }}>
-        <MaterialCommunityIcons name="rocket-launch" size={60} color="#D32F2F" />
+        <MaterialCommunityIcons name="rocket-launch" size={60} color={COLORS.primary} />
       </View>
       <Text style={{
       fontSize: 24,
       fontWeight: '700',
-      color: '#111'
+      color: COLORS.text
     }}>Coming Soon</Text>
       <Text style={{
       marginTop: 10,
-      color: '#666',
+      color: COLORS.textSecondary,
       fontSize: 16,
       textAlign: 'center',
       paddingHorizontal: 40
@@ -266,7 +267,7 @@ export const RootNavigator = () => {
   }, []);
   return <View style={{
     flex: 1,
-    backgroundColor: '#FFF'
+    backgroundColor: COLORS.white
   }}>
       <NavigationContainer ref={navigationRef} linking={linking}>
         <Stack.Navigator screenOptions={{
@@ -312,11 +313,11 @@ export const RootNavigator = () => {
 const styles = StyleSheet.create({
   initializingContainer: {
     flex: 1,
-    backgroundColor: '#FFF'
+    backgroundColor: COLORS.white
   },
   splashFooter: {
     width: '100%',
-    backgroundColor: '#A51F38',
+    backgroundColor: COLORS.primary,
     paddingVertical: 2,
     alignItems: 'center',
     justifyContent: 'center'
