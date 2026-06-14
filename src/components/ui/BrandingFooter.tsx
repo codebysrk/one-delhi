@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
 
   // Tab footer strip
   globalFooter: {
-    backgroundColor: '#A51F38',
+    backgroundColor: '#D32F2F',
     paddingVertical: 2,
     alignItems: 'center',
     justifyContent: 'center',

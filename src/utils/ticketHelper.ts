@@ -167,3 +167,17 @@ export const getLatestActiveTicket = (tickets: Ticket[]): Ticket | null => {
   
   return activeOnes.sort((a, b) => getMs(b.timestamp) - getMs(a.timestamp))[0];
 };
+
+export const getLatestTicket = (tickets: Ticket[]): Ticket | null => {
+  const busTickets = tickets.filter(t => !t.isPass);
+  if (busTickets.length === 0) return null;
+  
+  const getMs = (timestamp: any): number => {
+    if (!timestamp) return 0;
+    return typeof timestamp === 'number' 
+      ? timestamp 
+      : (timestamp.toMillis?.() || (timestamp.seconds ? timestamp.seconds * 1000 : 0));
+  };
+  
+  return busTickets.sort((a, b) => getMs(b.timestamp) - getMs(a.timestamp))[0];
+};

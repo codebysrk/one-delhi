@@ -17,9 +17,11 @@ export const InvalidStamp = React.memo(({
   size = 35
 }: InvalidStampProps) => {
   return (
-    <View style={[style, { transform: [{ rotate: rotation }] }]}>
-      <View style={[styles.stampBox, { borderColor: color, paddingHorizontal: size * 0.2, paddingVertical: 1 }]}>
-        <Text style={[styles.stampLabel, { color, fontSize: size }]}>{text}</Text>
+    <View style={style}>
+      <View style={{ transform: [{ rotate: rotation }] }}>
+        <View style={[styles.stampBox, { borderColor: color, borderWidth: Math.max(2, Math.round(size * 0.07)), paddingHorizontal: size * 0.2, paddingVertical: 1 }]}>
+          <Text style={[styles.stampLabel, { color, fontSize: size }]}>{text}</Text>
+        </View>
       </View>
     </View>
   );

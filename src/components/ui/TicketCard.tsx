@@ -94,8 +94,12 @@ export const TicketCard = React.memo(({ ticket, onPress, showTimer, largeText, s
           <InvalidStamp 
             text="INVALID" 
             color={stampColor}
-            style={[styles.stampOverlay, fullStampOpacity && { opacity: 0.85 }, compact && { left: '26%', top: '42%' }]}
-            size={compact ? 30 : 35}
+            style={[
+              styles.stampOverlay, 
+              fullStampOpacity && { opacity: 0.85 }, 
+              compact && { left: '26%', top: '42%', bottom: undefined, right: undefined, justifyContent: 'flex-start', alignItems: 'flex-start' }
+            ]}
+            size={compact ? 30 : 55}
             rotation={compact ? "-10deg" : "-12deg"}
           />
         )}
@@ -196,8 +200,12 @@ const styles = StyleSheet.create({
   },
   stampOverlay: {
     position: 'absolute',
-    top: '35%',
-    left: '25%',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
     zIndex: 10,
     opacity: 0.8,
   }

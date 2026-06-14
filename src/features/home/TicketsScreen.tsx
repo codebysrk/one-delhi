@@ -6,13 +6,13 @@ import { useAppStore } from "../../store/useAppStore";
 import { MetroLogo } from "../../components/icons/MetroLogo";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { TicketCard } from "../../components/ui/TicketCard";
-import { getLatestActiveTicket, isTicketExpired } from "../../utils/ticketHelper";
+import { getLatestActiveTicket, getLatestTicket, isTicketExpired } from "../../utils/ticketHelper";
 
 type RootStackParamList = {
   Booking: undefined;
   Pass: undefined;
   History: undefined;
-  Ticket: undefined;
+  Ticket: { ticket: any } | undefined;
   ComingSoon: undefined;
 };
 
@@ -61,7 +61,7 @@ export const TicketsScreen: React.FC<TicketsScreenProps> = ({ navigation }) => {
 
   // Find the latest valid active ticket
   const latestTicket = useMemo(
-    () => getLatestActiveTicket(tickets),
+    () => getLatestTicket(tickets),
     [tickets, tick],
   );
 
@@ -144,7 +144,7 @@ export const TicketsScreen: React.FC<TicketsScreenProps> = ({ navigation }) => {
           {latestTicket ? (
             <TicketCard
               ticket={latestTicket}
-              onPress={() => handleNavigate("Ticket")}
+              onPress={() => navigation.navigate("Ticket", { ticket: latestTicket })}
               showTimer={false}
               largeText={true}
               showTID={false}

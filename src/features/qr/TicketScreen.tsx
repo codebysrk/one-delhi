@@ -16,6 +16,7 @@ import { BrandingFooter } from "../../components/ui/BrandingFooter";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import {
   getLatestActiveTicket,
+  getLatestTicket,
   getRouteNumberOnly,
   formatTimeTo12hr,
   isTicketExpired,
@@ -38,7 +39,7 @@ export const TicketScreen = ({ navigation, route }: any) => {
 
   // Support opening specific ticket from history OR showing latest active
   const ticketFromParams = route?.params?.ticket;
-  const activeTicket = ticketFromParams || getLatestActiveTicket(tickets);
+  const activeTicket = ticketFromParams || getLatestTicket(tickets);
 
   const [showQR, setShowQR] = useState(false);
   const isExpired = activeTicket
