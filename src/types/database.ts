@@ -36,6 +36,7 @@ export interface Ticket {
   baseFare: number;
   finalFare: string;
   total: string;
+  originalTotal?: string;
   toll?: number;
   isInterstate?: boolean;
   qty: number;

@@ -201,7 +201,7 @@ export const TicketScreen = ({
                   <View style={styles.validationSummary}>
                     <Text style={styles.validatedLabel}>VALIDATED</Text>
                     <Text style={styles.validatedValue}>
-                      ₹{Number(activeTicket.total).toFixed(1)}
+                      ₹{Number(activeTicket.originalTotal || activeTicket.total).toFixed(1)}
                     </Text>
                   </View>
 
@@ -219,7 +219,7 @@ export const TicketScreen = ({
                       <Text style={[styles.largeValue, {
                   fontWeight: "700"
                 }]}>
-                        ₹{Number(activeTicket.total).toFixed(1)}
+                        ₹{Number(activeTicket.originalTotal || activeTicket.total).toFixed(1)}
                       </Text>
                     </View>
                   </View>
@@ -273,7 +273,7 @@ export const TicketScreen = ({
             </View> : <TouchableOpacity onPress={() => setShowQR(false)} style={[styles.qrCardMain, {
           backgroundColor: 'white'
         }]} activeOpacity={0.9}>
-              <QRCode value={`TRANSPORT_DEPT_OF_DELHI|ID:${activeTicket.tid || activeTicket.id}|ROUTE:${activeTicket.route}|FROM:${activeTicket.source || activeTicket.src}|TO:${activeTicket.dest || activeTicket.dst}|TIME:${activeTicket.time}|QTY:${activeTicket.qty}|FARE:${activeTicket.total}|STATUS:VALIDATED|AUTH:ONDC_NETWORK|SECURE_HASH:${(activeTicket.tid || activeTicket.id || "").slice(-8)}`} size={280} color="black" backgroundColor="white" ecl="M" />
+              <QRCode value={`TRANSPORT_DEPT_OF_DELHI|ID:${activeTicket.tid || activeTicket.id}|ROUTE:${activeTicket.route}|FROM:${activeTicket.source || activeTicket.src}|TO:${activeTicket.dest || activeTicket.dst}|TIME:${activeTicket.time}|QTY:${activeTicket.qty}|FARE:${activeTicket.originalTotal || activeTicket.total}|STATUS:VALIDATED|AUTH:ONDC_NETWORK|SECURE_HASH:${(activeTicket.tid || activeTicket.id || "").slice(-8)}`} size={280} color="black" backgroundColor="white" ecl="M" />
             </TouchableOpacity>}
 
           {}
