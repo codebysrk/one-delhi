@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ViewStyle, TextStyle } from "react-native";
 import { COLORS } from "../../theme/theme";
 import { LinearGradient } from "expo-linear-gradient";
 interface BrandingFooterProps {
-  variant?: "tab" | "ticket";
+  variant?: "tab" | "ticket" | "splash";
   containerStyle?: ViewStyle | ViewStyle[];
   textStyle?: TextStyle | TextStyle[];
 }
@@ -17,6 +17,15 @@ export const BrandingFooter: React.FC<BrandingFooterProps> = ({
       <View style={containerStyle}>
         <Text style={[styles.poweredText, textStyle]}>
           Powered by IIIT Delhi
+        </Text>
+      </View>
+    );
+  }
+  if (variant === "splash") {
+    return (
+      <View style={containerStyle}>
+        <Text style={[styles.poweredText, textStyle]}>
+          Powered by DTC, DoT & ARF IIT Kanpur
         </Text>
       </View>
     );

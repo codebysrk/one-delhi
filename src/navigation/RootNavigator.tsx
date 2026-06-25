@@ -306,7 +306,7 @@ export const RootNavigator = () => {
         flex: 1,
         width: '100%'
       }} contentFit="cover" />
-          <BrandingFooter variant="ticket" containerStyle={styles.splashFooter} textStyle={styles.splashFooterText} />
+          <BrandingFooter variant="splash" containerStyle={styles.splashFooter} textStyle={styles.splashFooterText} />
         </Animated.View>}
     </View>;
 };
