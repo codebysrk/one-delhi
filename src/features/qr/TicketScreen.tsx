@@ -117,7 +117,7 @@ export const TicketScreen = ({
                     <Text style={[styles.validatedValue, {
                 color: "#1B5E20"
               }]}>
-                      ₹{Number(activeTicket.total).toFixed(1)}
+                      ₹{Number(activeTicket.fare).toFixed(1)}
                     </Text>
                   </View>
 
