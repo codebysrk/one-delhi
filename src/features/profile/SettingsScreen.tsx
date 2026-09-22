@@ -1,44 +1,52 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView, TextInput, Alert, ActivityIndicator, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TextInput, Alert, ActivityIndicator, TouchableOpacity, Modal } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Screen } from "../../components/layout/Screen";
 import { Header } from "../../components/layout/Header";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAppStore } from "../../store/useAppStore";
-import { auth } from "../../services/firebase";
+import { supabase } from "../../services/supabase";
+import { updateUserProfile } from "../../services/userService";
 import { COLORS } from "../../theme/theme";
 export const SettingsScreen = ({
   navigation
 }: any) => {
   const {
     user,
+    userProfile,
     setUser,
+    setUserProfile,
     setShowFooter
   } = useAppStore();
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
-  const [name, setName] = useState(user?.displayName || "");
-  const [email, setEmail] = useState(user?.email || "");
-  const [gender, setGender] = useState("Male");
-  const [phone, setPhone] = useState("9876543210");
+  const [showGenderModal, setShowGenderModal] = useState(false);
+  const [name, setName] = useState(userProfile?.name || user?.displayName || "");
+  const [email, setEmail] = useState(userProfile?.email || user?.email || "");
+  const [gender, setGender] = useState(userProfile?.gender || "Not Specified");
+  const [phone, setPhone] = useState(userProfile?.phone || "");
+
+  const GENDER_OPTIONS = ["Male", "Female", "Transgender", "Other"];
   useEffect(() => {
-    setName(user?.displayName || "");
-    setEmail(user?.email || "");
-  }, [user]);
+    setName(userProfile?.name || user?.displayName || "");
+    setEmail(userProfile?.email || user?.email || "");
+    setGender(userProfile?.gender || "Not Specified");
+    setPhone(userProfile?.phone || "");
+  }, [user, userProfile]);
   useEffect(() => {
     setShowFooter(false);
     const unsubscribeFocus = navigation.addListener("focus", () => {
-      setName(user?.displayName || "");
-      setEmail(user?.email || "");
-      setGender("Male");
-      setPhone("9876543210");
+      setName(userProfile?.name || user?.displayName || "");
+      setEmail(userProfile?.email || user?.email || "");
+      setGender(userProfile?.gender || "Not Specified");
+      setPhone(userProfile?.phone || "");
       setIsEditing(null);
     });
     const unsubscribeBlur = navigation.addListener("blur", () => {
-      setName(user?.displayName || "");
-      setEmail(user?.email || "");
-      setGender("Male");
-      setPhone("9876543210");
+      setName(userProfile?.name || user?.displayName || "");
+      setEmail(userProfile?.email || user?.email || "");
+      setGender(userProfile?.gender || "Not Specified");
+      setPhone(userProfile?.phone || "");
       setIsEditing(null);
     });
     return () => {
@@ -46,19 +54,28 @@ export const SettingsScreen = ({
       unsubscribeFocus();
       unsubscribeBlur();
     };
-  }, [navigation, user]);
+  }, [navigation, user, userProfile]);
   const handleSave = async () => {
-    if (!auth.currentUser) return;
+    const uid = user?.id || user?.uid;
+    if (!uid) return;
     setLoading(true);
     try {
-      if (name !== user?.displayName) {
-        await auth.currentUser.updateProfile({
-          displayName: name
+      await updateUserProfile(uid, {
+        name,
+        gender
+      });
+      setUserProfile({
+        ...userProfile,
+        name,
+        gender
+      });
+      if (user) {
+        setUser({
+          ...user,
+          displayName: name,
+          name
         });
       }
-      setUser({
-        ...auth.currentUser
-      });
       setIsEditing(null);
       Alert.alert("Success", "Profile updated successfully!");
     } catch (error: any) {
@@ -76,7 +93,7 @@ export const SettingsScreen = ({
       style: "destructive",
       onPress: async () => {
         try {
-          await auth.signOut();
+          await supabase.auth.signOut();
         } catch (error: any) {
           Alert.alert("Error", error.message);
         }
@@ -154,15 +171,41 @@ export const SettingsScreen = ({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Basic Information</Text>
           <View style={styles.infoBox}>
-            {basicInfo.map((item, index) => <View key={index} style={styles.infoRow}>
-                <Text style={styles.infoLabel}>{item.label}</Text>
-                <View style={styles.infoRight}>
-                  {isEditing === item.key ? <TextInput style={styles.editInput} value={item.value} onChangeText={item.setter} autoFocus onBlur={() => setIsEditing(null)} /> : <Text style={styles.infoValue}>{item.value}</Text>}
-                  {item.hasButton && <TouchableOpacity style={styles.redCircleBtn} onPress={() => setIsEditing(item.key)} accessibilityLabel={`Edit ${item.label}`}>
-                      <MaterialCommunityIcons name="arrow-right" size={16} color="white" />
-                    </TouchableOpacity>}
-                </View>
-              </View>)}
+            {basicInfo.map((item, index) => {
+              const isGender = item.key === 'gender';
+              return (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.infoRow}
+                  activeOpacity={isGender ? 0.7 : 1}
+                  onPress={isGender ? () => setShowGenderModal(true) : undefined}
+                >
+                  <Text style={styles.infoLabel}>{item.label}</Text>
+                  <View style={styles.infoRight}>
+                    {isEditing === item.key && !isGender ? (
+                      <TextInput
+                        style={styles.editInput}
+                        value={item.value}
+                        onChangeText={item.setter}
+                        autoFocus
+                        onBlur={() => setIsEditing(null)}
+                      />
+                    ) : (
+                      <Text style={styles.infoValue}>{item.value}</Text>
+                    )}
+                    {item.hasButton && (
+                      <TouchableOpacity
+                        style={styles.redCircleBtn}
+                        onPress={() => (isGender ? setShowGenderModal(true) : setIsEditing(item.key))}
+                        accessibilityLabel={`Edit ${item.label}`}
+                      >
+                        <MaterialCommunityIcons name="arrow-right" size={16} color="white" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
@@ -181,6 +224,58 @@ export const SettingsScreen = ({
           <Text style={styles.versionNumber}>2.0.1</Text>
         </View>
       </ScrollView>
+
+      {/* Gender Selection Modal */}
+      <Modal
+        visible={showGenderModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowGenderModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowGenderModal(false)}
+        >
+          <View style={styles.pickerModal}>
+            <View style={styles.pickerHeader}>
+              <Text style={styles.pickerTitle}>Select Gender</Text>
+              <TouchableOpacity onPress={() => setShowGenderModal(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <MaterialCommunityIcons name="close" size={22} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
+            {GENDER_OPTIONS.map((opt) => {
+              const isSelected = gender?.toLowerCase() === opt.toLowerCase();
+              return (
+                <TouchableOpacity
+                  key={opt}
+                  style={[styles.pickerItem, isSelected && styles.pickerItemActive]}
+                  onPress={async () => {
+                    setGender(opt);
+                    setShowGenderModal(false);
+                    const uid = user?.id || user?.uid;
+                    if (uid) {
+                      try {
+                        await updateUserProfile(uid, { gender: opt });
+                        setUserProfile({ ...userProfile, gender: opt });
+                      } catch (err) {
+                        console.error("[SettingsScreen] Failed to update gender:", err);
+                      }
+                    }
+                  }}
+                >
+                  <Text style={[styles.pickerItemText, isSelected && styles.pickerItemTextActive]}>
+                    {opt}
+                  </Text>
+                  {isSelected && (
+                    <MaterialCommunityIcons name="check" size={20} color={COLORS.primary} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </Screen>;
 };
 const styles = StyleSheet.create({
@@ -288,5 +383,59 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "400",
     marginTop: 4
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20
+  },
+  pickerModal: {
+    width: "88%",
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 18,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 12
+  },
+  pickerHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+    marginBottom: 6
+  },
+  pickerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: COLORS.text
+  },
+  pickerItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f8f8f8"
+  },
+  pickerItemActive: {
+    backgroundColor: "#fff5f5",
+    borderRadius: 8
+  },
+  pickerItemText: {
+    fontSize: 16,
+    color: COLORS.text,
+    fontWeight: "500"
+  },
+  pickerItemTextActive: {
+    color: COLORS.primary,
+    fontWeight: "700"
   }
 });

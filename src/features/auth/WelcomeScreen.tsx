@@ -83,13 +83,9 @@ export const WelcomeScreen = ({
                 </TouchableOpacity>)}
             </View>
 
-            {}
             <View style={styles.buttonGroup}>
-              {}
+              {/* Login Button */}
               <PrimaryButton title="Login" onPress={() => navigation.navigate('Login')} activeOpacity={0.9} iconElement={<MaterialIcons name="arrow-forward" size={20} color="#ffffff" />} iconPosition="right" />
-
-              {}
-              <PrimaryButton title="Sign Up" onPress={() => navigation.navigate('Signup')} activeOpacity={0.8} style={styles.signupButton} textStyle={styles.signupButtonText} />
             </View>
           </View>
         </View>

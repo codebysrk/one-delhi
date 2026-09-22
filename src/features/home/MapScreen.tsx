@@ -247,7 +247,9 @@ export const MapScreen = ({
         {index < stopsToShow.length - 1 && <View style={styles.divider} />}
       </Animated.View>, [stopsToShow.length]);
   return <Screen noPadding ignoreTopSafe style={styles.container}>
-      <MainHeader style={styles.headerArea} showSearch={true} searchPlaceholder="Search 500+ Route" onSearchPress={() => navigation.navigate("Search")} rightElement={<TouchableOpacity onPress={() => (navigation as any).navigate("ProfileStack", {
+      <MainHeader style={styles.headerArea} showSearch={true} searchPlaceholder="Search 500+ Route" onSearchPress={() => navigation.navigate("Search")} rightElement={<TouchableOpacity style={{
+        marginRight: -6
+      }} onPress={() => (navigation as any).navigate("ProfileStack", {
       screen: "Settings"
     })}>
             <MaterialCommunityIcons name="cog" size={26} color="white" />

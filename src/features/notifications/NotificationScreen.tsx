@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '../../components/layout/Screen';
 import { Header } from '../../components/layout/Header';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { db } from '../../services/firebase';
+import { supabase } from '../../services/supabase';
 import { useAppStore } from '../../store/useAppStore';
 import { COLORS } from '../../theme/theme';
 const ICON_MAP: Record<string, JSX.Element> = {
@@ -25,25 +25,49 @@ export const NotificationScreen = ({
     setLatestNotificationTimestamp
   } = useAppStore();
   const initialLastSeen = useRef(lastSeenNotification);
+
   useEffect(() => {
-    const unsubscribe = db.collection('notifications').orderBy('timestamp', 'desc').limit(50).onSnapshot(snapshot => {
-      if (!snapshot) return;
-      const data = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as any[];
-      setNotifications(data);
-      setLoading(false);
-      if (data.length > 0 && data[0].timestamp) {
-        setLatestNotificationTimestamp(data[0].timestamp);
+    const fetchNotifications = async () => {
+      try {
+        const { data } = await supabase
+          .from('notifications')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(50);
+        if (data) {
+          const mapped = data.map((d: any) => ({
+            id: d.id,
+            title: d.title,
+            message: d.message,
+            type: d.type?.toLowerCase() || 'general',
+            read: d.is_read,
+            timestamp: d.created_at ? new Date(d.created_at).getTime() : Date.now(),
+            ...d,
+          }));
+          setNotifications(mapped);
+          if (mapped.length > 0 && mapped[0].timestamp) {
+            setLatestNotificationTimestamp(mapped[0].timestamp);
+          }
+        }
+      } catch (err) {
+        if (__DEV__) console.warn('[NotificationScreen] Error:', err);
+      } finally {
+        setLoading(false);
       }
-    }, error => {
-      console.error('[NotificationScreen] Firestore error:', error);
-      setLoading(false);
-    });
+    };
+
+    fetchNotifications();
+
+    const channel = supabase
+      .channel('public:notifications_screen')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
+        fetchNotifications();
+      })
+      .subscribe();
+
     return () => {
       setLastSeenNotification(Date.now());
-      unsubscribe();
+      supabase.removeChannel(channel);
     };
   }, []);
   const renderItem = ({ item }: { item: any }) => {

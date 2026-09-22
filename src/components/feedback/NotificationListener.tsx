@@ -1,27 +1,45 @@
 import { useEffect } from 'react';
-import { db } from '../../services/firebase';
+import { supabase } from '../../services/supabase';
 import { useAppStore } from '../../store/useAppStore';
+
 export const NotificationListener = () => {
-  const {
-    setLatestNotificationTimestamp,
-    user
-  } = useAppStore();
+  const { setLatestNotificationTimestamp, user } = useAppStore();
+
   useEffect(() => {
     if (!user) return;
-    const unsubscribe = db.collection('notifications').orderBy('timestamp', 'desc').limit(1).onSnapshot(snapshot => {
-      if (!snapshot.empty) {
-        const latest = snapshot.docs[0].data();
-        if (latest.timestamp) {
-          setLatestNotificationTimestamp(latest.timestamp);
+
+    const fetchLatest = async () => {
+      try {
+        const { data } = await supabase
+          .from('notifications')
+          .select('created_at')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (data?.created_at) {
+          setLatestNotificationTimestamp(new Date(data.created_at).getTime());
         }
+      } catch (e) {
+        if (__DEV__) console.warn('[NotificationListener] Error:', e);
       }
-    }, (error: any) => {
-      if (error.code === 'permission-denied') {
-        return;
-      }
-      if (__DEV__) console.error('[NotificationListener] Firestore error:', error);
-    });
-    return () => unsubscribe();
-  }, [user]);
+    };
+
+    fetchLatest();
+
+    const channel = supabase
+      .channel('public:notifications_listener')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
+        if (payload.new?.created_at) {
+          setLatestNotificationTimestamp(new Date(payload.new.created_at).getTime());
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, setLatestNotificationTimestamp]);
+
   return null;
 };

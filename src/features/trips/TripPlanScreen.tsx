@@ -36,7 +36,7 @@ export const TripPlanScreen = ({
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primaryLight} translucent />
       
       {}
-      <MainHeader style={styles.headerArea} showSearch={false} imageOpacity={0.9} rightElement={<TouchableOpacity onPress={() => navigation.navigate('Settings')}>
+      <MainHeader style={styles.headerArea} showSearch={false} imageOpacity={0.9} rightElement={<TouchableOpacity onPress={() => (navigation as any).navigate('ProfileStack', { screen: 'Settings' })}>
             <MaterialCommunityIcons name="cog" size={26} color="white" />
           </TouchableOpacity>} />
 

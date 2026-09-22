@@ -6,7 +6,7 @@ import { Header } from "../../components/layout/Header";
 import { FlashList } from "@shopify/flash-list";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Swipeable } from "react-native-gesture-handler";
-import { auth } from "../../services/firebase";
+import { supabase } from "../../services/supabase";
 import { getRoutes, Route } from "../../services/routeService";
 import { useAppStore } from "../../store/useAppStore";
 import { logAction } from "../../services/logService";
@@ -125,10 +125,11 @@ export const SearchScreen = ({
     item: any;
   }) => <TouchableOpacity style={styles.routeCard} activeOpacity={0.7} onPress={async () => {
     try {
+      const sessionUser = (await supabase.auth.getUser()).data.user;
       await logAction({
-        userId: auth.currentUser?.uid || 'guest',
-        userName: auth.currentUser?.displayName || 'Delhi Traveler',
-        userEmail: auth.currentUser?.email || '',
+        userId: sessionUser?.id || useAppStore.getState().user?.id || 'guest',
+        userName: useAppStore.getState().userProfile?.name || useAppStore.getState().user?.name || 'Delhi Traveler',
+        userEmail: sessionUser?.email || useAppStore.getState().user?.email || '',
         action: 'SEARCH_ROUTE',
         details: `User viewed details for Route ${item.route} (${item.directionType})`,
         type: 'USER',

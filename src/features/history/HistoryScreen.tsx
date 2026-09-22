@@ -4,7 +4,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Screen } from "../../components/layout/Screen";
 import { Header } from "../../components/layout/Header";
 import { FlashList } from "@shopify/flash-list";
-import { db } from "../../services/firebase";
+import { supabase } from "../../services/supabase";
+import { fetchUserTicketsFromDb } from "../../services/ticketService";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { TicketCard } from "../../components/ui/TicketCard";
 import { useAppStore } from "../../store/useAppStore";
@@ -18,32 +19,46 @@ export const HistoryScreen = ({
   const setTickets = useAppStore(state => state.setTickets);
   const [loading, setLoading] = useState(cachedTickets.length === 0);
   const [refreshing, setRefreshing] = useState(false);
-  useEffect(() => {
-    if (!user || !user.uid) return;
-    const unsubscribe = db.collection("tickets").where("userId", "==", user.uid).orderBy("timestamp", "desc").onSnapshot(snapshot => {
-      if (!snapshot) return;
-      const ticketsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as any[];
-      const getMs = (timestamp: any): number => {
-        if (!timestamp) return 0;
-        return typeof timestamp === 'number' ? timestamp : timestamp.toMillis?.() || (timestamp.seconds ? timestamp.seconds * 1000 : 0);
-      };
-      const sortedTickets = ticketsData.sort((a, b) => getMs(b.timestamp) - getMs(a.timestamp));
-      setTickets(sortedTickets);
+
+  const fetchTickets = useCallback(async () => {
+    const uid = user?.id || user?.uid;
+    if (!uid) {
       setLoading(false);
       setRefreshing(false);
-    }, error => {
-      if (__DEV__) console.error("[HistoryScreen] Firestore snapshot error:", error);
+      return;
+    }
+    try {
+      const ticketsData = await fetchUserTicketsFromDb(uid);
+      setTickets(ticketsData);
+    } catch (err) {
+      if (__DEV__) console.warn("[HistoryScreen] Fetch error:", err);
+    } finally {
       setLoading(false);
       setRefreshing(false);
-    });
-    return () => unsubscribe();
+    }
   }, [user, setTickets]);
+
+  useEffect(() => {
+    fetchTickets();
+    const uid = user?.id || user?.uid;
+    if (!uid) return;
+
+    const channel = supabase
+      .channel('public:tickets_history')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets', filter: `user_id=eq.${uid}` }, () => {
+        fetchTickets();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchTickets, user]);
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-  }, []);
+    fetchTickets();
+  }, [fetchTickets]);
   const renderTicketItem = React.useCallback(({
     item
   }: {

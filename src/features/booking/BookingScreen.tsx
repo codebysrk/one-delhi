@@ -199,6 +199,7 @@ export const BookingScreen = ({
   const [destSearch, setDestSearch] = useState("");
   const [isManualFare, setIsManualFare] = useState(false);
   const [manualTotal, setManualTotal] = useState("");
+  const [manualBaseFare, setManualBaseFare] = useState<number>(0);
   const [selectedFullRouteId, setSelectedFullRouteId] = useState("");
   const [selectedSourceIndex, setSelectedSourceIndex] = useState<number | null>(null);
   const [dbRoutes, setDbRoutes] = useState<Route[]>([]);
@@ -299,7 +300,10 @@ export const BookingScreen = ({
     const now = Date.now();
     if (lastTap.current && now - lastTap.current < 300) {
       if (!isManualFare) {
-        setManualTotal(getFinalFare().total);
+        const currentFare = getCurrentFare();
+        const baseUnit = currentFare.fare || 10;
+        setManualBaseFare(baseUnit);
+        setManualTotal(String(baseUnit * (qty || 1)));
       }
       setIsEditingFare(true);
     } else {
@@ -318,6 +322,9 @@ export const BookingScreen = ({
     setCustomFareInput("");
     setQty(1);
     setBusType("AC");
+    setIsManualFare(false);
+    setManualTotal("");
+    setManualBaseFare(0);
     timeLeft.value = 180;
     setTimeLeftForLogic(180);
   }, []);
@@ -327,6 +334,7 @@ export const BookingScreen = ({
     setSelectedSourceIndex(null);
     setIsManualFare(false);
     setManualTotal("");
+    setManualBaseFare(0);
   }, [routeSearch]);
   useEffect(() => {
     const fetchRoutes = async () => {
@@ -451,9 +459,9 @@ export const BookingScreen = ({
   }, [routeSearch, sourceSearch, destSearch, selectedFullRouteId, busType, dbRoutes, fareConfigState]);
   const getCurrentFare = useCallback(() => {
     if (isManualFare) {
-      const manualFarePerTicket = Number(manualTotal) / qty;
+      const farePerTicket = manualBaseFare > 0 ? manualBaseFare : (Number(manualTotal) / (qty || 1));
       return {
-        fare: manualFarePerTicket,
+        fare: farePerTicket,
         slab: null,
         isValid: true,
         source: "MANUAL"
@@ -465,7 +473,7 @@ export const BookingScreen = ({
         source: "AUTO"
       };
     }
-  }, [isManualFare, manualTotal, qty, calculateAutoFare]);
+  }, [isManualFare, manualBaseFare, manualTotal, qty, calculateAutoFare]);
   const getFinalFare = useCallback(() => {
     const currentFare = getCurrentFare();
     const baseFareTotal = currentFare.fare * qty;
@@ -515,6 +523,7 @@ export const BookingScreen = ({
     const subTotal = baseFareTotal + totalToll;
     const discountAmount = baseFareTotal * 0.1;
     const discountedTotal = baseFareTotal - discountAmount + totalToll;
+
     return {
       ...currentFare,
       isInterstate,
@@ -524,6 +533,17 @@ export const BookingScreen = ({
       toll: totalToll
     };
   }, [getCurrentFare, qty, sourceSearch, destSearch, dbRoutes, selectedFullRouteId]);
+  const handleQtyChange = useCallback((newQty: number) => {
+    setQty(newQty);
+    if (isManualFare) {
+      const base = manualBaseFare > 0 ? manualBaseFare : (parseFloat(manualTotal) / (qty || 1));
+      if (!isNaN(base) && base > 0) {
+        setManualBaseFare(base);
+        const updated = (base * newQty).toFixed(0);
+        setManualTotal(updated);
+      }
+    }
+  }, [isManualFare, manualBaseFare, manualTotal, qty]);
   const getCustomFinalFare = useCallback(() => {
     const baseFareTotal = customFare * qty;
     const discountAmount = baseFareTotal * 0.1;
@@ -848,6 +868,7 @@ export const BookingScreen = ({
               setBusType(type);
               setIsManualFare(false);
               setManualTotal("");
+              setManualBaseFare(0);
             }} compact={bookingMode === "custom"} />
             </View>
           </ScrollView>
@@ -856,11 +877,13 @@ export const BookingScreen = ({
           <View style={[styles.bottom, {
           paddingBottom: insets.bottom + moderateScale(16)
         }]}>
-            <QuantitySelector qty={qty} onQtyChange={setQty} />
+            <QuantitySelector qty={qty} onQtyChange={handleQtyChange} />
 
             <FareDisplay finalFare={bookingMode === "regular" ? getFinalFare() : getCustomFinalFare()} showDiscount={bookingMode === "regular" ? !!(routeSearch && sourceSearch && destSearch) : customFare > 0} isEditing={bookingMode === "regular" ? isEditingFare : false} onPress={bookingMode === "regular" ? handleFarePress : () => {}} manualTotal={manualTotal} onManualChange={val => {
             setIsManualFare(true);
             setManualTotal(val);
+            const parsed = parseFloat(val);
+            setManualBaseFare(isNaN(parsed) ? 0 : parsed / (qty || 1));
           }} onBlur={() => setIsEditingFare(false)} />
 
             <PrimaryButton title="BUY" onPress={handleBuy} disabled={false} />

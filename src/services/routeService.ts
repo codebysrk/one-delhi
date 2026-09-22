@@ -1,4 +1,5 @@
-import { db } from './firebase';
+import { supabase } from './supabase';
+
 export interface Route {
   id?: string;
   route: string;
@@ -20,6 +21,7 @@ export interface Route {
     };
   };
 }
+
 export interface Stop {
   id: string;
   name: string;
@@ -28,32 +30,26 @@ export interface Stop {
   lng?: number;
   isActive?: boolean;
 }
+
 export const getRoutes = async (): Promise<Route[]> => {
-  const snapshot = await db.collection("routes").get();
-  const list: Route[] = [];
-  snapshot.forEach(doc => {
-    list.push({
-      id: doc.id,
-      ...doc.data()
-    } as Route);
-  });
-  return list;
+  const { data, error } = await supabase.from('routes').select('*');
+  if (error || !data) return [];
+  return data.map((r: any) => ({
+    id: r.id,
+    route: r.route,
+    routeNumber: r.route_number || r.route,
+    isActive: r.is_active,
+    isNCR: r.is_ncr,
+    directions: r.directions,
+  }));
 };
+
 export const getStops = async (): Promise<Stop[]> => {
-  const snapshot = await db.collection("stops").get();
-  const list: Stop[] = [];
-  snapshot.forEach(doc => {
-    list.push({
-      id: doc.id,
-      ...doc.data()
-    } as Stop);
-  });
-  return list;
+  return [];
 };
+
 export const getFareConfig = async (): Promise<any> => {
-  const doc = await db.collection("metadata").doc("fare_config").get();
-  if (doc.exists) {
-    return doc.data();
-  }
-  return null;
+  const { data, error } = await supabase.from('configs').select('value').eq('key', 'fare_config').maybeSingle();
+  if (error || !data) return null;
+  return data.value;
 };

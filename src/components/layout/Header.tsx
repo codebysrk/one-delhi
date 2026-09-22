@@ -77,9 +77,36 @@ export const Header: React.FC<HeaderProps> = ({
           textAlign: isCenteredLayout ? 'center' : 'left'
         }, titleStyle]} numberOfLines={1}>
                   {title}
-                </Text> : isMainHeader ? <View style={styles.logoBox}>
-                  <Image source={require("../../../assets/images/map-header-logo.webp")} style={styles.logoImage} contentFit="contain" transition={400} />
-                </View> : null}
+                </Text> : isMainHeader ? (
+                  <View style={styles.logoRow}>
+                    <View style={styles.dtcCol}>
+                      <Image
+                        source={require("../../../assets/icons/Delhi_Transport_Corporation.svg")}
+                        style={styles.dtcLogo}
+                        contentFit="contain"
+                        tintColor="#FFFFFF"
+                      />
+                    </View>
+
+                    <View style={styles.oneCol}>
+                      <Image
+                        source={require("../../../assets/images/map-header-logo.webp")}
+                        style={styles.logoImage}
+                        contentFit="contain"
+                        transition={400}
+                      />
+                    </View>
+
+                    <View style={styles.emblemCol}>
+                      <Image
+                        source={require("../../../assets/icons/Emblem_of_India.svg")}
+                        style={styles.emblemLogo}
+                        contentFit="contain"
+                        tintColor="#FFFFFF"
+                      />
+                    </View>
+                  </View>
+                ) : null}
         </View>
 
         <View style={isCenteredLayout ? styles.rightContainerAbsolute : styles.rightContainerCustom}>
@@ -172,7 +199,7 @@ const styles = StyleSheet.create({
     width: '100%'
   },
   leftContainerCustom: {
-    minWidth: 32,
+    minWidth: 40,
     alignItems: 'flex-start',
     justifyContent: 'center'
   },
@@ -214,13 +241,38 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'normal'
   },
-  logoBox: {
-    alignItems: "center",
-    justifyContent: 'center'
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  dtcCol: {
+    width: 68,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  dtcLogo: {
+    width: 64,
+    height: 35,
+  },
+  oneCol: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   logoImage: {
-    width: 100,
-    height: 40
+    width: 90,
+    height: 38,
+  },
+  emblemCol: {
+    width: 68,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emblemLogo: {
+    width: 25,
+    height: 38,
   },
   searchContainer: {
     flexDirection: "row",

@@ -15,7 +15,7 @@ import { COLORS } from "../../theme/theme";
 import * as ScreenCapture from "expo-screen-capture";
 import { usePreventScreenCapture } from "expo-screen-capture";
 import { logAction } from "../../services/logService";
-import { auth } from "../../services/firebase";
+import { supabase } from "../../services/supabase";
 import { PendingScreen } from "./PendingScreen";
 import { PrimaryButton } from "../../components/ui/PrimaryButton";
 const logoImg = require("../../../assets/images/logo.webp");
@@ -37,15 +37,16 @@ export const TicketScreen = ({
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [showRedirect, setShowRedirect] = useState(false);
   useEffect(() => {
-    const subscription = ScreenCapture.addScreenshotListener(() => {
+    const subscription = ScreenCapture.addScreenshotListener(async () => {
       Alert.alert("Security Warning", "Screenshots of digital tickets are strictly prohibited for security reasons.", [{
         text: "I Understand",
         style: "cancel"
       }]);
+      const sessionUser = (await supabase.auth.getUser()).data.user;
       logAction({
-        userId: auth.currentUser?.uid || "guest",
+        userId: sessionUser?.id || useAppStore.getState().user?.id || "guest",
         userName: useAppStore.getState().userProfile?.name || "User",
-        userEmail: auth.currentUser?.email || "",
+        userEmail: sessionUser?.email || useAppStore.getState().user?.email || "",
         action: "SCREENSHOT_ATTEMPT",
         details: `SCREENSHOT ATTEMPT: User tried to capture ticket ${activeTicket.tid || activeTicket.id}`,
         type: "USER",

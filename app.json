@@ -3,7 +3,7 @@
     "name": "One Delhi",
     "slug": "railone-mobile",
     "scheme": "onedelhi",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "light",
@@ -22,14 +22,12 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.onedelhi.app",
-      "googleServicesFile": "./GoogleService-Info.plist"
+      "bundleIdentifier": "com.onedelhi.app"
     },
     "android": {
       "package": "com.onedelhi.app",
-      "versionCode": 5,
+      "versionCode": 6,
       "softwareKeyboardLayoutMode": "pan",
-      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#D32F2F"

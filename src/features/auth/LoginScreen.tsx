@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platfor
 import { useForm, Controller } from 'react-hook-form';
 import { MaterialIcons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
-import { auth } from '../../services/firebase';
+import { supabase } from '../../services/supabase';
 import { getUserProfile } from '../../services/userService';
 import { useAppStore } from '../../store/useAppStore';
 import { logAction } from '../../services/logService';
@@ -38,11 +38,13 @@ export const LoginScreen = ({
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
-  const setUser = useAppStore(state => state.setUser);
-  const setUserProfile = useAppStore(state => state.setUserProfile);
-  const setDeviceId = useAppStore(state => state.setDeviceId);
-  const setIsVerifying = useAppStore(state => state.setIsVerifying);
-  const setIsAuthReady = useAppStore(state => state.setIsAuthReady);
+  const {
+    setUser,
+    setUserProfile,
+    setIsAuthReady,
+    setDeviceId,
+    setIsVerifying
+  } = useAppStore();
   const scrollViewRef = useRef<ScrollView>(null);
   const passwordInputRef = useRef<TextInput>(null);
   useEffect(() => {
@@ -63,11 +65,12 @@ export const LoginScreen = ({
   const {
     control,
     handleSubmit,
+    setValue,
+    getValues,
     formState: {
       errors
     }
   } = useForm<LoginForm>({
-    mode: 'onSubmit',
     defaultValues: {
       email: '',
       password: ''
@@ -77,54 +80,55 @@ export const LoginScreen = ({
     Keyboard.dismiss();
     setLoading(true);
     setIsVerifying(true);
-    console.log("[LoginScreen] Starting login process...");
+    console.log("[LoginScreen] Starting login process with Supabase...");
     try {
-      const userCredential = await auth.signInWithEmailAndPassword(data.email, data.password);
-      const user = userCredential.user;
-      await user.getIdToken(true);
-      console.log("[LoginScreen] Firebase Auth success, checking profile...");
-      let userData: any = {};
-      try {
-        const profile = await getUserProfile(user.uid);
-        userData = profile || {};
-      } catch (err: any) {
-        console.log("[LoginScreen] Profile fetch error:", err.code);
-        if (err.code === 'permission-denied') {
-          userData = {
-            status: 'BANNED'
-          };
-        } else {
-          throw err;
-        }
+      const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
+        email: data.email.trim(),
+        password: data.password,
+      });
+
+      if (authErr || !authData.user) {
+        throw authErr || new Error("Login failed");
       }
-      console.log("[LoginScreen] Fetched user status:", userData.status);
-      if (userData.status === 'BANNED') {
+
+      const user = authData.user;
+      console.log("[LoginScreen] Supabase Auth success, checking profile...");
+      const profile = await getUserProfile(user.id);
+
+      if (!profile || profile.status === 'DELETED') {
+        console.log("[LoginScreen] User profile does not exist or account is deleted, blocking access.");
+        setLoading(false);
+        setIsVerifying(false);
+        await supabase.auth.signOut().catch(() => {});
+        showToast('❌ Account not found: Yeh account exist nahi karta ya admin dwara delete kar diya gaya hai.', 'error');
+        return;
+      }
+
+      console.log("[LoginScreen] Fetched user status:", profile.status);
+      if (profile.status === 'BANNED') {
         console.log("[LoginScreen] User is banned, blocking access.");
         setLoading(false);
         setIsVerifying(false);
         await logAction({
-          userId: user.uid,
-          userName: userData.name || 'Banned User',
+          userId: user.id,
+          userName: profile.name || 'Banned User',
           userEmail: user.email || '',
           action: 'LOGIN',
           details: 'Login attempt blocked: Account is banned.',
           type: 'USER',
           deviceId: useAppStore.getState().deviceId || undefined
         }).catch(() => {});
-        try {
-          await auth.signOut();
-        } catch (err) {
-          console.error("[LoginScreen] Sign out error during ban:", err);
-        }
+        await supabase.auth.signOut().catch(() => {});
         showToast('🚫 Banned Account: Access is restricted.', 'error');
         return;
       }
+
       console.log("[LoginScreen] Checking device security...");
-      let deviceResult = await registerDevice(user.uid, userData.name || 'User', user.email || '');
+      let deviceResult = await registerDevice(user.id, profile.name || 'User', user.email || '');
       if (!deviceResult) {
         console.log("[LoginScreen] Device registration failed, retrying in 1.5s...");
         await new Promise(resolve => setTimeout(resolve, 1500));
-        deviceResult = await registerDevice(user.uid, userData.name || 'User', user.email || '');
+        deviceResult = await registerDevice(user.id, profile.name || 'User', user.email || '');
       }
       if (!deviceResult) {
         throw new Error("Device registration failed after retry. Please check your connection or try again.");
@@ -133,11 +137,7 @@ export const LoginScreen = ({
         console.log("[LoginScreen] Device is BANNED. Aborting.");
         setLoading(false);
         setIsVerifying(false);
-        try {
-          await auth.signOut();
-        } catch (err) {
-          console.error("[LoginScreen] Sign out error during device ban:", err);
-        }
+        await supabase.auth.signOut().catch(() => {});
         showToast('📱 Device Banned: Access is restricted.', 'error');
         return;
       }
@@ -147,38 +147,37 @@ export const LoginScreen = ({
       }
       console.log("[LoginScreen] All checks passed, logging login and setting user.");
       await logAction({
-        userId: user.uid,
-        userName: user.displayName || 'User',
+        userId: user.id,
+        userName: profile.name || 'User',
         userEmail: user.email || '',
         action: 'LOGIN',
         details: 'User successfully logged into the application.',
         type: 'USER',
         targetType: 'USER',
-        targetId: user.uid,
+        targetId: user.id,
         deviceId: deviceResult.deviceId
       });
       console.log("[LoginScreen] Login success, updating store states...");
       setDeviceId(deviceResult.deviceId);
-      setUserProfile(userData);
-      setUser(user);
+      setUserProfile(profile);
+      setUser({
+        ...user,
+        uid: user.id,
+        displayName: profile.name,
+      });
       setIsAuthReady(true);
       setLoading(false);
       setIsVerifying(false);
     } catch (error: any) {
-      console.log("[LoginScreen] Handled login error:", error?.code || error?.message);
-      const errStr = error?.message || '';
-      const errCode = error?.code || '';
-      let msg = error?.message ? error.message.replace('Firebase: ', '') : 'An unexpected error occurred.';
-      if (errCode === 'auth/too-many-requests' || errStr.includes('too-many-requests')) {
-        msg = 'Too many failed attempts. Please try again later.';
-      } else if (errCode === 'auth/network-request-failed' || errStr.includes('network-request-failed')) {
-        msg = 'Network error. Please check your internet connection and try again.';
-      } else if (errCode === 'permission-denied' || errStr.includes('permission-denied')) {
-        msg = 'Security verification failed. Contact support.';
-      } else if (errCode === 'auth/invalid-email' || errStr.includes('invalid-email')) {
-        msg = 'Invalid email address.';
-      } else if (errCode === 'auth/invalid-credential' || errCode === 'auth/wrong-password' || errCode === 'auth/user-not-found' || errStr.includes('invalid-credential') || errStr.includes('wrong-password') || errStr.includes('user-not-found')) {
+      console.log("[LoginScreen] Handled login error:", error?.message);
+      const errStr = (error?.message || '').toLowerCase();
+      let msg = error?.message || 'An unexpected error occurred.';
+      if (errStr.includes('invalid login credentials') || errStr.includes('invalid-credential') || errStr.includes('wrong-password') || errStr.includes('user-not-found')) {
         msg = 'Wrong email or password.';
+      } else if (errStr.includes('email not confirmed')) {
+        msg = 'Email not confirmed.';
+      } else if (errStr.includes('network') || errStr.includes('failed to fetch')) {
+        msg = 'Network error. Please check your internet connection and try again.';
       }
       setLoading(false);
       setIsVerifying(false);
@@ -199,6 +198,25 @@ export const LoginScreen = ({
     handleSubmit(onLogin, onValidationErrors)().catch(err => {
       console.log("[LoginScreen] Handled submit promise rejection:", err);
     });
+  };
+  const handleForgotPassword = async () => {
+    const userEmail = getValues('email')?.trim();
+    if (!userEmail) {
+      showToast('Please enter your email address first', 'info');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
+        redirectTo: 'https://tiuzvutjuazntxmisozk.supabase.co/functions/v1/reset-password',
+      });
+      if (error) throw error;
+      showToast('Password reset link sent! Check your email.', 'success');
+    } catch (error: any) {
+      showToast(error.message || 'Failed to send reset link', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
   const insets = useSafeAreaInsets();
   const dynamicPadding = {
@@ -282,7 +300,7 @@ export const LoginScreen = ({
                     <Text style={styles.checkboxLabel}>Remember Me</Text>
                   </TouchableOpacity>
  
-                  <TouchableOpacity onPress={() => showToast('Feature coming soon!', 'info')} activeOpacity={0.7}>
+                  <TouchableOpacity onPress={handleForgotPassword} disabled={loading} activeOpacity={0.7}>
                     <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
                   </TouchableOpacity>
                 </View>
@@ -291,27 +309,6 @@ export const LoginScreen = ({
                 <View style={styles.actionsGroup}>
                   {}
                   <PrimaryButton title="Login" onPress={handleLoginSubmit} loading={loading} disabled={loading} activeOpacity={0.9} iconElement={<MaterialIcons name="arrow-forward" size={20} color={COLORS.white} />} iconPosition="right" />
-
-                  {}
-                  <View style={styles.dividerContainer}>
-                    <View style={styles.dividerLine} />
-                    <Text style={styles.dividerText}>OR</Text>
-                    <View style={styles.dividerLine} />
-                  </View>
-
-                  {}
-                  <TouchableOpacity style={styles.googleButton} onPress={() => showToast('Google Sign-In is coming soon!', 'info')} activeOpacity={0.8}>
-                    <GoogleIcon />
-                    <Text style={styles.googleButtonText}>Continue with Google</Text>
-                  </TouchableOpacity>
-
-                  {}
-                  <View style={styles.bottomSignupContainer}>
-                    <Text style={styles.bottomSignupText}>Don't have an account? </Text>
-                    <TouchableOpacity onPress={() => navigation.replace('Signup')} activeOpacity={0.7}>
-                      <Text style={styles.signupLinkText}>Sign up</Text>
-                    </TouchableOpacity>
-                  </View>
                 </View>
 
               </View>

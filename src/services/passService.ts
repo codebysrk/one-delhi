@@ -1,4 +1,5 @@
-import { db } from './firebase';
+import { supabase } from './supabase';
+
 export interface BusPass {
   passId: string;
   userId: string;
@@ -16,6 +17,9 @@ export interface BusPass {
   paymentStatus: string;
   txnId: string;
 }
+
 export const savePass = async (passId: string, pass: BusPass): Promise<void> => {
-  await db.collection("passes").doc(passId).set(pass);
+  try {
+    await supabase.from('passes').upsert({ id: passId, ...pass });
+  } catch (_) {}
 };

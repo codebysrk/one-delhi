@@ -7,7 +7,7 @@ import { Screen } from "../../components/layout/Screen";
 import { Header } from "../../components/layout/Header";
 import { GoogleMap, GoogleMapRef } from "../../components/ui/GoogleMap";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { db } from "../../services/firebase";
+import { supabase } from "../../services/supabase";
 import * as Location from "expo-location";
 import { BottomSheet } from "../../components/layout/BottomSheet";
 import Animated, { useSharedValue, useAnimatedStyle, interpolate, Extrapolate, withSpring, FadeInDown } from "react-native-reanimated";
@@ -241,69 +241,77 @@ export const RouteDetailScreen = ({
   }, [SNAP_MID]));
   useEffect(() => {
     setLoading(true);
-    const unsubscribe = db.collection("routes").doc(routeId).onSnapshot(async docSnap => {
-      if (docSnap && docSnap.exists) {
-        const data = docSnap.data();
-        let formattedData: RouteData;
-        if (data.stops && Array.isArray(data.stops)) {
-          const rawStops = Array.from(new Set(data.stops.map((s: string) => s.trim()).filter(Boolean))) as string[];
-          const coords = data.polylineCoordinates && data.polylineCoordinates.length > 0 ? data.polylineCoordinates : await findCoordinatesForStops(rawStops);
-          formattedData = {
-            routeNumber: data.routeNumber || routeId,
-            origin: data.origin || rawStops[0] || "Unknown",
-            destination: data.destination || rawStops[rawStops.length - 1] || "Unknown",
-            totalBuses: data.totalBuses || 11,
-            totalStops: rawStops.length,
-            direction: data.direction,
-            polylineCoordinates: coords,
-            stops: rawStops
-          };
-        } else if (data.directions) {
-          const hasUp = !!(data.directions.up && Array.isArray(data.directions.up.stops) && data.directions.up.stops.length > 0);
-          const hasDown = !!(data.directions.down && Array.isArray(data.directions.down.stops) && data.directions.down.stops.length > 0);
-          let activeDirection = direction || (hasUp ? "UP" : "DOWN");
-          if (activeDirection === "UP" && !hasUp) {
-            activeDirection = "DOWN";
-          } else if (activeDirection === "DOWN" && !hasDown) {
-            activeDirection = "UP";
+    const fetchRoute = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("routes")
+          .select("*")
+          .eq("id", routeId)
+          .maybeSingle();
+
+        if (data) {
+          let formattedData: RouteData;
+          if (data.stops && Array.isArray(data.stops)) {
+            const rawStops = Array.from(new Set(data.stops.map((s: string) => s.trim()).filter(Boolean))) as string[];
+            const coords = data.polylineCoordinates && data.polylineCoordinates.length > 0 ? data.polylineCoordinates : await findCoordinatesForStops(rawStops);
+            formattedData = {
+              routeNumber: data.routeNumber || routeId,
+              origin: data.origin || rawStops[0] || "Unknown",
+              destination: data.destination || rawStops[rawStops.length - 1] || "Unknown",
+              totalBuses: data.totalBuses || 11,
+              totalStops: rawStops.length,
+              direction: data.direction,
+              polylineCoordinates: coords,
+              stops: rawStops
+            };
+          } else if (data.directions) {
+            const hasUp = !!(data.directions.up && Array.isArray(data.directions.up.stops) && data.directions.up.stops.length > 0);
+            const hasDown = !!(data.directions.down && Array.isArray(data.directions.down.stops) && data.directions.down.stops.length > 0);
+            let activeDirection = direction || (hasUp ? "UP" : "DOWN");
+            if (activeDirection === "UP" && !hasUp) {
+              activeDirection = "DOWN";
+            } else if (activeDirection === "DOWN" && !hasDown) {
+              activeDirection = "UP";
+            }
+            const dirData = activeDirection === "UP" ? data.directions.up : data.directions.down;
+            const stopNames = Array.from(new Set((dirData?.stops || []).map((s: string) => s.trim()).filter(Boolean))) as string[];
+            const coords = dirData?.stop_coordinates && dirData.stop_coordinates.length > 0 ? dirData.stop_coordinates : await findCoordinatesForStops(stopNames);
+            formattedData = {
+              routeNumber: data.route || routeId.replace(/UP|DOWN/g, ''),
+              origin: dirData?.from || stopNames[0] || "Origin",
+              destination: dirData?.to || stopNames[stopNames.length - 1] || "Destination",
+              totalBuses: 11,
+              totalStops: stopNames.length,
+              direction: activeDirection,
+              polylineCoordinates: coords,
+              stops: stopNames
+            };
+          } else {
+            formattedData = {
+              routeNumber: routeId,
+              origin: "Unknown",
+              destination: "Unknown",
+              totalBuses: 0,
+              totalStops: 0,
+              stops: [],
+              polylineCoordinates: []
+            };
           }
-          const dirData = activeDirection === "UP" ? data.directions.up : data.directions.down;
-          const stopNames = Array.from(new Set((dirData?.stops || []).map((s: string) => s.trim()).filter(Boolean))) as string[];
-          const coords = dirData?.stop_coordinates && dirData.stop_coordinates.length > 0 ? dirData.stop_coordinates : await findCoordinatesForStops(stopNames);
-          formattedData = {
-            routeNumber: data.route || routeId.replace(/UP|DOWN/g, ''),
-            origin: dirData?.from || stopNames[0] || "Origin",
-            destination: dirData?.to || stopNames[stopNames.length - 1] || "Destination",
-            totalBuses: 11,
-            totalStops: stopNames.length,
-            direction: activeDirection,
-            polylineCoordinates: coords,
-            stops: stopNames
-          };
+          setRouteData(formattedData);
+          setError(null);
         } else {
-          formattedData = {
-            routeNumber: routeId,
-            origin: "Unknown",
-            destination: "Unknown",
-            totalBuses: 0,
-            totalStops: 0,
-            stops: [],
-            polylineCoordinates: []
-          };
+          setError("Route not found");
         }
-        setRouteData(formattedData);
-        setError(null);
-      } else {
-        setError("Route not found");
+      } catch (err) {
+        console.error("Error fetching route:", err);
+        setError("Failed to load route data");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    }, err => {
-      console.error("Error listening to route:", err);
-      setError("Failed to load route data");
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, [routeId]);
+    };
+
+    fetchRoute();
+  }, [routeId, direction]);
   useEffect(() => {
     const getUserLocation = async () => {
       try {

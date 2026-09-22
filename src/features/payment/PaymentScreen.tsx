@@ -5,12 +5,10 @@ import { Screen } from "../../components/layout/Screen";
 import { Header } from "../../components/layout/Header";
 import { useAppStore } from "../../store/useAppStore";
 import { generateTicketId } from "../../utils/ticketHelper";
-import { auth } from "../../services/firebase";
+import { supabase } from "../../services/supabase";
 import { saveTicket } from "../../services/ticketService";
 import { savePass } from "../../services/passService";
-import firestore from "@react-native-firebase/firestore";
 import { PaytmIcon, PhonePeIcon, GPayIcon } from "../../components/icons/PaymentIcons";
-import { sanitizePayload } from "../../utils/firebaseUtils";
 import { logAction } from "../../services/logService";
 import { UpiConfirmScreen } from "./UpiConfirmScreen";
 import { UpiPinScreen } from "./UpiPinScreen";
@@ -163,28 +161,35 @@ export const PaymentScreen = ({
         minute: "2-digit",
         hour12: true
       });
+      const sessionUser = (await supabase.auth.getUser()).data.user;
+      const currentUserId = sessionUser?.id || useAppStore.getState().user?.id || null;
+      const currentUserEmail = sessionUser?.email || useAppStore.getState().user?.email || "";
+      const currentUserName = useAppStore.getState().userProfile?.name || useAppStore.getState().user?.name || "User";
+
       const tid = generateTicketId();
       const finalTicket = {
         ...ticketData,
         baseFare: ticketData.baseFare || 10,
         date: dateStr,
         time: timeStr,
-        timestamp: firestore.Timestamp.now(),
-        expiresAt: firestore.Timestamp.fromMillis(expiresAtMs),
-        userId: auth.currentUser?.uid,
+        timestamp: now.toISOString(),
+        expiresAt: new Date(expiresAtMs).toISOString(),
+        userId: currentUserId,
+        userName: currentUserName,
+        userEmail: currentUserEmail,
         deviceId: useAppStore.getState().deviceId,
         status: "Active",
         tid: tid
       };
       addTicket({
         ...finalTicket,
-        timestamp: finalTicket.timestamp.toMillis(),
+        timestamp: nowMs,
         expiresAt: expiresAtMs,
         fare: ticketData.total,
         status: "Active" as any,
         tid: tid
       });
-      saveTicket(tid, sanitizePayload(finalTicket)).then(() => {
+      saveTicket(tid, finalTicket).then(() => {
         console.log("[PaymentScreen] Ticket synced online successfully.");
       }).catch(() => {
         console.log("[OfflineSync] Offline mode active. Ticket saved locally and will sync when online.");
@@ -192,7 +197,7 @@ export const PaymentScreen = ({
       if (ticketData.isPass) {
         const passDoc = {
           passId: tid,
-          userId: auth.currentUser?.uid,
+          userId: currentUserId,
           passType: ticketData.passName,
           status: "ACTIVE",
           validFrom: nowMs,
@@ -207,16 +212,16 @@ export const PaymentScreen = ({
           paymentStatus: "PAID",
           txnId: tid
         };
-        savePass(tid, sanitizePayload(passDoc)).then(() => {
+        savePass(tid, passDoc).then(() => {
           console.log("[PaymentScreen] Pass synced online successfully.");
         }).catch(err => {
           console.log("[OfflineSync] Offline/failed pass sync. Will retry online.", err);
         });
       }
       logAction({
-        userId: auth.currentUser?.uid || "anonymous",
-        userName: useAppStore.getState().userProfile?.name || "User",
-        userEmail: auth.currentUser?.email || "",
+        userId: currentUserId || "anonymous",
+        userName: currentUserName,
+        userEmail: currentUserEmail,
         action: "BUY_TICKET",
         details: `Ticket purchased for route ${ticketData.route}: ₹${ticketData.total}`,
         type: "USER",
@@ -226,7 +231,7 @@ export const PaymentScreen = ({
       }).catch(() => {});
       setFinalCreatedTicket({
         ...finalTicket,
-        timestamp: finalTicket.timestamp.toMillis(),
+        timestamp: nowMs,
         fare: ticketData.total,
         tid
       });

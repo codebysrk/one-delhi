@@ -2,225 +2,151 @@ import * as Device from 'expo-device';
 import * as Network from 'expo-network';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { db } from './firebase';
-import { sanitizePayload } from '../utils/firebaseUtils';
+import { supabase } from './supabase';
 import { logAction } from './logService';
+
 const DEVICE_ID_KEY = '@one_delhi_device_id';
-const getOrCreateDeviceId = async (): Promise<string> => {
+
+const getOrCreateDeviceId = async (userId: string): Promise<string> => {
   let hashId = 'DEVICE_FALLBACK';
   try {
     const raw = [Device.osBuildId, Device.modelId, Device.brand, Device.osVersion].filter(Boolean).join('_');
+    const userSuffix = userId ? `_${userId.slice(0, 6).toUpperCase()}` : '';
     if (raw) {
       const hash = raw.split('').reduce((acc, char) => {
         const chr = char.charCodeAt(0);
-        return (acc << 5) - acc + chr;
+        return ((acc << 5) - acc) + chr;
       }, 0);
-      hashId = `DEVICE_${Math.abs(hash).toString(36).toUpperCase()}`;
+      hashId = `DEVICE_${Math.abs(hash).toString(36).toUpperCase()}${userSuffix}`;
     } else {
-      hashId = `DEVICE_FALLBACK_${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+      hashId = `DEVICE_FALLBACK${userSuffix}`;
     }
   } catch (e) {
     console.warn('[DeviceService] Failed to compute hardware hash:', e);
-    hashId = `DEVICE_FALLBACK_${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+    const userSuffix = userId ? `_${userId.slice(0, 8).toUpperCase()}` : '';
+    hashId = `DEVICE_FALLBACK${userSuffix}`;
   }
+
+  const storageKey = `${DEVICE_ID_KEY}_${userId}`;
   try {
-    const stored = await AsyncStorage.getItem(DEVICE_ID_KEY);
+    const stored = await AsyncStorage.getItem(storageKey);
     if (stored) return stored;
-    await AsyncStorage.setItem(DEVICE_ID_KEY, hashId);
+    await AsyncStorage.setItem(storageKey, hashId);
     return hashId;
   } catch {
     return hashId;
   }
 };
-export const registerDevice = async (userId: string, userName: string, userEmail: string): Promise<{
-  deviceId: string;
-  status: string;
-  forceLogout: boolean;
-} | null> => {
+
+export const registerDevice = async (
+  userId: string,
+  userName: string,
+  userEmail: string
+): Promise<{ deviceId: string; status: string; forceLogout: boolean } | null> => {
   try {
-    let deviceId = await getOrCreateDeviceId();
-    try {
-      const existingDevices = await db.collection('devices').where('userId', '==', userId).get();
-      let matchedDeviceId = null;
-      existingDevices.forEach(doc => {
-        const data = doc.data();
-        if (data.model === (Device.modelName || 'Unknown') && data.brand === (Device.brand || 'Unknown') && data.platform === 'android') {
-          matchedDeviceId = doc.id;
-        }
-      });
-      if (matchedDeviceId && matchedDeviceId !== deviceId) {
-        console.log('[DeviceService] Found existing device session in Firestore, reusing deviceId:', matchedDeviceId);
-        deviceId = matchedDeviceId;
-        await AsyncStorage.setItem(DEVICE_ID_KEY, deviceId).catch(() => {});
-      }
-    } catch (queryError) {
-      console.warn('[DeviceService] Failed to query existing device sessions:', queryError);
-    }
-    const deviceRef = db.collection('devices').doc(deviceId);
-    let deviceSnap;
-    let documentExists = false;
-    let existingStatus = 'APPROVED';
-    let existingForceLogout = false;
-    try {
-      deviceSnap = await deviceRef.get();
-      documentExists = deviceSnap.exists;
-      if (documentExists) {
-        const data = deviceSnap.data();
-        existingStatus = data?.status || 'APPROVED';
-        existingForceLogout = data?.forceLogout || false;
-      }
-    } catch (e: any) {
-      if (e.code === 'permission-denied') {
-        try {
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          deviceSnap = await deviceRef.get();
-          documentExists = deviceSnap.exists;
-          if (documentExists) {
-            const data = deviceSnap.data();
-            existingStatus = data?.status || 'APPROVED';
-            existingForceLogout = data?.forceLogout || false;
-          }
-        } catch (retryError: any) {
-          if (retryError.code === 'permission-denied') {
-            console.log('[DeviceService] Permission denied during retry (user likely banned).');
-            return null;
-          }
-          throw retryError;
-        }
-      } else if (e.code === 'firestore/not-found' || e.message?.includes('not-found')) {
-        console.log('[DeviceService] Device document not found on server during get(). Treating as new device.');
-        documentExists = false;
-      } else {
-        throw e;
-      }
-    }
+    let deviceId = await getOrCreateDeviceId(userId);
     let ipAddress = 'Unknown';
     try {
       ipAddress = (await Network.getIpAddressAsync()) || 'Unknown';
     } catch {}
+
+    const { data: existingDevice } = await supabase
+      .from('devices')
+      .select('*')
+      .eq('id', deviceId)
+      .maybeSingle();
+
+    let existingStatus = existingDevice?.status || 'ACTIVE';
+    let existingForceLogout = existingDevice?.force_logout || false;
+
     if (existingStatus === 'BANNED') {
       console.log('[DeviceService] Device is BANNED, skipping update.');
-      return {
-        deviceId,
-        status: 'BANNED',
-        forceLogout: existingForceLogout
-      };
+      return { deviceId, status: 'BANNED', forceLogout: existingForceLogout };
     }
-    const now = Date.now();
-    if (!documentExists) {
-      const deviceData = sanitizePayload({
-        deviceId,
-        userId,
-        userName,
-        userEmail,
-        deviceName: Device.deviceName || 'Unknown Device',
-        brand: Device.brand || 'Unknown',
-        model: Device.modelName || 'Unknown',
-        platform: 'android',
-        osVersion: Device.osVersion || 'Unknown',
-        appVersion: Constants.expoConfig?.version || '1.0.0',
-        ipAddress,
-        firstRegistered: now,
-        lastActive: now,
-        status: 'APPROVED',
-        isCurrentDevice: true,
-        forceLogout: false
-      });
-      await deviceRef.set(deviceData);
+
+    const deviceData = {
+      id: deviceId,
+      user_id: userId,
+      user_name: userName,
+      user_email: userEmail,
+      device_name: Device.deviceName || 'Unknown Device',
+      brand: Device.brand || 'Unknown',
+      model: Device.modelName || 'Unknown',
+      platform: 'android',
+      os_version: Device.osVersion || 'Unknown',
+      app_version: Constants.expoConfig?.version || '1.0.0',
+      ip_address: ipAddress,
+      status: existingStatus,
+      force_logout: false,
+      last_active: new Date().toISOString(),
+    };
+
+    const { error: upsertErr } = await supabase.from('devices').upsert(deviceData);
+    if (upsertErr) {
+      console.warn('[DeviceService] Device upsert error:', upsertErr.message);
+    }
+
+    if (!existingDevice) {
       await logAction({
         userId,
         userName,
         userEmail,
         action: 'DEVICE_REGISTERED',
-        details: `New device registered: ${deviceData.deviceName} (${deviceData.model})`,
+        details: `New device registered: ${deviceData.device_name} (${deviceData.model})`,
         type: 'SYSTEM',
         deviceId,
-        deviceName: deviceData.deviceName,
-        ipAddress
+        deviceName: deviceData.device_name,
+        ipAddress,
       });
-    } else {
-      try {
-        await deviceRef.update(sanitizePayload({
-          lastActive: now,
-          ipAddress,
-          userId,
-          userName,
-          userEmail,
-          appVersion: Constants.expoConfig?.version || '1.0.0',
-          isCurrentDevice: true
-        }));
-      } catch (updateError: any) {
-        if (updateError.code === 'firestore/not-found' || updateError.message?.includes('not-found')) {
-          console.log('[DeviceService] Device document not found on server during update. Re-creating with set().');
-          const deviceData = sanitizePayload({
-            deviceId,
-            userId,
-            userName,
-            userEmail,
-            deviceName: Device.deviceName || 'Unknown Device',
-            brand: Device.brand || 'Unknown',
-            model: Device.modelName || 'Unknown',
-            platform: 'android',
-            osVersion: Device.osVersion || 'Unknown',
-            appVersion: Constants.expoConfig?.version || '1.0.0',
-            ipAddress,
-            firstRegistered: now,
-            lastActive: now,
-            status: 'APPROVED',
-            isCurrentDevice: true,
-            forceLogout: false
-          });
-          await deviceRef.set(deviceData);
-        } else {
-          throw updateError;
-        }
-      }
     }
+
     return {
       deviceId,
       status: existingStatus,
-      forceLogout: existingForceLogout
+      forceLogout: existingForceLogout,
     };
   } catch (error: any) {
-    if (error.code === 'permission-denied') {
-      console.log('[DeviceService] Permission denied during registration (user likely banned).');
-    } else {
-      console.error('[DeviceService] registerDevice error:', error);
-    }
+    console.error('[DeviceService] registerDevice error:', error);
     return null;
   }
 };
-export const listenToDeviceSecurity = (deviceId: string, onAction: (action: 'BANNED' | 'LOGOUT') => void): (() => void) => {
+
+export const listenToDeviceSecurity = (
+  deviceId: string,
+  onAction: (action: 'BANNED' | 'LOGOUT') => void
+): (() => void) => {
   if (!deviceId) return () => {};
-  return db.collection('devices').doc(deviceId).onSnapshot(snap => {
-    if (!snap || !snap.exists) return;
-    const data = snap.data();
-    if (data?.status === 'BANNED') {
-      onAction('BANNED');
-    } else if (data?.forceLogout === true) {
-      onAction('LOGOUT');
-    }
-  }, (error: any) => {
-    if (error.code === 'permission-denied') {
-      onAction('BANNED');
-    } else {
-      console.error('[DeviceService] Security listener error:', error);
-    }
-  });
+  const channel = supabase
+    .channel(`device-sec-${deviceId}`)
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'devices', filter: `id=eq.${deviceId}` },
+      (payload: any) => {
+        const data = payload.new;
+        if (data?.status === 'BANNED') {
+          onAction('BANNED');
+        } else if (data?.force_logout === true) {
+          onAction('LOGOUT');
+        }
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
 };
+
 export const updateLastActive = async (deviceId: string): Promise<void> => {
   if (!deviceId) return;
   try {
-    await db.collection('devices').doc(deviceId).update({
-      lastActive: Date.now()
-    });
+    await supabase.from('devices').update({ last_active: new Date().toISOString() }).eq('id', deviceId);
   } catch {}
 };
+
 export const clearForceLogout = async (deviceId: string): Promise<void> => {
   if (!deviceId) return;
   try {
-    await db.collection('devices').doc(deviceId).update({
-      forceLogout: false
-    });
+    await supabase.from('devices').update({ force_logout: false }).eq('id', deviceId);
   } catch {}
 };

@@ -1,4 +1,5 @@
-import { db } from './firebase';
+import { supabase } from './supabase';
+
 export interface EVStation {
   id: string;
   name: string;
@@ -9,17 +10,21 @@ export interface EVStation {
   lat: number;
   lng: number;
 }
+
 export const getEVStations = async (): Promise<EVStation[]> => {
-  const snapshot = await db.collection("ev_stations").limit(50).get();
-  const list: EVStation[] = [];
-  snapshot.forEach(doc => {
-    list.push({
-      id: doc.id,
-      ...doc.data()
-    } as EVStation);
-  });
-  return list;
+  try {
+    const { data } = await supabase
+      .from('ev_stations')
+      .select('*')
+      .limit(50);
+    return (data || []) as EVStation[];
+  } catch (_) {
+    return [];
+  }
 };
+
 export const saveEVStation = async (station: EVStation): Promise<void> => {
-  await db.collection("ev_stations").doc(station.id).set(station);
+  try {
+    await supabase.from('ev_stations').upsert(station);
+  } catch (_) {}
 };
