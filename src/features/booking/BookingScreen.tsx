@@ -17,6 +17,76 @@ import { AppState, AppStateStatus } from "react-native";
 import { moderateScale, responsiveFontSize, responsiveHeight } from "../../utils/responsive";
 import { PrimaryButton } from "../../components/ui/PrimaryButton";
 import fareConfig from "../../constants/fareConfig.json";
+import * as Location from "expo-location";
+
+let _stopsMapCache: Map<string, { lat: number; lon: number }> | null = null;
+const getStopsMap = (): Map<string, { lat: number; lon: number }> => {
+  if (_stopsMapCache) return _stopsMapCache;
+  let rawStops: any[] = [];
+  try {
+    rawStops = require("../../../assets/stops.json");
+  } catch {
+    rawStops = [];
+  }
+  const map = new Map<string, { lat: number; lon: number }>();
+  for (let i = 0; i < rawStops.length; i++) {
+    const s = rawStops[i];
+    if (s && s.stop_name && typeof s.stop_lat === 'number' && typeof s.stop_lon === 'number') {
+      const key = s.stop_name.toLowerCase().replace(/[^a-z0-9]/g, ' ').trim();
+      if (!map.has(key)) {
+        map.set(key, { lat: s.stop_lat, lon: s.stop_lon });
+      }
+    }
+  }
+  _stopsMapCache = map;
+  return map;
+};
+
+const getDist = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const dy = lat1 - lat2;
+  const dx = lon1 - lon2;
+  return Math.sqrt(dy * dy + dx * dx);
+};
+
+const findNearestStopIndex = (
+  routeStops: string[],
+  userCoords: { latitude: number; longitude: number }
+): number => {
+  if (!routeStops || routeStops.length === 0) return 0;
+  if (routeStops.length === 1) return 0;
+
+  const map = getStopsMap();
+  let bestIdx = 0;
+  let minDist = Infinity;
+  const maxLimit = routeStops.length - 1;
+
+  for (let i = 0; i < maxLimit; i++) {
+    const name = routeStops[i];
+    if (!name) continue;
+    const cleanName = name.toLowerCase().replace(/[^a-z0-9]/g, ' ').trim();
+    let coords = map.get(cleanName);
+
+    if (!coords) {
+      for (const [k, v] of map.entries()) {
+        if (k.length > 3 && cleanName.length > 3 && (k.includes(cleanName) || cleanName.includes(k))) {
+          coords = v;
+          break;
+        }
+      }
+    }
+
+    if (coords) {
+      const d = getDist(userCoords.latitude, userCoords.longitude, coords.lat, coords.lon);
+      if (d < minDist) {
+        minDist = d;
+        bestIdx = i;
+      }
+    }
+  }
+
+  return bestIdx;
+};
+
 interface Route {
   id: string;
   name: string;
@@ -225,6 +295,41 @@ export const BookingScreen = ({
     focus: () => void;
     blur: () => void;
   }>(null);
+  const userLocationRef = useRef<{ latitude: number; longitude: number } | null>(null);
+  const skipSourceResetRef = useRef(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === "granted") {
+          const cached = await Location.getLastKnownPositionAsync();
+          if (cached && isMounted) {
+            userLocationRef.current = {
+              latitude: cached.coords.latitude,
+              longitude: cached.coords.longitude,
+            };
+          }
+          const current = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          if (current && isMounted) {
+            userLocationRef.current = {
+              latitude: current.coords.latitude,
+              longitude: current.coords.longitude,
+            };
+          }
+        }
+      } catch (err) {
+        // Silently ignore location errors
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const [customErrors, setCustomErrors] = useState<{
     route?: boolean;
     source?: boolean;
@@ -329,6 +434,13 @@ export const BookingScreen = ({
     setTimeLeftForLogic(180);
   }, []);
   useEffect(() => {
+    if (skipSourceResetRef.current) {
+      skipSourceResetRef.current = false;
+      setIsManualFare(false);
+      setManualTotal("");
+      setManualBaseFare(0);
+      return;
+    }
     setSourceSearch("");
     setDestSearch("");
     setSelectedSourceIndex(null);
@@ -696,15 +808,45 @@ export const BookingScreen = ({
                   {}
                   <View style={styles.inputSection}>
                     <Text style={styles.inputLabel}>Route Info</Text>
-                    <SearchableDropdown ref={routeDropdownRef} data={dropdownRoutesData} value={routeSearch} onChangeText={setRouteSearch} onSelect={(item: any) => {
+                    <SearchableDropdown ref={routeDropdownRef} data={dropdownRoutesData} value={routeSearch} onChangeText={setRouteSearch} onSelect={async (item: any) => {
+                  skipSourceResetRef.current = true;
                   const displayId = item.id.replace(/UP$|DOWN$/, "");
                   setRouteSearch(`${displayId}-${item.dest}`);
                   setSelectedFullRouteId(item.id);
-                  setSourceSearch("");
                   setDestSearch("");
+
+                  const foundRoute = item.originalItem || dbRoutes.find(r => r.id === item.id);
+                  const stops: string[] = foundRoute?.stops || [];
+
+                  let chosenIndex = 0;
+                  if (stops.length > 1) {
+                    let loc = userLocationRef.current;
+                    if (!loc) {
+                      try {
+                        const cached = await Location.getLastKnownPositionAsync();
+                        if (cached) {
+                          loc = { latitude: cached.coords.latitude, longitude: cached.coords.longitude };
+                          userLocationRef.current = loc;
+                        }
+                      } catch {}
+                    }
+                    if (loc) {
+                      chosenIndex = findNearestStopIndex(stops, loc);
+                    }
+                  }
+
+                  if (stops.length > 0) {
+                    const chosenStop = stops[chosenIndex];
+                    setSourceSearch(chosenStop);
+                    setSelectedSourceIndex(chosenIndex);
+                  } else {
+                    setSourceSearch("");
+                    setSelectedSourceIndex(null);
+                  }
+
                   setTimeout(() => {
-                    sourceDropdownRef.current?.focus();
-                  }, 100);
+                    destDropdownRef.current?.focus();
+                  }, 150);
                 }} variant="route" searchKeys={["route", "source", "dest"]} displayKey="route" keyExtractor={(item: any) => item.id} placeholder="Current Route" leftIcon={<MaterialIcons name="route" size={24} color={COLORS.text} />} storageKey="recent_routes" maxHeight={responsiveHeight(65)} onFocus={() => {
                   setRouteSearch("");
                   setSelectedFullRouteId("");

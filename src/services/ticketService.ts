@@ -11,6 +11,7 @@ export const saveTicket = async (ticketId: string, ticket: any): Promise<void> =
     fare: Number(ticket.fare) || 0,
     passengers: Number(ticket.passengers) || 1,
     status: (ticket.status || 'ACTIVE').toUpperCase(),
+    bus_type: (ticket.busType || ticket.bus_type || 'Non-AC').toUpperCase(),
     device_id: ticket.deviceId || ticket.device_id || null,
   };
   const { error } = await supabase.from('tickets').upsert(row);
@@ -80,6 +81,8 @@ export const fetchUserTicketsFromDb = async (userId: string): Promise<any[]> => 
         time: timeStr,
         is_pass: false,
         isPass: false,
+        busType: t.bus_type || (t.route && t.route.toLowerCase().includes('ac') ? 'AC' : 'Non-AC'),
+        bus_type: t.bus_type || (t.route && t.route.toLowerCase().includes('ac') ? 'AC' : 'Non-AC'),
         device_id: t.device_id,
         deviceId: t.device_id,
       };

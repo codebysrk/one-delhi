@@ -1,3 +1,12 @@
+# What's New in One Delhi v1.0.6 🚀
+
+We update the One Delhi app regularly to make your commute smoother and more reliable. Here is what is new in this update:
+
+* ❄️ **AC Bus Booking Accuracy**: Fixed an issue where AC bus bookings were recorded as Non-AC. AC bus selections now correctly sync with full bus type metadata to the database.
+* ⚡ **Performance & Sync Reliability**: Further improved ticket synchronization and stability across mobile devices.
+
+---
+
 # What's New in One Delhi v1.0.5 🚀
 
 We update the One Delhi app regularly to make your commute smoother and more reliable. Here is what is new in this update:
