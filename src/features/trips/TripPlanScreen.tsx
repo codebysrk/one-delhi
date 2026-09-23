@@ -9,12 +9,10 @@ export const TripPlanScreen = ({
 }: any) => {
   const [sourceText, setSourceText] = useState('');
   const [destText, setDestText] = useState('');
-  const {
-    recentTrips,
-    addRecentTrip,
-    removeRecentTrip,
-    clearRecentTrips
-  } = useAppStore();
+  const recentTrips = useAppStore((s) => s.recentTrips);
+  const addRecentTrip = useAppStore((s) => s.addRecentTrip);
+  const removeRecentTrip = useAppStore((s) => s.removeRecentTrip);
+  const clearRecentTrips = useAppStore((s) => s.clearRecentTrips);
   const handleSwap = () => {
     const temp = sourceText;
     setSourceText(destText);

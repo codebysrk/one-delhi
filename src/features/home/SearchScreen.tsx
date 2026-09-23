@@ -14,11 +14,9 @@ import { COLORS } from "../../theme/theme";
 export const SearchScreen = ({
   navigation
 }: any) => {
-  const {
-    recentRoutes,
-    addRecentRoute,
-    removeRecentRoute
-  } = useAppStore();
+  const recentRoutes = useAppStore((s) => s.recentRoutes);
+  const addRecentRoute = useAppStore((s) => s.addRecentRoute);
+  const removeRecentRoute = useAppStore((s) => s.removeRecentRoute);
   const [searchQuery, setSearchQuery] = useState("");
   const [routes, setRoutes] = useState<Route[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,7 +116,7 @@ export const SearchScreen = ({
       }
     });
     return list;
-  }, [recentRoutes]);
+  }, [routes]);
   const renderRouteItem = useCallback(({
     item
   }: {

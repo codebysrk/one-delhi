@@ -67,8 +67,6 @@ export const registerDevice = async (
     const deviceData = {
       id: deviceId,
       user_id: userId,
-      user_name: userName,
-      user_email: userEmail,
       device_name: Device.deviceName || 'Unknown Device',
       brand: Device.brand || 'Unknown',
       model: Device.modelName || 'Unknown',
@@ -80,6 +78,7 @@ export const registerDevice = async (
       force_logout: false,
       last_active: new Date().toISOString(),
     };
+
 
     const { error: upsertErr } = await supabase.from('devices').upsert(deviceData);
     if (upsertErr) {

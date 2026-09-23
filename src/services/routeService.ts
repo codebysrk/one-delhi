@@ -37,8 +37,9 @@ export const getRoutes = async (): Promise<Route[]> => {
   return data.map((r: any) => ({
     id: r.id,
     route: r.route,
-    routeNumber: r.route_number || r.route,
+    routeNumber: r.route,
     isActive: r.is_active,
+
     isNCR: r.is_ncr,
     directions: r.directions,
   }));

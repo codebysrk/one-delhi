@@ -8,6 +8,7 @@ import { generateTicketId } from "../../utils/ticketHelper";
 import { supabase } from "../../services/supabase";
 import { saveTicket } from "../../services/ticketService";
 import { savePass } from "../../services/passService";
+
 import { PaytmIcon, PhonePeIcon, GPayIcon } from "../../components/icons/PaymentIcons";
 import { logAction } from "../../services/logService";
 import { UpiConfirmScreen } from "./UpiConfirmScreen";
@@ -36,9 +37,7 @@ export const PaymentScreen = ({
   const formattedTotal = displayTotal.toFixed(1);
   const baseFareNum = Number(ticketData.baseFare || 10);
   const formattedBaseFare = baseFareNum.toFixed(1);
-  const {
-    addTicket
-  } = useAppStore();
+  const addTicket = useAppStore((state) => state.addTicket);
   const now = new Date();
   const dateStr = `${now.getDate().toString().padStart(2, "0")} ${now.toLocaleString("en-GB", {
     month: "short"
@@ -169,35 +168,28 @@ export const PaymentScreen = ({
       const tid = generateTicketId();
       const finalTicket = {
         ...ticketData,
+        id: tid,
+        tid: tid,
+        source: ticketData.source,
+        destination: ticketData.destination,
+        fare: Number(ticketData.fare),
+        passengers: Number(ticketData.passengers || 1),
         baseFare: ticketData.baseFare || 10,
         date: dateStr,
         time: timeStr,
-        timestamp: now.toISOString(),
-        expiresAt: new Date(expiresAtMs).toISOString(),
+        timestamp: nowMs,
+        expiresAt: expiresAtMs,
         userId: currentUserId,
         userName: currentUserName,
         userEmail: currentUserEmail,
         deviceId: useAppStore.getState().deviceId,
-        status: "Active",
-        tid: tid
-      };
-      addTicket({
-        ...finalTicket,
-        timestamp: nowMs,
-        expiresAt: expiresAtMs,
-        fare: ticketData.total,
         status: "Active" as any,
-        tid: tid
-      });
-      saveTicket(tid, finalTicket).then(() => {
-        console.log("[PaymentScreen] Ticket synced online successfully.");
-      }).catch(() => {
-        console.log("[OfflineSync] Offline mode active. Ticket saved locally and will sync when online.");
-      });
+      };
+      addTicket(finalTicket);
       if (ticketData.isPass) {
         const passDoc = {
           passId: tid,
-          userId: currentUserId,
+          userId: currentUserId || '',
           passType: ticketData.passName,
           status: "ACTIVE",
           validFrom: nowMs,
@@ -213,11 +205,18 @@ export const PaymentScreen = ({
           txnId: tid
         };
         savePass(tid, passDoc).then(() => {
-          console.log("[PaymentScreen] Pass synced online successfully.");
+          console.log("[PaymentScreen] Pass synced to passes table.");
         }).catch(err => {
-          console.log("[OfflineSync] Offline/failed pass sync. Will retry online.", err);
+          console.error("[PaymentScreen] Pass sync failed:", err);
+        });
+      } else {
+        saveTicket(tid, finalTicket).then(() => {
+          console.log("[PaymentScreen] Ticket synced online successfully.");
+        }).catch(() => {
+          console.log("[OfflineSync] Offline mode active. Ticket saved locally and will sync when online.");
         });
       }
+
       logAction({
         userId: currentUserId || "anonymous",
         userName: currentUserName,

@@ -48,6 +48,15 @@ export const TicketCard = React.memo(({
   const secondaryTextStyle = [styles.secondaryText, largeText && styles.largeSecondaryText];
   const locationTextStyle = [styles.locationText, largeText && styles.largeLocationText];
   const totalTextStyle = [styles.totalText, largeText && styles.largeTotalText];
+  const passengerCount = Number(ticket.passengers || ticket.qty || 1);
+  const baseTotal = ticket.isPass
+    ? Number(ticket.fare || 0)
+    : (ticket.originalTotal
+        ? Number(ticket.originalTotal)
+        : (ticket.baseFare
+            ? Number(ticket.baseFare) * passengerCount
+            : (ticket.fare ? Math.round((Number(ticket.fare) / 0.9) * 10) / 10 : 0)));
+
   return <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7} accessibilityLabel="Open ticket details">
     <View style={styles.headerStrip} />
 
@@ -58,21 +67,21 @@ export const TicketCard = React.memo(({
         <Text style={textStyle}>
           {getRouteNumberOnly(ticket.route || ticket.id || 'Bus')}
         </Text>
-        <Text style={textStyle}>₹{(Number(ticket.qty || 1) * Number(ticket.baseFare || 10)).toFixed(1)}</Text>
+        <Text style={textStyle}>₹{baseTotal.toFixed(1)}</Text>
       </View>
 
       <View style={styles.dataRow}>
         <Text style={secondaryTextStyle}>{displayDateTime}</Text>
-        <Text style={secondaryTextStyle}>x {ticket.qty || 1}</Text>
+        <Text style={secondaryTextStyle}>x {ticket.passengers || ticket.qty || 1}</Text>
       </View>
 
       <View style={styles.dataRow}>
-        <Text style={locationTextStyle} numberOfLines={1}>{ticket.source || ticket.src || (ticket as any).from || 'Boarding'}</Text>
-        <Text style={totalTextStyle}>₹{Number(ticket.total || ticket.fare || 0).toFixed(1)}</Text>
+        <Text style={locationTextStyle} numberOfLines={1}>{ticket.source || 'Boarding'}</Text>
+        <Text style={totalTextStyle}>₹{Number(ticket.fare).toFixed(1)}</Text>
       </View>
 
       <View style={styles.destRow}>
-        <Text style={locationTextStyle} numberOfLines={2}>{ticket.dest || ticket.dst || (ticket as any).to || 'Destination'}</Text>
+        <Text style={locationTextStyle} numberOfLines={2}>{ticket.destination || 'Destination'}</Text>
       </View>
 
       {showTID && <View style={[styles.tidContainer, hideDivider && {

@@ -52,9 +52,7 @@ const BusStack = () => <Stack.Navigator screenOptions={{
   }} />
   </Stack.Navigator>;
 export const MainTabNavigator = () => {
-  const {
-    showFooter
-  } = useAppStore();
+  const showFooter = useAppStore(state => state.showFooter);
   return <View style={styles.container}>
       <Tab.Navigator screenOptions={{
       tabBarStyle: styles.tabBar,

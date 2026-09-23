@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TextInput, Keyboard, TouchableWithoutFeedback, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TextInput, Keyboard, TouchableWithoutFeedback, Dimensions, Modal, ActivityIndicator, Pressable } from 'react-native';
+
 import { useForm, Controller } from 'react-hook-form';
 import { MaterialIcons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
@@ -38,15 +39,35 @@ export const LoginScreen = ({
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
-  const {
-    setUser,
-    setUserProfile,
-    setIsAuthReady,
-    setDeviceId,
-    setIsVerifying
-  } = useAppStore();
+
+  // Forgot Password In-App OTP Modal State
+  const [forgotModalVisible, setForgotModalVisible] = useState(false);
+  const [forgotStep, setForgotStep] = useState<'EMAIL' | 'OTP'>('EMAIL');
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotOtp, setForgotOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    let timer: any;
+    if (resendCooldown > 0) {
+      timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
+
+  const setUser = useAppStore((s) => s.setUser);
+  const setUserProfile = useAppStore((s) => s.setUserProfile);
+  const setIsAuthReady = useAppStore((s) => s.setIsAuthReady);
+  const setDeviceId = useAppStore((s) => s.setDeviceId);
+  const setIsVerifying = useAppStore((s) => s.setIsVerifying);
   const scrollViewRef = useRef<ScrollView>(null);
   const passwordInputRef = useRef<TextInput>(null);
+  const otpInputRef = useRef<TextInput>(null);
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
@@ -62,6 +83,7 @@ export const LoginScreen = ({
     setToastType(type);
     setToastVisible(true);
   };
+
   const {
     control,
     handleSubmit,
@@ -199,25 +221,96 @@ export const LoginScreen = ({
       console.log("[LoginScreen] Handled submit promise rejection:", err);
     });
   };
-  const handleForgotPassword = async () => {
-    const userEmail = getValues('email')?.trim();
-    if (!userEmail) {
-      showToast('Please enter your email address first', 'info');
+  const handleOpenForgotPassword = () => {
+    const userEmail = getValues('email')?.trim() || '';
+    setForgotEmail(userEmail);
+    setForgotOtp('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setForgotStep('EMAIL');
+    setForgotModalVisible(true);
+  };
+
+  const handleSendOtp = async () => {
+    const cleanEmail = forgotEmail.trim();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      showToast('Please enter a valid email address', 'error');
       return;
     }
-    setLoading(true);
+    setForgotLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
-        redirectTo: 'https://tiuzvutjuazntxmisozk.supabase.co/functions/v1/reset-password',
+      const { data: checkRes, error: checkErr } = await supabase.rpc('check_user_email_exists', {
+        lookup_email: cleanEmail,
       });
+
+      if (checkErr) {
+        console.warn('[LoginScreen] User check error:', checkErr);
+      } else if (checkRes) {
+        if (!checkRes.exists) {
+          showToast('This email is not registered. Please enter a valid registered email.', 'error');
+          setForgotLoading(false);
+          return;
+        }
+        if (checkRes.status === 'BANNED' || checkRes.status === 'DELETED') {
+          showToast('This account is restricted. Password recovery is unavailable.', 'error');
+          setForgotLoading(false);
+          return;
+        }
+      }
+
+      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail);
       if (error) throw error;
-      showToast('Password reset link sent! Check your email.', 'success');
-    } catch (error: any) {
-      showToast(error.message || 'Failed to send reset link', 'error');
+      setForgotStep('OTP');
+      setResendCooldown(60);
+      showToast('Verification code sent! Check your email.', 'success');
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to send verification code', 'error');
     } finally {
-      setLoading(false);
+      setForgotLoading(false);
     }
   };
+
+
+  const handleResetPassword = async () => {
+    const cleanOtp = forgotOtp.trim();
+    if (!cleanOtp || cleanOtp.length < 6) {
+      showToast('Please enter the 6-digit code', 'error');
+      return;
+    }
+    if (newPassword.length < 6) {
+      showToast('Password must be at least 6 characters', 'error');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      showToast('Passwords do not match', 'error');
+      return;
+    }
+    setForgotLoading(true);
+    try {
+      const { error: otpError } = await supabase.auth.verifyOtp({
+        email: forgotEmail.trim(),
+        token: cleanOtp,
+        type: 'recovery',
+      });
+      if (otpError) throw otpError;
+
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      if (updateError) throw updateError;
+
+      await supabase.auth.signOut().catch(() => {});
+      setForgotModalVisible(false);
+      setValue('email', forgotEmail.trim());
+      setValue('password', '');
+      showToast('Password updated successfully! Please login.', 'success');
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to reset password. Please check the code.', 'error');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
   const insets = useSafeAreaInsets();
   const dynamicPadding = {
     paddingLeft: Math.max(24, insets.left),
@@ -300,7 +393,7 @@ export const LoginScreen = ({
                     <Text style={styles.checkboxLabel}>Remember Me</Text>
                   </TouchableOpacity>
  
-                  <TouchableOpacity onPress={handleForgotPassword} disabled={loading} activeOpacity={0.7}>
+                  <TouchableOpacity onPress={handleOpenForgotPassword} disabled={loading} activeOpacity={0.7}>
                     <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
                   </TouchableOpacity>
                 </View>
@@ -315,8 +408,204 @@ export const LoginScreen = ({
             </ScrollView>
           </KeyboardAvoidingView>
 
-          {}
-          <Toast visible={toastVisible} message={toastMsg} type={toastType} onDismiss={() => setToastVisible(false)} />
+          {/* In-App Forgot Password OTP Modal */}
+          <Modal
+            visible={forgotModalVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => {
+              if (!forgotLoading) setForgotModalVisible(false);
+            }}
+          >
+            <View style={styles.modalOverlay}>
+              <Toast
+                visible={forgotModalVisible && toastVisible}
+                message={toastMsg}
+                type={toastType}
+                onDismiss={() => setToastVisible(false)}
+              />
+              <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                style={styles.modalKeyboardAvoid}
+              >
+                <View style={styles.modalCard}>
+                  {/* Modal Header */}
+                  <View style={styles.modalHeaderRow}>
+                    <View style={{ flex: 1, paddingRight: 12 }}>
+                      <Text style={styles.modalTitle}>
+                        {forgotStep === 'EMAIL' ? 'Forgot Password' : 'Reset Password'}
+                      </Text>
+                      <Text style={styles.modalSubtitle} numberOfLines={2}>
+                        {forgotStep === 'EMAIL'
+                          ? 'Enter your registered email to receive a 6-digit verification code.'
+                          : `Code sent to ${forgotEmail}`}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => setForgotModalVisible(false)}
+                      disabled={forgotLoading}
+                      style={styles.modalCloseBtn}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <MaterialIcons name="close" size={18} color={COLORS.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Modal Body */}
+                  {forgotStep === 'EMAIL' ? (
+                    <View style={styles.modalBody}>
+                      <Text style={styles.modalInputLabel}>Email Address</Text>
+                      <View style={styles.modalInputWrapper}>
+                        <MaterialIcons name="mail" size={18} color="#5f5e5e" style={styles.inputIcon} />
+                        <TextInput
+                          style={styles.textInput}
+                          placeholder="Enter your email"
+                          placeholderTextColor="#c8c6c5"
+                          keyboardType="email-address"
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          value={forgotEmail}
+                          onChangeText={setForgotEmail}
+                          editable={!forgotLoading}
+                        />
+                      </View>
+
+                      <PrimaryButton
+                        title="Send Verification Code"
+                        onPress={handleSendOtp}
+                        loading={forgotLoading}
+                        disabled={forgotLoading}
+                        style={styles.modalSubmitBtn}
+                        textStyle={styles.modalSubmitBtnText}
+                      />
+                    </View>
+                  ) : (
+                    <View style={styles.modalBody}>
+                      <Text style={styles.modalInputLabel}>Verification Code</Text>
+                      <Pressable
+                        onPress={() => otpInputRef.current?.focus()}
+                        style={styles.otpBoxesRow}
+                      >
+                        {[0, 1, 2, 3, 4, 5].map((idx) => {
+                          const digit = forgotOtp[idx] || '';
+                          const isCurrent = forgotOtp.length === idx;
+                          return (
+                            <View
+                              key={idx}
+                              style={[
+                                styles.otpCell,
+                                digit ? styles.otpCellFilled : null,
+                                isCurrent ? styles.otpCellActive : null,
+                              ]}
+                            >
+                              <Text style={styles.otpCellText}>{digit}</Text>
+                            </View>
+                          );
+                        })}
+                      </Pressable>
+
+                      <TextInput
+                        ref={otpInputRef}
+                        style={styles.hiddenOtpInput}
+                        keyboardType="number-pad"
+                        maxLength={6}
+                        value={forgotOtp}
+                        onChangeText={setForgotOtp}
+                        editable={!forgotLoading}
+                        autoFocus
+                      />
+
+                      <Text style={[styles.modalInputLabel, { marginTop: 8 }]}>New Password</Text>
+                      <View style={styles.modalInputWrapper}>
+                        <MaterialIcons name="lock" size={18} color="#5f5e5e" style={styles.inputIcon} />
+                        <TextInput
+                          style={styles.textInput}
+                          placeholder="At least 6 characters"
+                          placeholderTextColor="#c8c6c5"
+                          secureTextEntry={!showNewPassword}
+                          autoCapitalize="none"
+                          value={newPassword}
+                          onChangeText={setNewPassword}
+                          editable={!forgotLoading}
+                        />
+                        <TouchableOpacity
+                          onPress={() => setShowNewPassword(!showNewPassword)}
+                          style={styles.visibilityToggle}
+                        >
+                          <MaterialIcons
+                            name={showNewPassword ? 'visibility-off' : 'visibility'}
+                            size={18}
+                            color="#5f5e5e"
+                          />
+                        </TouchableOpacity>
+                      </View>
+
+                      <Text style={[styles.modalInputLabel, { marginTop: 8 }]}>Confirm Password</Text>
+                      <View style={styles.modalInputWrapper}>
+                        <MaterialIcons name="lock" size={18} color="#5f5e5e" style={styles.inputIcon} />
+                        <TextInput
+                          style={styles.textInput}
+                          placeholder="Re-enter password"
+                          placeholderTextColor="#c8c6c5"
+                          secureTextEntry={!showConfirmPassword}
+                          autoCapitalize="none"
+                          value={confirmPassword}
+                          onChangeText={setConfirmPassword}
+                          editable={!forgotLoading}
+                        />
+                        <TouchableOpacity
+                          onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                          style={styles.visibilityToggle}
+                        >
+                          <MaterialIcons
+                            name={showConfirmPassword ? 'visibility-off' : 'visibility'}
+                            size={18}
+                            color="#5f5e5e"
+                          />
+                        </TouchableOpacity>
+                      </View>
+
+                      <PrimaryButton
+                        title="Update Password"
+                        onPress={handleResetPassword}
+                        loading={forgotLoading}
+                        disabled={forgotLoading}
+                        style={styles.modalSubmitBtn}
+                        textStyle={styles.modalSubmitBtnText}
+                      />
+
+                      <View style={styles.modalResendRow}>
+                        {resendCooldown > 0 ? (
+                          <Text style={styles.resendTimerText}>
+                            Resend code in {resendCooldown}s
+                          </Text>
+                        ) : (
+                          <TouchableOpacity onPress={handleSendOtp} disabled={forgotLoading}>
+                            <Text style={styles.resendBtnText}>Resend Code</Text>
+                          </TouchableOpacity>
+                        )}
+                        <TouchableOpacity
+                          onPress={() => setForgotStep('EMAIL')}
+                          disabled={forgotLoading}
+                        >
+                          <Text style={styles.changeEmailText}>Change Email</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              </KeyboardAvoidingView>
+            </View>
+          </Modal>
+
+          {/* Toast for Login Screen */}
+          <Toast
+            visible={!forgotModalVisible && toastVisible}
+            message={toastMsg}
+            type={toastType}
+            onDismiss={() => setToastVisible(false)}
+          />
+
         </ScreenContainer>
       </View>
     </TouchableWithoutFeedback>;
@@ -556,5 +845,145 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     textDecorationLine: 'underline',
     fontFamily: Platform.OS === 'ios' ? 'Inter' : undefined
-  }
-});
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalKeyboardAvoid: {
+    width: '100%',
+    maxWidth: 380,
+  },
+  modalCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: COLORS.text,
+    letterSpacing: -0.2,
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : undefined,
+  },
+  modalSubtitle: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+    lineHeight: 16,
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : undefined,
+  },
+  modalCloseBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F3F4F6',
+  },
+  modalBody: {
+    marginTop: 0,
+  },
+  modalInputLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#4B5563',
+    marginBottom: 3,
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : undefined,
+  },
+  modalInputWrapper: {
+    height: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 10,
+  },
+  otpBoxesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 4,
+  },
+  otpCell: {
+    flex: 1,
+    height: 44,
+    marginHorizontal: 3,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  otpCellFilled: {
+    borderColor: COLORS.primary,
+    backgroundColor: '#FFFFFF',
+  },
+  otpCellActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: '#FEF2F2',
+  },
+  otpCellText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.text,
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : undefined,
+  },
+  hiddenOtpInput: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    opacity: 0.01,
+  },
+  modalSubmitBtn: {
+    height: 40,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  modalSubmitBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalResendRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  resendTimerText: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : undefined,
+  },
+  resendBtnText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.primary,
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : undefined,
+  },
+  changeEmailText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    fontFamily: Platform.OS === 'ios' ? 'Inter' : undefined,
+  },
+});

@@ -1,3 +1,15 @@
+# What's New in One Delhi v1.0.5 🚀
+
+We update the One Delhi app regularly to make your commute smoother and more reliable. Here is what is new in this update:
+
+* 🎫 **Ticket Booking & Sync**: Resolved an issue where newly booked bus tickets were not syncing properly with the database and disappearing from the ticket screen.
+* ⚡ **Performance & State Optimizations**: Optimized state selectors across booking and trip plan screens to prevent unnecessary re-renders and deliver fluid navigation.
+* 🔔 **In-App Update Notifications**: Added seamless notification alerts when new app updates are published, with automatic download selection tailored to your device CPU architecture.
+* 📱 **Optimized Mobile & Emulator APKs**: Provided dedicated, lightweight builds for `arm64-v8a`, `armeabi-v7a`, `universal`, `x86`, and `x86_64` architectures.
+* 🛡️ **Session & Route Stability**: Enhanced session tracking and active ticket monitoring for high reliability during daily transit.
+
+---
+
 # What's New in One Delhi v1.0.3 🚀
 
 We update the One Delhi app regularly to make your commute smoother and more reliable. Here is what is new in this update:

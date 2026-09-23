@@ -61,25 +61,37 @@ jobs:
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon
 
-      - name: Upload APK Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: one-delhi-release-apks
-          path: android/app/build/outputs/apk/release/*.apk
-
       - name: Get App Version
         id: get_version
         run: |
           VERSION=$(node -p "require('./app.json').expo.version")
           echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
 
+      - name: Rename APKs to standard release format
+        run: |
+          cd android/app/build/outputs/apk/release
+          for f in app-*-release.apk; do
+            if [ -f "$f" ]; then
+              suffix="${f#app-}"
+              mv "$f" "One.Delhi.v${APP_VERSION}-${suffix}"
+            fi
+          done
+          ls -la
+
+      - name: Upload APK Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: one-delhi-release-apks
+          path: android/app/build/outputs/apk/release/*.apk
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
         with:
-          tag_name: v${{ env.APP_VERSION }}
+          tag_name: ${{ env.APP_VERSION }}
           name: One Delhi v${{ env.APP_VERSION }}
-          generate_release_notes: true
+          body_path: WHATS_NEW.md
           files: android/app/build/outputs/apk/release/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

@@ -1,6 +1,7 @@
 export enum TicketStatus {
   ACTIVE = 'Active',
   INVALID = 'INVALID',
+  EXPIRED = 'EXPIRED',
 }
 export const getRouteNumberOnly = (route: string): string => {
   if (!route) return '';
@@ -28,19 +29,21 @@ export interface Ticket {
   userId: string;
   route: string;
   source: string;
-  dest: string;
+  destination?: string;
+  dest?: string;
   src?: string;
   dst?: string;
-  busType: 'AC' | 'Non-AC';
+  busType?: 'AC' | 'Non-AC';
   fare: number;
-  baseFare: number;
-  finalFare: string;
-  total: string;
+  baseFare?: number;
+  finalFare?: string;
+  total?: string;
   originalTotal?: string;
   toll?: number;
   isInterstate?: boolean;
-  qty: number;
-  status: 'Active' | 'Expired' | 'INVALID';
+  qty?: number;
+  passengers?: number;
+  status: 'Active' | 'Expired' | 'INVALID' | 'ACTIVE' | 'EXPIRED' | 'USED' | string;
   date: string;
   time: string;
   timestamp: number;
@@ -63,25 +66,35 @@ export interface Ticket {
     minKm?: number;
   };
 }
+const toMs = (val: any): number => {
+  if (!val) return 0;
+  if (typeof val === 'number') return val;
+  if (typeof val === 'string') {
+    const t = new Date(val).getTime();
+    return isNaN(t) ? 0 : t;
+  }
+  return val.toMillis?.() || (val.seconds ? val.seconds * 1000 : 0);
+};
+
 export const isTicketExpired = (timestamp: any, expiresAt?: any): boolean => {
   const now = Date.now();
   if (expiresAt) {
-    const exp = typeof expiresAt === 'number' ? expiresAt : expiresAt?.toMillis?.() || (expiresAt?.seconds ? expiresAt.seconds * 1000 : 0);
+    const exp = toMs(expiresAt);
     if (exp) return now > exp;
   }
   if (!timestamp) return false;
-  const ts = typeof timestamp === 'number' ? timestamp : timestamp?.toMillis?.() || (timestamp?.seconds ? timestamp.seconds * 1000 : 0);
+  const ts = toMs(timestamp);
   if (!ts) return false;
   const twoHoursInMs = 2 * 60 * 60 * 1000;
   return now - ts > twoHoursInMs;
 };
 export const getRemainingValidity = (timestamp: any, expiresAt?: any): string => {
-  const ts = typeof timestamp === 'number' ? timestamp : timestamp?.toMillis?.() || (timestamp?.seconds ? timestamp.seconds * 1000 : 0);
+  const ts = toMs(timestamp);
   if (!ts) return "Expired";
   const now = Date.now();
   let remainingMs = 0;
   if (expiresAt) {
-    const exp = typeof expiresAt === 'number' ? expiresAt : expiresAt?.toMillis?.() || (expiresAt?.seconds ? expiresAt.seconds * 1000 : 0);
+    const exp = toMs(expiresAt);
     remainingMs = exp - now;
   } else {
     const twoHoursInMs = 2 * 60 * 60 * 1000;
@@ -102,20 +115,12 @@ export const generateTicketId = (): string => {
   return `T${dateStr}${hexStr}`;
 };
 export const getLatestActiveTicket = (tickets: Ticket[]): Ticket | null => {
-  const activeOnes = tickets.filter(t => t.status === TicketStatus.ACTIVE && !isTicketExpired(t.timestamp, t.expiresAt));
+  const activeOnes = tickets.filter(t => (t.status === TicketStatus.ACTIVE || (t.status as any) === 'ACTIVE') && !isTicketExpired(t.timestamp, t.expiresAt));
   if (activeOnes.length === 0) return null;
-  const getMs = (timestamp: any): number => {
-    if (!timestamp) return 0;
-    return typeof timestamp === 'number' ? timestamp : timestamp.toMillis?.() || (timestamp.seconds ? timestamp.seconds * 1000 : 0);
-  };
-  return activeOnes.sort((a, b) => getMs(b.timestamp) - getMs(a.timestamp))[0];
+  return activeOnes.sort((a, b) => toMs(b.timestamp) - toMs(a.timestamp))[0];
 };
 export const getLatestTicket = (tickets: Ticket[]): Ticket | null => {
   const busTickets = tickets.filter(t => !t.isPass);
   if (busTickets.length === 0) return null;
-  const getMs = (timestamp: any): number => {
-    if (!timestamp) return 0;
-    return typeof timestamp === 'number' ? timestamp : timestamp.toMillis?.() || (timestamp.seconds ? timestamp.seconds * 1000 : 0);
-  };
-  return busTickets.sort((a, b) => getMs(b.timestamp) - getMs(a.timestamp))[0];
+  return busTickets.sort((a, b) => toMs(b.timestamp) - toMs(a.timestamp))[0];
 };

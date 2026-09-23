@@ -3,10 +3,11 @@ import { supabase } from '../../services/supabase';
 import { useAppStore } from '../../store/useAppStore';
 
 export const NotificationListener = () => {
-  const { setLatestNotificationTimestamp, user } = useAppStore();
+  const userId = useAppStore((s) => s.user?.id || s.user?.uid);
+  const setLatestNotificationTimestamp = useAppStore((s) => s.setLatestNotificationTimestamp);
 
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
 
     const fetchLatest = async () => {
       try {
@@ -39,7 +40,7 @@ export const NotificationListener = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, setLatestNotificationTimestamp]);
+  }, [userId, setLatestNotificationTimestamp]);
 
   return null;
 };

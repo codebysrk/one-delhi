@@ -42,9 +42,7 @@ const PASS_TYPES = [{
 export const PassScreen = ({
   navigation
 }: any) => {
-  const {
-    setShowFooter
-  } = useAppStore();
+  const setShowFooter = useAppStore((state) => state.setShowFooter);
   const [showPicker, setShowPicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedIdType, setSelectedIdType] = useState('Aadhaar Card');
@@ -99,7 +97,10 @@ export const PassScreen = ({
         ticketData: {
           route: 'BUS PASS',
           source: selectedPass.label,
+          destination: formData.name.trim(),
           dest: formData.name.trim(),
+          fare: Number(selectedPass.fare.replace('₹', '')),
+          passengers: 1,
           type: selectedPass.label.includes('AC') ? 'AC' : 'Non-AC',
           total: selectedPass.fare.replace('₹', ''),
           isPass: true,

@@ -1,6 +1,7 @@
 import { Alert, Linking, Platform } from 'react-native';
 import * as Application from 'expo-application';
 import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 interface GitHubAsset {
   name: string;
   browser_download_url: string;
@@ -65,7 +66,7 @@ export async function checkForUpdate(): Promise<void> {
     return;
   }
   try {
-    const currentVersion = Application.nativeApplicationVersion;
+    const currentVersion = Application.nativeApplicationVersion || Constants.expoConfig?.version;
     if (!currentVersion) {
       console.log('[UpdateCheck] Native application version is not available.');
       return;
@@ -73,9 +74,8 @@ export async function checkForUpdate(): Promise<void> {
     const response = await fetch('https://api.github.com/repos/codebysrk/one-delhi/releases/latest', {
       headers: {
         Accept: 'application/vnd.github.v3+json',
-        'User-Agent': 'one-delhi-app'
+        'User-Agent': 'OneDelhi-App',
       },
-      cache: 'no-cache'
     });
     if (!response.ok) {
       console.log(`[UpdateCheck] GitHub API returned status: ${response.status}`);
@@ -87,24 +87,32 @@ export async function checkForUpdate(): Promise<void> {
       const selectedAsset = selectApkAsset(releaseData.assets, Device.supportedCpuArchitectures);
       const downloadUrl = selectedAsset ? selectedAsset.browser_download_url : releaseData.html_url;
       const apkName = selectedAsset ? selectedAsset.name : 'Latest Release';
-      Alert.alert('अपडेट उपलब्ध है', `एक नया अपडेट (${latestVersion}) उपलब्ध (Available) है। क्या आप इसे डाउनलोड करना चाहते हैं?\n\nफ़ाइल: ${apkName}`, [{
-        text: 'बाद में',
-        style: 'cancel'
-      }, {
-        text: 'अपडेट करें',
-        onPress: () => {
-          Linking.openURL(downloadUrl).catch(err => {
-            console.error('[UpdateCheck] URL खोलने में त्रुटि:', err);
-            Alert.alert('त्रुटि', 'अपडेट लिंक खोलने में असमर्थ।');
-          });
+      Alert.alert(
+        'Update Available',
+        `A new version (${latestVersion}) is available. Would you like to update now?\n\nFile: ${apkName}`,
+        [
+          {
+            text: 'Later',
+            style: 'cancel',
+          },
+          {
+            text: 'Update Now',
+            onPress: () => {
+              Linking.openURL(downloadUrl).catch(err => {
+                console.warn('[UpdateCheck] Error opening URL:', err);
+                Alert.alert('Error', 'Unable to open the download link.');
+              });
+            },
+          },
+        ],
+        {
+          cancelable: true,
         }
-      }], {
-        cancelable: true
-      });
+      );
     } else {
       console.log('[UpdateCheck] App is up to date.');
     }
   } catch (error) {
-    console.error('[UpdateCheck] Error checking for update:', error);
+    console.log('[UpdateCheck] Update check skipped or network unavailable:', error);
   }
 }

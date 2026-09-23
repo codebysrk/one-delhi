@@ -19,11 +19,9 @@ export const NotificationScreen = ({
 }: any) => {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const {
-    lastSeenNotification,
-    setLastSeenNotification,
-    setLatestNotificationTimestamp
-  } = useAppStore();
+  const lastSeenNotification = useAppStore((s) => s.lastSeenNotification);
+  const setLastSeenNotification = useAppStore((s) => s.setLastSeenNotification);
+  const setLatestNotificationTimestamp = useAppStore((s) => s.setLatestNotificationTimestamp);
   const initialLastSeen = useRef(lastSeenNotification);
 
   useEffect(() => {

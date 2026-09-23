@@ -11,13 +11,11 @@ import { COLORS } from "../../theme/theme";
 export const SettingsScreen = ({
   navigation
 }: any) => {
-  const {
-    user,
-    userProfile,
-    setUser,
-    setUserProfile,
-    setShowFooter
-  } = useAppStore();
+  const user = useAppStore((s) => s.user);
+  const userProfile = useAppStore((s) => s.userProfile);
+  const setUser = useAppStore((s) => s.setUser);
+  const setUserProfile = useAppStore((s) => s.setUserProfile);
+  const setShowFooter = useAppStore((s) => s.setShowFooter);
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [showGenderModal, setShowGenderModal] = useState(false);

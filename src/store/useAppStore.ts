@@ -137,5 +137,15 @@ export const useAppStore = create<AppState>()(persist(set => ({
   })
 }), {
   name: 'railone-storage',
-  storage: createJSONStorage(() => AsyncStorage)
+  storage: createJSONStorage(() => AsyncStorage),
+  partialize: (state) => ({
+    user: state.user,
+    userProfile: state.userProfile,
+    tickets: state.tickets,
+    deviceId: state.deviceId,
+    recentRoutes: state.recentRoutes,
+    recentTrips: state.recentTrips,
+    lastSeenNotification: state.lastSeenNotification,
+    latestNotificationTimestamp: state.latestNotificationTimestamp,
+  }),
 }));

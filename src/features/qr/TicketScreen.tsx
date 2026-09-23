@@ -18,6 +18,7 @@ import { logAction } from "../../services/logService";
 import { supabase } from "../../services/supabase";
 import { PendingScreen } from "./PendingScreen";
 import { PrimaryButton } from "../../components/ui/PrimaryButton";
+import { expireTicketInDb } from "../../services/ticketService";
 const logoImg = require("../../../assets/images/logo.webp");
 export const TicketScreen = ({
   navigation,
@@ -25,15 +26,33 @@ export const TicketScreen = ({
 }: any) => {
   useKeepAwake();
   usePreventScreenCapture();
-  const {
-    tickets,
-    setShowFooter
-  } = useAppStore();
+  const tickets = useAppStore((s) => s.tickets);
+  const setShowFooter = useAppStore((s) => s.setShowFooter);
   const ticketFromParams = route?.params?.ticket;
   const activeTicket = ticketFromParams || getLatestTicket(tickets);
   const [showQR, setShowQR] = useState(false);
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTick((t) => t + 1);
+    }, 15000);
+    return () => clearInterval(timer);
+  }, []);
+
   const isExpired = activeTicket ? isTicketExpired(activeTicket.timestamp, activeTicket.expiresAt) : false;
   const isInvalid = activeTicket?.status === "INVALID" || isExpired;
+
+  useEffect(() => {
+    if (activeTicket && isExpired && String(activeTicket.status).toUpperCase() === 'ACTIVE') {
+      const ticketId = activeTicket.id || activeTicket.tid;
+      if (ticketId) {
+        expireTicketInDb(ticketId);
+        activeTicket.status = 'EXPIRED';
+      }
+    }
+  }, [activeTicket, isExpired]);
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [showRedirect, setShowRedirect] = useState(false);
   useEffect(() => {
@@ -48,10 +67,10 @@ export const TicketScreen = ({
         userName: useAppStore.getState().userProfile?.name || "User",
         userEmail: sessionUser?.email || useAppStore.getState().user?.email || "",
         action: "SCREENSHOT_ATTEMPT",
-        details: `SCREENSHOT ATTEMPT: User tried to capture ticket ${activeTicket.tid || activeTicket.id}`,
+        details: `SCREENSHOT ATTEMPT: User tried to capture ticket ${activeTicket?.tid || activeTicket?.id || 'N/A'}`,
         type: "USER",
         targetType: "TICKET",
-        targetId: activeTicket.tid || activeTicket.id,
+        targetId: activeTicket?.tid || activeTicket?.id || "N/A",
         deviceId: useAppStore.getState().deviceId || undefined
       }).catch(err => {
         if (__DEV__) console.error("[TicketScreen] Logging failed:", err);
@@ -77,6 +96,19 @@ export const TicketScreen = ({
       </View>;
   }
   const routeCode = getRouteNumberOnly(activeTicket.route);
+  const ticketDate = activeTicket.date || (activeTicket.timestamp ? `${new Date(typeof activeTicket.timestamp === 'number' ? activeTicket.timestamp : activeTicket.timestamp).getDate().toString().padStart(2, "0")} ${new Date(typeof activeTicket.timestamp === 'number' ? activeTicket.timestamp : activeTicket.timestamp).toLocaleString("en-GB", { month: "short" })}, ${new Date(typeof activeTicket.timestamp === 'number' ? activeTicket.timestamp : activeTicket.timestamp).getFullYear()}` : "");
+  const ticketTime = activeTicket.time || (activeTicket.timestamp ? new Date(typeof activeTicket.timestamp === 'number' ? activeTicket.timestamp : activeTicket.timestamp).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }) : "");
+  const ticketFare = Number(activeTicket.fare || 0);
+  const ticketPassengers = Number(activeTicket.passengers || 1);
+  const validatedAmount = activeTicket.isPass
+    ? ticketFare
+    : (activeTicket.originalTotal
+        ? Number(activeTicket.originalTotal)
+        : (activeTicket.baseFare
+            ? Number(activeTicket.baseFare) * ticketPassengers
+            : (ticketFare > 0 ? Math.round((ticketFare / 0.9) * 10) / 10 : ticketFare)));
+  const ticketSource = activeTicket.source || "Starting Point";
+  const ticketDestination = activeTicket.destination || "Destination";
   const insets = useSafeAreaInsets();
   const themeColor = activeTicket.isPass ? COLORS.success : COLORS.primary;
   return <Screen noPadding ignoreTopSafe style={{
@@ -186,7 +218,7 @@ export const TicketScreen = ({
                 color: "#1B5E20",
                 fontWeight: "600"
               }]}>
-                      Valid till: {activeTicket.date} | 23:59
+                      Valid till: {ticketDate} | 23:59
                     </Text>
                   </View>
 
@@ -202,7 +234,7 @@ export const TicketScreen = ({
                   <View style={styles.validationSummary}>
                     <Text style={styles.validatedLabel}>VALIDATED</Text>
                     <Text style={styles.validatedValue}>
-                      ₹{Number(activeTicket.originalTotal || activeTicket.total).toFixed(1)}
+                      ₹{validatedAmount.toFixed(1)}
                     </Text>
                   </View>
 
@@ -220,7 +252,7 @@ export const TicketScreen = ({
                       <Text style={[styles.largeValue, {
                   fontWeight: "700"
                 }]}>
-                        ₹{Number(activeTicket.total).toFixed(1)}
+                        ₹{ticketFare.toFixed(1)}
                       </Text>
                     </View>
                   </View>
@@ -233,7 +265,7 @@ export const TicketScreen = ({
               }}>
                       <Text style={styles.label}>Booking Time</Text>
                       <Text style={styles.mediumValue}>
-                        {activeTicket.date} | {formatTimeTo12hr(activeTicket.time)}
+                        {ticketDate} | {formatTimeTo12hr(ticketTime)}
                       </Text>
                     </View>
                     <View style={{
@@ -241,14 +273,14 @@ export const TicketScreen = ({
                 alignItems: "flex-end"
               }}>
                       <Text style={styles.label}>Bus Tickets</Text>
-                      <Text style={styles.mediumValue}>{activeTicket.qty}</Text>
+                      <Text style={styles.mediumValue}>{ticketPassengers}</Text>
                     </View>
                   </View>
 
                   <View style={styles.stopBox}>
                     <Text style={styles.label}>Starting stop</Text>
                     <Text style={styles.stopText}>
-                      {activeTicket.source || activeTicket.src || "Starting Point"}
+                      {ticketSource}
                     </Text>
                   </View>
 
@@ -257,7 +289,7 @@ export const TicketScreen = ({
             }]}>
                     <Text style={styles.label}>Ending stop</Text>
                     <Text style={styles.stopText}>
-                      {activeTicket.dest || activeTicket.dst || "Destination"}
+                      {ticketDestination}
                     </Text>
                   </View>
 
@@ -274,14 +306,14 @@ export const TicketScreen = ({
             </View> : <TouchableOpacity onPress={() => setShowQR(false)} style={[styles.qrCardMain, {
           backgroundColor: 'white'
         }]} activeOpacity={0.9}>
-              <QRCode value={`TRANSPORT_DEPT_OF_DELHI|ID:${activeTicket.tid || activeTicket.id}|ROUTE:${activeTicket.route}|FROM:${activeTicket.source || activeTicket.src}|TO:${activeTicket.dest || activeTicket.dst}|TIME:${activeTicket.time}|QTY:${activeTicket.qty}|FARE:${activeTicket.total}|STATUS:VALIDATED|AUTH:ONDC_NETWORK|SECURE_HASH:${(activeTicket.tid || activeTicket.id || "").slice(-8)}`} size={280} color="black" backgroundColor="white" ecl="M" />
+              <QRCode value={`TRANSPORT_DEPT_OF_DELHI|ID:${activeTicket.tid || activeTicket.id}|ROUTE:${activeTicket.route}|FROM:${ticketSource}|TO:${ticketDestination}|TIME:${ticketTime}|QTY:${ticketPassengers}|FARE:${ticketFare}|STATUS:VALIDATED|AUTH:ONDC_NETWORK|SECURE_HASH:${(activeTicket.tid || activeTicket.id || "").slice(-8)}`} size={280} color="black" backgroundColor="white" ecl="M" />
             </TouchableOpacity>}
 
           {}
           <View style={styles.statusPill}>
             <Text style={styles.statusPillText}>
-              Validated At: {activeTicket.date} |{" "}
-              {formatTimeTo12hr(activeTicket.time)}
+              Validated At: {ticketDate} |{" "}
+              {formatTimeTo12hr(ticketTime)}
             </Text>
           </View>
         </Animated.View>

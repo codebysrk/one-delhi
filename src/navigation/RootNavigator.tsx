@@ -64,17 +64,15 @@ export const ComingSoon = ({
     <BrandingFooter />
   </Screen>;
 export const RootNavigator = () => {
-  const {
-    user,
-    userProfile,
-    setUser,
-    setUserProfile,
-    isAuthReady,
-    setIsAuthReady,
-    isVerifying,
-    setTickets,
-    resetStore
-  } = useAppStore();
+  const user = useAppStore((s) => s.user);
+  const userProfile = useAppStore((s) => s.userProfile);
+  const setUser = useAppStore((s) => s.setUser);
+  const setUserProfile = useAppStore((s) => s.setUserProfile);
+  const isAuthReady = useAppStore((s) => s.isAuthReady);
+  const setIsAuthReady = useAppStore((s) => s.setIsAuthReady);
+  const isVerifying = useAppStore((s) => s.isVerifying);
+  const setTickets = useAppStore((s) => s.setTickets);
+  const resetStore = useAppStore((s) => s.resetStore);
   const [initializing, setInitializing] = useState(true);
   const [splashVisible, setSplashVisible] = useState(true);
   const fadeAnim = useState(new Animated.Value(1))[0];

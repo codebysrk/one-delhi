@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Alert } from "react-native";
 import { GoogleMap, GoogleMapRef } from "../../components/ui/GoogleMap";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -111,12 +111,20 @@ export const EVScreen = ({
   const [stations, setStations] = useState<any[]>(EV_STATIONS);
   useEffect(() => {
     (async () => {
-      let {
-        status
-      } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") return;
-      let loc = await Location.getCurrentPositionAsync({});
-      setLocation(loc);
+      try {
+        let {
+          status
+        } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") return;
+        let loc = await Location.getCurrentPositionAsync({});
+        setLocation(loc);
+      } catch (error) {
+        console.log("Error getting user location in EVScreen:", error);
+        Alert.alert(
+          "Location Unavailable",
+          "Unable to get your current location. Please make sure location services (GPS) are enabled on your device."
+        );
+      }
     })();
   }, []);
   useEffect(() => {

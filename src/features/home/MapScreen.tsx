@@ -44,11 +44,9 @@ export const MapScreen = ({
   }[]>([]);
   const translateY = useSharedValue(SNAP_MID);
   const [canScroll, setCanScroll] = useState(false);
-  const {
-    setShowFooter,
-    lastSeenNotification,
-    latestNotificationTimestamp
-  } = useAppStore();
+  const setShowFooter = useAppStore((s) => s.setShowFooter);
+  const lastSeenNotification = useAppStore((s) => s.lastSeenNotification);
+  const latestNotificationTimestamp = useAppStore((s) => s.latestNotificationTimestamp);
   useEffect(() => {
     setShowFooter(true);
   }, []);
@@ -100,6 +98,10 @@ export const MapScreen = ({
         setLocation(loc);
       } catch (error) {
         console.log("Location fetch error:", error);
+        Alert.alert(
+          "Location Unavailable",
+          "Unable to get your current location. Please make sure location services (GPS) are enabled on your device."
+        );
       }
     };
     initializeLocation();

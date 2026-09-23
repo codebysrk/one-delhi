@@ -7,6 +7,7 @@ import { MetroLogo } from "../../components/icons/MetroLogo";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { TicketCard } from "../../components/ui/TicketCard";
 import { getLatestTicket, isTicketExpired } from "../../utils/ticketHelper";
+import { expireTicketInDb } from "../../services/ticketService";
 type RootStackParamList = {
   Booking: undefined;
   Pass: undefined;
@@ -51,9 +52,24 @@ export const TicketsScreen: React.FC<TicketsScreenProps> = ({
   }, [setShowFooter]);
   const latestTicket = useMemo(() => getLatestTicket(tickets), [tickets, tick]);
   const latestPass = useMemo(() => {
-    const activePasses = tickets.filter(t => t.isPass && t.status === 'Active' && !isTicketExpired(t.timestamp, t.expiresAt));
+    const activePasses = tickets.filter(t => t.isPass && (t.status === 'Active' || (t.status as any) === 'ACTIVE') && !isTicketExpired(t.timestamp, t.expiresAt));
     return activePasses[0] || null;
   }, [tickets, tick]);
+
+  useEffect(() => {
+    if (
+      latestTicket &&
+      isTicketExpired(latestTicket.timestamp, latestTicket.expiresAt) &&
+      String(latestTicket.status).toUpperCase() === 'ACTIVE'
+    ) {
+      const ticketId = latestTicket.id || latestTicket.tid;
+      if (ticketId) {
+        expireTicketInDb(ticketId);
+        latestTicket.status = 'EXPIRED';
+      }
+    }
+  }, [latestTicket, tick]);
+
   const handleNavigate = useCallback((screen: keyof RootStackParamList) => {
     navigation.navigate(screen);
   }, [navigation]);

@@ -23,16 +23,15 @@ export const logAction = async (data: Omit<LogData, 'timestamp'>): Promise<void>
   try {
     const row = {
       user_id: data.userId,
-      user_name: data.userName,
-      user_email: data.userEmail,
       action: data.action,
       details: data.details,
-      type: data.type === 'SYSTEM' ? 'USER' : data.type,
+      type: data.type,
       device_id: data.deviceId || null,
       target_id: data.targetId || null,
       target_type: data.targetType || null,
       notes: data.notes || (data.deviceName ? `Device: ${data.deviceName}` : null),
     };
+
     await supabase.from('activity_logs').insert(row);
   } catch (error) {
     console.error('[LogService] Critical log error:', error);
